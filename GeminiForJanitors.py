@@ -366,6 +366,10 @@ def proxy():
         }]
     }, 200
 
+@app.route('/health', methods=["GET"])
+def health():
+    return "We are healthy!", 200
+
 ################################################################################
 
 if __name__ == '__main__':
