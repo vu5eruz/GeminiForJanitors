@@ -9,7 +9,6 @@ import traceback
 from flask import Flask, Response, request
 from flask_cors import CORS
 from functools import wraps
-from waitress import serve
 
 ################################################################################
 
@@ -372,7 +371,4 @@ def health():
 
 ################################################################################
 
-if __name__ == '__main__':
-    print_settings()
-
-    serve(app, host='0.0.0.0', port=5000)
+print_settings()
