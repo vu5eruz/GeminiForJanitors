@@ -274,23 +274,27 @@ def proxy():
 
     print(end="Sending request to Google AI...", flush=True)
 
-    response = requests.post(
-        f'https://generativelanguage.googleapis.com/v1beta/models/{jai_model}:generateContent',
-        json={
-            'contents': gem_chat_prompt_content,
-            'systemInstruction': {
-                'parts': [{'text': gem_system_prompt}]
+    try:
+        response = requests.post(
+            f'https://generativelanguage.googleapis.com/v1beta/models/{jai_model}:generateContent',
+            json={
+                'contents': gem_chat_prompt_content,
+                'systemInstruction': {
+                    'parts': [{'text': gem_system_prompt}]
+                },
+                'safetySettings': SAFETY_SETTINGS,
+                'generationConfig': gem_config,
             },
-            'safetySettings': SAFETY_SETTINGS,
-            'generationConfig': gem_config,
-        },
-        headers={
-            'User-Agent': f'{PROXY_NAME}/{PROXY_VERSION}',
-            'Content-Type': 'application/json',
-            'X-goog-api-key': jai_api_key,
-        },
-        timeout=REQUEST_TIMEOUT_IN_SECONDS
-    )
+            headers={
+                'User-Agent': f'{PROXY_NAME}/{PROXY_VERSION}',
+                'Content-Type': 'application/json',
+                'X-goog-api-key': jai_api_key,
+            },
+            timeout=REQUEST_TIMEOUT_IN_SECONDS
+        )
+    except requests.exceptions.Timeout:
+        print(end=f" timeout\n", flush=True)
+        return error_message(f"Gateway Timeout. The request to Google AI timed out."), 504
 
     print(end=f" {response.status_code} {response.reason}\n", flush=True)
 
