@@ -444,7 +444,7 @@ def handle_proxy():
 
     if 'candidates' not in response_json or not response_json['candidates']:
         block_reason = gem_feedback.get('blockReason', 'UNKNOWN')
-        message = f"Response blocked. Reason: {}" + block_reason
+        message = f"Response blocked. Reason: {block_reason}"
         if block_reason == PROHIBITED_CONTENT:
             message += " (try using the '//prefill on' or '//prefill off' commands)"
         return error_message(message), 502
