@@ -317,7 +317,7 @@ def handle_proxy():
         print(f"Command from {jai_xuid_short}{' (new)' if jai_xuid_new else ''}", command)
 
         if command[0] == 'prefill':
-            if argcount != 1:
+            if argcount < 1:
                 return proxy_response(f"Specify 'on' or 'off' after //prefill"), 200
             elif command[1] == 'on':
                 option_prefill = True
@@ -334,6 +334,7 @@ def handle_proxy():
                 f"Prefill is {'enabled' if option_prefill else 'disabled'}.\n" +
                 "It may or may not help you with reducing errors.\n" +
                 "This settings is in effect across all chats."
+                "You can now remove the //prefill command from your message."
             ), 200
         else:
             return proxy_response(f"Unknown command //" + command[0]), 200
