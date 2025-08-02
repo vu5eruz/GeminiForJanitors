@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import logging
 import requests
 import time
 import threading
@@ -368,6 +369,18 @@ def proxy():
 @app.route('/health', methods=["GET"])
 def health():
     return "We are healthy!", 200
+
+################################################################################
+
+# Render.com makes many health checks and it pollutes the log.
+# Silence that.
+
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record):
+        return record.getMessage().find('"GET /health HTTP/1.1" 200') == -1
+
+gunicorn_logger = logging.getLogger('gunicorn.access')
+gunicorn_logger.addFilter(HealthCheckFilter())
 
 ################################################################################
 
