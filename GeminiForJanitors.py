@@ -67,6 +67,9 @@ DEBUG_PRINT_JSON = False
 
 REQUEST_TIMEOUT_IN_SECONDS = 60
 
+with open('prefill.txt') as prefill:
+    PREFILL = prefill.read()
+
 ################################################################################
 
 PROXY_AUTHORS = "undefinedundefined (vu5eruz on GitHub)"
@@ -99,13 +102,6 @@ SGR_FORE_YELLOW  = "\x1B[33m"
 SGR_FORE_BLUE    = "\x1B[34m"
 
 ################################################################################
-
-# JanitorAI proxy test request is a single user message with "Just say TEST"
-# max_tokens is set to 10 and temperature to 0, but these checks are sufficient
-def is_jai_proxy_test(messages):
-    return len(messages) == 1 \
-        and messages[0].get('role', '') == 'user' \
-        and messages[0].get('content', '') == "Just say TEST"
 
 def debug_print_json(obj):
     if DEBUG_PRINT_JSON and obj:
@@ -183,7 +179,6 @@ def handle_proxy():
 
     jai_messages = request_json.get('messages', [])
 
-
     # JanitorAI allows the user to configure max_tokens, model and temperature.
     # There is currently no means to configure other model parameters.
     # The code can manage if they come to exist and gracefully default if not.
@@ -196,10 +191,16 @@ def handle_proxy():
     jai_frequency_p = request_json.get('frequency_penalty', FREQUENCY_PENALTY)
     jai_presence_p  = request_json.get('presence_penalty', PRESENCE_PENALTY)
 
+    # JanitorAI proxy test request is a single user message with "Just say TEST"
+    # Other parameters are set to specific values, but these checks are enough
+
+    jai_proxy_test = len(jai_messages) == 1 \
+        and jai_messages[0].get('role', '') == 'user' \
+        and jai_messages[0].get('content', '') == "Just say TEST"
 
     # JanitorAI message format needs to be converted to Google AI
 
-    gem_system_prompt       = ''
+    gem_system_prompt       = '' if jai_proxy_test else PREFILL
     gem_chat_prompt_content = []
     gem_chat_prompt_length  = 0
 
@@ -211,7 +212,7 @@ def handle_proxy():
             msg_role = 'model' # Google AI convention
 
         if msg_role == 'system':
-            gem_system_prompt = msg_content
+            gem_system_prompt += msg_content
         else:
             gem_chat_prompt_length += len(msg_content)
             gem_chat_prompt_content.append({
@@ -247,7 +248,7 @@ def handle_proxy():
     # It is not enough to accommodate thinking tokens, leading to rejections.
     # Otherwise, honor a max_tokens limit. Users will get an error on rejection.
 
-    if jai_max_tokens > 0 and not is_jai_proxy_test(jai_messages):
+    if jai_max_tokens > 0 and not jai_proxy_test:
         gem_config['maxOutputTokens'] = jai_max_tokens
 
 
