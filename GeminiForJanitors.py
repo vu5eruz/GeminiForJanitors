@@ -3,6 +3,7 @@
 
 import json
 import logging
+import os
 import requests
 import time
 import threading
@@ -385,6 +386,21 @@ class HealthCheckFilter(logging.Filter):
 
 gunicorn_logger = logging.getLogger('gunicorn.access')
 gunicorn_logger.addFilter(HealthCheckFilter())
+
+
+# Allow running an usable instance locally while developing
+# Use waitress-serve --host="127.0.0.1" --port=5000 GeminiForJanitors:app
+# It's better than pushing to production and hoping for the best
+
+if os.environ.get("USE_CLOUDFLARED"):
+    from flask_cloudflared import start_cloudflared
+
+    cloudflared_thread = threading.Thread(
+        target=start_cloudflared,
+        kwargs={ 'port': 5000, 'metrics_port': 5001, },
+        daemon=True)
+
+    cloudflared_thread.start()
 
 ################################################################################
 
