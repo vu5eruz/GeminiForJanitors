@@ -73,7 +73,7 @@ PROXY_AUTHORS = "undefinedundefined (vu5eruz on GitHub)"
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = "2025.08.01"
+PROXY_VERSION = "2025.08.02"
 
 # HTML pro-tip: you can always omit <body> and <head> (screw IE9)
 # See https://stackoverflow.com/a/5642982
