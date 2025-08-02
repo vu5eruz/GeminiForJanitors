@@ -30,7 +30,7 @@ from functools import wraps
 
 ################################################################################
 
-SAFETY_SETTINGS_THRESHOLD = 'OFF'
+SAFETY_SETTINGS_THRESHOLD = 'BLOCK_NONE'
 
 SAFETY_SETTINGS = [
     {
