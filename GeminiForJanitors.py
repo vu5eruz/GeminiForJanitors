@@ -325,10 +325,7 @@ def handle_proxy():
 
     print(f"Chat/Prompt length {gem_chat_prompt_length} tokens {gem_chat_prompt_tokens}.")
     print(f"Response length {len(gem_chat_response)} tokens {gem_chat_response_tokens}.")
-    print(f"Thinking length {len(gem_chat_thinking)} tokens {gem_chat_thinking_tokens}:")
-
-    if gem_chat_thinking:
-        print(f"{SGR_BOLD_ON}{gem_chat_thinking}{SGR_BOLD_OFF}")
+    print(f"Thinking length {len(gem_chat_thinking)} tokens {gem_chat_thinking_tokens}.")
 
     if gem_finish_reason == 'MAX_TOKENS':
         return error_message("Max tokens exceeded. Increase or remove token limit."), 502
