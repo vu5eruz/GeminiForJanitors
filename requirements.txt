@@ -1,6 +1,0 @@
-Flask
-flask-cors
-requests
-gunicorn
-gevent
-redis
