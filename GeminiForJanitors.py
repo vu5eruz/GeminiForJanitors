@@ -47,7 +47,7 @@ PRESENCE_PENALTY = 0.0
 
 DEBUG_PRINT_JSON = False
 
-REQUEST_TIMEOUT_IN_SECONDS = 45
+REQUEST_TIMEOUT_IN_SECONDS = 60
 
 ################################################################################
 
