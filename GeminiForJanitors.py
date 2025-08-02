@@ -1,9 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+################################################################################
+
+# Development requires an environment variable DEVELOPMENT set non-empty
+
+import os
+
+if os.environ.get("DEVELOPMENT"):
+    PRODUCTION = False
+else:
+    PRODUCTION = True
+
+    # Production runs on gevent. Prevent issues with ssl monkey-patching.
+    from gevent import monkey
+    monkey.patch_all()
+
+################################################################################
+
 import json
 import logging
-import os
 import requests
 import time
 import threading
@@ -392,7 +408,7 @@ gunicorn_logger.addFilter(HealthCheckFilter())
 # Use waitress-serve --host="127.0.0.1" --port=5000 GeminiForJanitors:app
 # It's better than pushing to production and hoping for the best
 
-if os.environ.get("USE_CLOUDFLARED"):
+if not PRODUCTION:
     from flask_cloudflared import start_cloudflared
 
     cloudflared_thread = threading.Thread(
