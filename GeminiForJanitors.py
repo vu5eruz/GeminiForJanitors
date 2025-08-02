@@ -3,9 +3,11 @@
 
 ################################################################################
 
-# Development requires an environment variable DEVELOPMENT to be set non-empty
-
 import os
+import sys
+
+
+# Development requires an environment variable DEVELOPMENT to be set non-empty
 
 if os.environ.get("DEVELOPMENT"):
     PRODUCTION = False
@@ -31,6 +33,23 @@ if not XUID_SECRET:
 
 if isinstance(XUID_SECRET, str):
     XUID_SECRET = XUID_SECRET.encode('utf-8')
+
+
+# Production must provide a Redis server, Development can use local
+
+import redis
+
+redis_client = None
+if (redis_url := os.environ.get("REDIS_URL")):
+    print("Using REDIS_URL =", redis_url)
+    redis_client = redis.from_url(redis_url)
+else:
+    if PRODUCTION:
+        print("!!! CRITICAL: Production deployment without a REDIS_URL. Aborting. !!!")
+        sys.exit(1)
+    else:
+        print("REDIS_URL not found. Using non-persistent in-memory dictionary.")
+        USER_STORAGE = dict()
 
 ################################################################################
 
@@ -81,12 +100,18 @@ FREQUENCY_PENALTY = 0.0
 
 PRESENCE_PENALTY = 0.0
 
-DEBUG_PRINT_JSON = False
+DEBUG_PRINT_JSON = True
 
 REQUEST_TIMEOUT_IN_SECONDS = 60
 
-with open('prefill.txt') as prefill:
-    PREFILL = prefill.read()
+REDIS_EXPIRY_TIME_IN_SECONDS = 30 * 24 * 60 * 60 
+
+try:
+    with open('prefill.txt') as prefill:
+        PREFILL = prefill.read()
+except FileNotFoundError:
+    print("!!! WARNING: prefill.txt not found. Prefill feature won't work. !!!")
+    PREFILL = ""
 
 ################################################################################
 
@@ -96,6 +121,19 @@ PROXY_NAME = "GeminiForJanitors"
 
 PROXY_VERSION = "2025.08.02"
 
+PROXY_TITLE = f"{PROXY_NAME} ({PROXY_VERSION}) by {PROXY_AUTHORS}"
+
+PROXY_BANNER = fr"""
+***
+# {PROXY_TITLE}
+The proxy has been updated or has crashed and restarted. Your settings inside this proxy may have been reset.
+
+You should see this message only once or twice. Your next request shouldn't include it.
+If you don't want to see this message, switch your proxy URL to: https://geminiforjanitors.onrender.com/quiet/
+
+You can now set up prefill with the commands `//prefill on` and `//prefill off`. It might help you reduce PROHIBITED_CONTENT errors.
+"""
+
 # HTML pro-tip: you can always omit <body> and <head> (screw IE9)
 # See https://stackoverflow.com/a/5642982
 # <html> is optional too, but lang=en is good manners
@@ -103,7 +141,7 @@ INDEX = fr"""<!doctype html>
 <html lang=en>
 <meta charset=utf-8>
 <title>Google AI Studio Proxy for JanitorAI</title>
-<h1>{PROXY_NAME} ({PROXY_VERSION}) by {PROXY_AUTHORS}</h1>
+<h1>{PROXY_TITLE}</h1>
 <p>Up and running.</p>
 </html>
 """
@@ -121,6 +159,31 @@ SGR_FORE_BLUE    = "\x1B[34m"
 
 ################################################################################
 
+# User are anonymously identified by their XUID, which is use for keying.
+# Storage (either Redis or local) maps XUIDs to a json (python dict) with their settings.
+# If an XUID wasn't in the storage, that's a new user.
+
+# Returns the user data (possibly an empty dict) and whether the user is new
+def user_fetch(xuid):
+    if redis_client:
+        user_data_json = redis_client.get(xuid)
+        if user_data_json:
+            return json.loads(user_data_json), False
+        return {}, True
+    else: # Development fallback
+        try:
+            return USER_STORAGE[xuid], False
+        except KeyError:
+            return {}, True
+
+def user_store(xuid, data):
+    if redis_client:
+        redis_client.set(xuid, json.dumps(data), ex=REDIS_EXPIRY_TIME_IN_SECONDS)
+    else: # Development fallback
+        USER_STORAGE[xuid] = data
+
+################################################################################
+
 def debug_print_json(obj):
     if DEBUG_PRINT_JSON and obj:
         print(f"{SGR_FORE_YELLOW}{json.dumps(obj, indent=4)}{SGR_FORE_DEFAULT}")
@@ -128,7 +191,7 @@ def debug_print_json(obj):
 def print_settings():
     print()
     print(end=SGR_BOLD_ON + SGR_FORE_GREEN)
-    print(f"{PROXY_NAME} ({PROXY_VERSION}) settings:")
+    print(PROXY_TITLE)
     print(f" * {PRODUCTION = }")
     print(f" * {SAFETY_SETTINGS_THRESHOLD = }")
     print(f" * {TOP_K = }")
@@ -137,6 +200,7 @@ def print_settings():
     print(f" * {PRESENCE_PENALTY = }")
     print(f" * {DEBUG_PRINT_JSON = }")
     print(f" * {REQUEST_TIMEOUT_IN_SECONDS = }")
+    print(f" * {REDIS_EXPIRY_TIME_IN_SECONDS = }")
     print(end=SGR_BOLD_OFF + SGR_FORE_DEFAULT)
     print()
 
@@ -171,7 +235,13 @@ def chat_response(message):
         }]
     }
 
+def proxy_response(message):
+    return chat_response(f"<proxy>\n{message}\n</proxy>")
+
 def handle_proxy():
+    request_path = request.path
+    option_quiet = 'quiet' in request_path
+
     request_json = request.get_json(silent=True)
     if not request_json:
         return error_message("Bad Request. Missing or invalid JSON from JanitorAI."), 400
@@ -189,6 +259,12 @@ def handle_proxy():
 
     jai_xuid, jai_xuid_short = make_xuid(jai_api_key)
 
+    jai_xuid_data, jai_xuid_new = user_fetch(jai_xuid)
+
+    gmtime = time.gmtime()
+    jai_xuid_data['lastSeen'] = gmtime
+
+    option_prefill = jai_xuid_data.get('usePrefill', False)
 
     # Streaming isn't and won't be implemented as it could increase rejections
     if request_json.get('stream', False):
@@ -222,9 +298,55 @@ def handle_proxy():
         and jai_messages[0].get('role', '') == 'user' \
         and jai_messages[0].get('content', '') == "Just say TEST"
 
+    # Look for proxy commands on normal chat requests. There should be
+    # - One system command (the bot description)
+    # - One or more messages (user or assistant, i.e the chat)
+    # - The latest message should be the user's
+
+    if len(jai_messages) > 1 \
+        and jai_messages[0].get('role', '') == 'system' \
+        and jai_messages[-1].get('role', '') == 'user' \
+        and jai_messages[-1].get('content', '').find(': //') != -1:
+
+        # User's message looks like "<user's character name>: //<command> <one or more args>"
+        # An user's character name can have spaces in it
+
+        command = jai_messages[-1]['content'].lower().split(': //')[1].strip().split(' ')
+        argcount = len(command) - 1
+
+        print(f"Command from {jai_xuid_short}{' (new)' if jai_xuid_new else ''}", command)
+
+        if command[0] == 'prefill':
+            if argcount != 1:
+                return proxy_response(f"Specify 'on' or 'off' after //prefill"), 200
+            elif command[1] == 'on':
+                option_prefill = True
+            elif command[1] == 'off':
+                option_prefill = False
+            else:
+                return proxy_response(f"Type 'on' or 'off', not '{command[1]}'"), 200
+
+            jai_xuid_data['usePrefill'] = option_prefill 
+
+            user_store(jai_xuid, jai_xuid_data)
+
+            return proxy_response(
+                f"Prefill is {'enabled' if option_prefill else 'disabled'}.\n" +
+                "It may or may not help you with reducing errors.\n" +
+                "This settings is in effect across all chats."
+            ), 200
+        else:
+            return proxy_response(f"Unknown command //" + command[0]), 200
+
+    # No proxy commands were present, lets continue as normal
+
     # JanitorAI message format needs to be converted to Google AI
 
-    gem_system_prompt       = '' if jai_proxy_test else PREFILL
+    if jai_proxy_test or not option_prefill:
+        gem_system_prompt = ''
+    else:
+        gem_system_prompt = PREFILL
+
     gem_chat_prompt_content = []
     gem_chat_prompt_length  = 0
 
@@ -279,7 +401,7 @@ def handle_proxy():
     # Let's get this bread
 
     try:
-        print(f"Sending request from {jai_xuid_short} to Google AI...")
+        print(f"Sending request from {jai_xuid_short}{' (new)' if jai_xuid_new else ''} to Google AI...")
 
         response = requests.post(
             f'https://generativelanguage.googleapis.com/v1beta/models/{jai_model}:generateContent',
@@ -317,20 +439,20 @@ def handle_proxy():
 
     # Be as lenient as possible while processing Google AI responses
 
-    gem_candidates = response_json.get('candidates')
-    gem_canditate  = gem_candidates[0] if gem_candidates else None
-    gem_metadata   = response_json.get('usageMetadata', {})
-    gem_feedback   = response_json.get('promptFeedback', {})
+    gem_metadata = response_json.get('usageMetadata', {})
+    gem_feedback = response_json.get('promptFeedback', {})
 
-    if not isinstance(gem_canditate, dict):
+    if 'candidates' not in response_json or not response_json['candidates']:
         message = "Response blocked. Reason: " + gem_feedback.get('blockReason', 'UNKNOWN')
         return error_message(message), 502
+
+    gem_candidate = response_json['candidates'][0]
 
     gem_chat_response = ''
     gem_chat_thinking = ''
 
-    for part in gem_canditate.get('content', {}).get('parts', [{}]):
-        part_text = part.get('text')
+    for part in gem_candidate.get('content', {}).get('parts', [{}]):
+        part_text = part.get('text', '')
         part_thought = part.get('thought', False)
 
         if not part_thought:
@@ -345,7 +467,7 @@ def handle_proxy():
     gem_chat_prompt_tokens   = gem_metadata.get('promptTokenCount', 0)
     gem_chat_response_tokens = gem_metadata.get('candidatesTokenCount', 0)
     gem_chat_thinking_tokens = gem_metadata.get('thoughtsTokenCount', 0)
-    gem_finish_reason        = gem_canditate.get('finishReason', 'STOP')
+    gem_finish_reason        = gem_candidate.get('finishReason', 'STOP')
 
 
     print(f"Chat/Prompt length {gem_chat_prompt_length} tokens {gem_chat_prompt_tokens}.")
@@ -355,8 +477,16 @@ def handle_proxy():
     if gem_finish_reason == 'MAX_TOKENS':
         return error_message("Max tokens exceeded. Increase or remove token limit."), 502
 
-
     # All done and good
+
+    if not jai_proxy_test:
+        if jai_xuid_new:
+            jai_xuid_data['firstSeen'] = gmtime
+
+            if not option_quiet:
+                gem_chat_response += PROXY_BANNER
+
+        user_store(jai_xuid, jai_xuid_data)
 
     return chat_response(gem_chat_response), 200
 
@@ -374,10 +504,12 @@ def index():
 
 @app.route('/', methods=['POST'])
 @app.route('/chat/completions', methods=['POST'])
+@app.route('/quiet/', methods=['POST'])
+@app.route('/quiet/chat/completions', methods=['POST'])
 def proxy():
     print(f"{SGR_BOLD_ON}{SEPARATOR}{SGR_BOLD_OFF}")
 
-    ref_time = print_timed_message("Processing request...")
+    ref_time = print_timed_message(f"Processing {request.path} ...")
 
     try:
         response, status = handle_proxy()
