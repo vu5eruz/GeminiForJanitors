@@ -16,13 +16,31 @@ else:
     from gevent import monkey
     monkey.patch_all()
 
+
+# Production requires XUID_SECRET to be set non-empty, Development can make one
+
+XUID_SECRET = os.environ.get("XUID_SECRET")
+
+if not XUID_SECRET:
+    if PRODUCTION:
+        print("!!! CRITICAL: Production deployment without a XUID_SECRET. Aborting. !!!")
+        sys.exit(1)
+    else:
+        import secrets
+        XUID_SECRET = secrets.token_bytes(32)
+
+if isinstance(XUID_SECRET, str):
+    XUID_SECRET = XUID_SECRET.encode('utf-8')
+
 ################################################################################
 
+import hashlib
+import hmac
 import json
 import logging
 import requests
-import time
 import threading
+import time
 import traceback
 from flask import Flask, Response, request
 from flask_cors import CORS
@@ -133,6 +151,10 @@ def print_timed_message(message, prev_ref_time=None):
 
     return current_ref_time
 
+def make_xuid(user):
+    xuid = hmac.new(XUID_SECRET, user.encode('utf-8'), hashlib.sha256).hexdigest()
+    return xuid, xuid[:8].upper()
+
 # This is all JanitorAI seems to need to present a custom error message.
 def error_message(message):
     return { 'error': message }
@@ -164,6 +186,8 @@ def handle_proxy():
         return error_message("Unauthorized. API key required."), 401
 
     jai_api_key = request_auth[len('Bearer '):]
+
+    jai_xuid, jai_xuid_short = make_xuid(jai_api_key)
 
 
     # Streaming isn't and won't be implemented as it could increase rejections
@@ -255,7 +279,7 @@ def handle_proxy():
     # Let's get this bread
 
     try:
-        print("Sending request to Google AI...")
+        print(f"Sending request from {jai_xuid_short} to Google AI...")
 
         response = requests.post(
             f'https://generativelanguage.googleapis.com/v1beta/models/{jai_model}:generateContent',
