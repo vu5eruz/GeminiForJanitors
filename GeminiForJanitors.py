@@ -141,56 +141,19 @@ def print_timed_message(message, prev_ref_time=None):
 def error_message(message):
     return { 'error': message }
 
-# For pretty output
-def proxy_wrapper(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        print()
-        print(f"{SGR_BOLD_ON}{SEPARATOR}{SGR_BOLD_OFF}")
+def chat_response(message):
+    return {
+        'choices': [{
+            'index': 0,
+            'message': {
+                'role': 'assistant',
+                'content': message,
+            },
+            'finish_reason': 'stop'
+        }]
+    }
 
-        ref_time = print_timed_message("Processing request...")
-
-        try:
-            response, status = func(*args, **kwargs)
-        except Exception as e:
-            response, status = (error_message("Internal Proxy Error"), 500)
-
-            print(end=SGR_FORE_RED)
-            print(f"Unexpected error in {func.__name__} handler.")
-            traceback.print_exception(e)
-            print(end=SGR_FORE_DEFAULT)
-
-        if 200 <= status <= 299:
-            print_timed_message("Processing succeeded", ref_time)
-        else:
-            print_timed_message(f"Processing failed.", ref_time)
-            print(f"{SGR_FORE_RED}{status} {response['error']}{SGR_FORE_DEFAULT}")
-
-        print(f"{SGR_BOLD_ON}{SEPARATOR}{SGR_BOLD_OFF}")
-
-        return Response(
-            response=json.dumps(response),
-            status=status,
-            mimetype='text/json')
-
-    return wrapper
-
-################################################################################
-
-app = Flask(__name__)
-CORS(app) # JanitorAI requires CORS on proxies
-
-@app.route('/', methods=['GET'])
-def index():
-    return Response(
-        response=INDEX,
-        status=200,
-        mimetype='text/html')
-
-@app.route('/', methods=['POST'])
-@app.route('/chat/completions', methods=['POST'])
-@proxy_wrapper
-def proxy():
+def handle_proxy():
     request_json = request.get_json(silent=True)
     if not request_json:
         return error_message("Bad Request. Missing or invalid JSON from JanitorAI."), 400
@@ -324,7 +287,6 @@ def proxy():
 
     if not response.ok:
         message = "Google AI error: " + response_json.get('error', {}).get('message', "unknown")
-        print(message)
         return error_message(message), response.status_code
 
 
@@ -336,12 +298,8 @@ def proxy():
     gem_feedback   = response_json.get('promptFeedback', {})
 
     if not isinstance(gem_canditate, dict):
-        # TODO: test this code path
-        block_reason  = gem_feedback.get('blockReason', 'UNKNOWN')
-        block_message = gem_feedback.get('blockReasonMessage', '.')
-        print(f"None or null first candidate response. {block_reason = }")
-        print(block_message)
-        return error_message(f"Response blocked (reason: {block_reason}). Adjust safety settings."), 502
+        message = "Response blocked. Reason: " + gem_feedback.get('blockReason', 'UNKNOWN')
+        return error_message(message), 502
 
     gem_chat_response = ''
     gem_chat_thinking = ''
@@ -378,16 +336,48 @@ def proxy():
 
     # All done and good
 
-    return {
-        'choices': [{
-            'index': 0,
-            'message': {
-                'role': 'assistant',
-                'content': gem_chat_response,
-            },
-            'finish_reason': 'stop'
-        }]
-    }, 200
+    return chat_response(gem_chat_response), 200
+
+################################################################################
+
+app = Flask(__name__)
+CORS(app) # JanitorAI requires CORS on proxies
+
+@app.route('/', methods=['GET'])
+def index():
+    return Response(
+        response=INDEX,
+        status=200,
+        mimetype='text/html')
+
+@app.route('/', methods=['POST'])
+@app.route('/chat/completions', methods=['POST'])
+def proxy():
+    print(f"{SGR_BOLD_ON}{SEPARATOR}{SGR_BOLD_OFF}")
+
+    ref_time = print_timed_message("Processing request...")
+
+    try:
+        response, status = handle_proxy()
+    except Exception as e:
+        response, status = (error_message("Internal Proxy Error"), 500)
+
+        print(end=SGR_FORE_RED)
+        traceback.print_exception(e)
+        print(end=SGR_FORE_DEFAULT)
+
+    if 200 <= status <= 299:
+        print_timed_message("Processing succeeded", ref_time)
+    else:
+        print_timed_message(f"Processing failed.", ref_time)
+        print(f"{SGR_FORE_RED}{status} {response['error']}{SGR_FORE_DEFAULT}")
+
+    print(f"{SGR_BOLD_ON}{SEPARATOR}{SGR_BOLD_OFF}")
+
+    return Response(
+        response=json.dumps(response),
+        status=status,
+        mimetype='text/json')
 
 @app.route('/health', methods=["GET"])
 def health():
