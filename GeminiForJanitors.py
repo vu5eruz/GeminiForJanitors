@@ -3,7 +3,7 @@
 
 ################################################################################
 
-# Development requires an environment variable DEVELOPMENT set non-empty
+# Development requires an environment variable DEVELOPMENT to be set non-empty
 
 import os
 
@@ -115,6 +115,7 @@ def print_settings():
     print()
     print(end=SGR_BOLD_ON + SGR_FORE_GREEN)
     print(f"{PROXY_NAME} ({PROXY_VERSION}) settings:")
+    print(f" * {PRODUCTION = }")
     print(f" * {SAFETY_SETTINGS_THRESHOLD = }")
     print(f" * {TOP_K = }")
     print(f" * {TOP_P = }")
@@ -289,9 +290,9 @@ def proxy():
 
     # Let's get this bread
 
-    print(end="Sending request to Google AI...", flush=True)
-
     try:
+        print("Sending request to Google AI...")
+
         response = requests.post(
             f'https://generativelanguage.googleapis.com/v1beta/models/{jai_model}:generateContent',
             json={
@@ -309,11 +310,12 @@ def proxy():
             },
             timeout=REQUEST_TIMEOUT_IN_SECONDS
         )
+
+        print("Received response from Google AI.", response.status_code, response.reason)
     except requests.exceptions.Timeout:
-        print(end=f" timeout\n", flush=True)
+        print("Request timeout after", REQUEST_TIMEOUT_IN_SECONDS, "seconds.")
         return error_message(f"Gateway Timeout. The request to Google AI timed out."), 504
 
-    print(end=f" {response.status_code} {response.reason}\n", flush=True)
 
     response_json = response.json()
     if not response_json:
@@ -394,7 +396,7 @@ def health():
 ################################################################################
 
 # Render.com makes many health checks and it pollutes the log.
-# Silence that.
+# Silence that, it makes the logs on the dashboard prettier.
 
 class HealthCheckFilter(logging.Filter):
     def filter(self, record):
