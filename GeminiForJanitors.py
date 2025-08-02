@@ -470,7 +470,7 @@ def handle_proxy():
     gem_finish_reason        = gem_candidate.get('finishReason', 'STOP')
 
 
-    print(f"Chat/Prompt length {gem_chat_prompt_length} tokens {gem_chat_prompt_tokens}.")
+    print(f"Chat/Prompt length {gem_chat_prompt_length} tokens {gem_chat_prompt_tokens} messages {len(gem_chat_prompt_content)}.")
     print(f"Response length {len(gem_chat_response)} tokens {gem_chat_response_tokens}.")
     print(f"Thinking length {len(gem_chat_thinking)} tokens {gem_chat_thinking_tokens}.")
 
