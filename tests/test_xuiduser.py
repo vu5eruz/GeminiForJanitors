@@ -79,7 +79,7 @@ def test_xuid_len():
     "storage",
     [
         LocalUserStorage(),
-        RedisUserStorage(),
+        RedisUserStorage(timeout=2.5),
     ],
 )
 def test_storage(storage):

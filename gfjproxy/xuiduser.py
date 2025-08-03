@@ -142,15 +142,20 @@ class LocalUserStorage(UserStorage):
 class RedisUserStorage(UserStorage):
     """Implements an user storage backed up by a Redis server.
 
-    :param url: redis:// URL of the Redis server. Defaults to localhost."""
+    :param url: redis:// URL of the Redis server. Defaults to localhost.
+    :param timeout: Socket timeouts in seconds."""
+
+    DEFAULT_URL = "redis://localhost:6379/"
 
     EXPIRY_TIME_IN_SECONDS = 30 * 24 * 60 * 60  # Arbitrary
 
-    def __init__(self, url: str = "redis://localhost:6379/0"):
+    def __init__(self, url: str = DEFAULT_URL, timeout: float = 30):
         try:
-            self._client = redis.from_url(url)
+            self._client = redis.from_url(url,
+                socket_timeout = timeout,
+                socket_connect_timeout = timeout)
             self._client.ping()
-        except redis.exceptions.ConnectionError:
+        except redis.exceptions.RedisError:
             self._client = None
 
     def active(self) -> bool:
