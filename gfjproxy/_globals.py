@@ -31,7 +31,7 @@ def _append_git_version(version):
 
 ################################################################################
 
-if _env.get("GEMINIFORJANITORS_DEVELOPMENT"):
+if _env.get("GFJPROXY_DEVELOPMENT"):
     DEVELOPMENT = True
     PRODUCTION = False
 else:
@@ -40,7 +40,7 @@ else:
 
 ################################################################################
 
-CLOUDFLARED = _env.get("GEMINIFORJANITORS_CLOUDFLARED")
+CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 
 ################################################################################
 
@@ -49,5 +49,9 @@ PROXY_AUTHORS = [
 ]
 
 PROXY_VERSION = _append_git_version("2025.08.02")
+
+################################################################################
+
+REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
 ################################################################################
