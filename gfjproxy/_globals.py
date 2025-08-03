@@ -40,6 +40,10 @@ else:
 
 ################################################################################
 
+CLOUDFLARED = _env.get("GEMINIFORJANITORS_CLOUDFLARED")
+
+################################################################################
+
 PROXY_AUTHORS = [
     "@undefinedundefined (vu5eruz on GitHub)",
 ]

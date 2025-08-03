@@ -4,8 +4,9 @@ from click import echo
 from colorama import just_fix_windows_console
 from flask import Flask, request, redirect
 from flask_cors import CORS
-from ._globals import PRODUCTION, PROXY_VERSION
+from ._globals import CLOUDFLARED, PRODUCTION, PROXY_VERSION
 from .logging import hijack_loggers, xlog
+from .utils import run_cloudflared
 from .xuiduser import LocalUserStorage, UserSettings, XUID
 
 just_fix_windows_console()
@@ -23,6 +24,9 @@ if PRODUCTION:
     echo(" * Production deployment")
 else:
     echo(" * Development deployment")
+
+if CLOUDFLARED is not None:
+    run_cloudflared(CLOUDFLARED)
 
 ################################################################################
 
