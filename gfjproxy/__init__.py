@@ -1,7 +1,7 @@
-"""GFJ Proxy."""
+"""GeminiForJanitors: Google AI Studio Proxy for JanitorAI"""
 
+from ._globals import PROXY_AUTHORS, PROXY_VERSION
 from .app import app
-from .globals import PROXY_AUTHORS, PROXY_VERSION
 from .xuiduser import (
     XUID,
     LocalUserStorage,
