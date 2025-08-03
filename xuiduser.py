@@ -5,8 +5,6 @@ The proxy has no access to any user-unique data or info except their API keys.
 Hashing an API key with a secret salt gives an unique user ID for program use.
 """
 
-# xuiduser
-
 from base64 import urlsafe_b64encode as _base64
 from colorama.ansi import Fore as _colorama_ansi_fore
 from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
