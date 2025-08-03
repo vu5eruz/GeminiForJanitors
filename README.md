@@ -1,9 +1,9 @@
 <div align="center">
-  <h1>GeminiForJanitors</h1>
+  <h2>GeminiForJanitors</h1>
   <p>Google AI Studio Proxy for JanitorAI</p>
 </div>
 
-## Running
+### Running
 
 Before you can run the proxy inside a local/development environment, you need to export the environmental variable `GEMINIFORJANITORS_DEVELOPMENT` set to any non-empty value. Otherwise, the proxy will assume a cloud/production deployment and demand more configuration. Any of the following commands can be used to run the proxy.
 
