@@ -1,5 +1,5 @@
 <div align="center">
-  <h3>GeminiForJanitors</h3>
+  <h1>GeminiForJanitors</h1>
   <p>Google AI Studio Proxy for JanitorAI</p>
 </div>
 
@@ -12,3 +12,5 @@ flask run -h 127.0.0.1 -p 5000
 gunicorn -b 127.0.0.1:5000 -k gevent -w 3 -t 65 app:app
 waitress-serve --listen=127.0.0.1:5000 app:app
 ```
+
+Running the proxy with `gunicorn` is the preferred way for a cloud/production deployment.
