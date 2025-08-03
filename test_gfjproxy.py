@@ -1,7 +1,7 @@
 import pytest
 import secrets
 
-from xuiduser import XUID, LocalUserStorage
+from gfjproxy.xuiduser import XUID, LocalUserStorage
 
 ################################################################################
 
