@@ -1,5 +1,7 @@
 """Proxy global variables."""
 
+from os import environ as _env
+
 
 # Based on https://github.com/numpy/numpy/blob/c6169853b871411ef207db1987a27f134a89b1cb/numpy/_build_utils/gitversion.py#L21
 def _append_git_version(version):
@@ -8,7 +10,7 @@ def _append_git_version(version):
 
     try:
         p = subprocess.Popen(
-            ["git", "log", "-1", '--format="%H"'],
+            ["git", "log", "-1", "--format=%H"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=os.path.dirname(__file__),
@@ -26,6 +28,15 @@ def _append_git_version(version):
 
     return version
 
+
+################################################################################
+
+if _env.get("GEMINIFORJANITORS_DEVELOPMENT"):
+    DEVELOPMENT = True
+    PRODUCTION = False
+else:
+    DEVELOPMENT = False
+    PRODUCTION = True
 
 ################################################################################
 

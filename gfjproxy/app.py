@@ -1,13 +1,28 @@
 """Proxy Application."""
 
+from click import echo
 from colorama import just_fix_windows_console
 from flask import Flask, request, redirect
 from flask_cors import CORS
+from ._globals import PRODUCTION, PROXY_VERSION
 from .logging import hijack_loggers, logxuid
 from .xuiduser import XUID
 
 just_fix_windows_console()
 hijack_loggers()
+
+################################################################################
+
+# Proxy startup banner
+# This is made to match up with Flask's own startup banner
+# Flask uses click.echo for these messages
+
+echo(f"GeminiForJanitors ({PROXY_VERSION})")
+
+if PRODUCTION:
+    echo(" * Production deployment")
+else:
+    echo(" * Development deployment")
 
 ################################################################################
 
