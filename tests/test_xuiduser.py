@@ -1,7 +1,7 @@
 import pytest
 import secrets
 
-from gfjproxy.xuiduser import XUID, LocalUserStorage
+from gfjproxy.xuiduser import LocalUserStorage, RedisUserStorage, XUID
 
 ################################################################################
 
@@ -79,10 +79,16 @@ def test_xuid_len():
     "storage",
     [
         LocalUserStorage(),
+        RedisUserStorage(),
     ],
 )
 def test_storage(storage):
     """Basic storage tests."""
+
+    if not storage.active():
+        # RedisUserStorage is inactive if there isn't any local Redis server
+        pytest.skip("Inactive storage")
+        return
 
     salt = secrets.token_bytes(32)
 

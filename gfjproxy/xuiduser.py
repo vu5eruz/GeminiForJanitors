@@ -5,6 +5,8 @@ The proxy has no access to any user-unique data or info except their API keys.
 Hashing an API key with a secret salt gives an unique user ID for program use.
 """
 
+import json
+import redis
 from base64 import urlsafe_b64encode as _base64
 from colorama.ansi import Fore as _colorama_ansi_fore
 from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
@@ -92,7 +94,12 @@ class UserStorage:
     """Abstract base class for a key-value storage.
 
     When a method return True, it means the given user exists in the storage.
-    A method return False to indicate that a user isn't or wasn't stored."""
+    A method returns False to indicate that a user isn't or wasn't stored."""
+
+    def active(self) -> bool:
+        """Returns true if the storage is active and can be used.
+        Using an inactive storage will most likely cause errors."""
+        raise NotImplementedError("UserStorage.active")
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         """Gets the user data if they exist in the storage."""
@@ -109,10 +116,13 @@ class UserStorage:
 
 
 class LocalUserStorage(UserStorage):
-    """Implements a non-persistent in-memory storage."""
+    """Implements a non-persistent in-memory user storage."""
 
     def __init__(self):
         self._storage: dict[XUID, dict] = dict()
+
+    def active(self) -> bool:
+        return True
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         data = self._storage.get(xuid)
@@ -130,7 +140,36 @@ class LocalUserStorage(UserStorage):
 
 
 class RedisUserStorage(UserStorage):
-    pass  # TODO
+    """Implements an user storage backed up by a Redis server.
+
+    :param url: redis:// URL of the Redis server. Defaults to localhost."""
+
+    EXPIRY_TIME_IN_SECONDS = 30 * 24 * 60 * 60  # Arbitrary
+
+    def __init__(self, url: str = "redis://localhost:6379/0"):
+        try:
+            self._client = redis.from_url(url)
+            self._client.ping()
+        except redis.exceptions.ConnectionError:
+            self._client = None
+
+    def active(self) -> bool:
+        return self._client is not None
+
+    def get(self, xuid: XUID) -> tuple[dict, bool]:
+        data = self._client.get(repr(xuid))
+        if data:
+            return json.loads(data), True
+        return {}, False
+
+    def put(self, xuid: XUID, data: dict) -> bool:
+        xuid_in_storage = self._client.exists(repr(xuid))
+        self._client.set(repr(xuid), json.dumps(data))
+        return xuid_in_storage
+
+    def rem(self, xuid: XUID):
+        if self._client.delete(repr(xuid)) == 0:
+            raise KeyError(repr(xuid))
 
 
 ################################################################################
@@ -148,6 +187,10 @@ class UserSettings:
         self._xuid = xuid
 
         self._data, self._exists = self._storage.get(self._xuid)
+
+    @property
+    def xuid(self):
+        return self._xuid
 
 
 ################################################################################
