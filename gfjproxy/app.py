@@ -1,12 +1,13 @@
 """Proxy Application."""
 
+import json
 from click import echo
 from colorama import just_fix_windows_console
-from flask import Flask, request, redirect
+from flask import Flask, Response, abort, request, redirect
 from flask_cors import CORS
 from ._globals import CLOUDFLARED, PRODUCTION, PROXY_VERSION
 from .logging import hijack_loggers, xlog
-from .utils import run_cloudflared
+from .utils import is_proxy_test, run_cloudflared
 from .xuiduser import LocalUserStorage, UserSettings, XUID
 
 just_fix_windows_console()
@@ -58,18 +59,53 @@ def health():
 @app.route("/quiet/", methods=["POST"])
 @app.route("/quiet/chat/completions", methods=["POST"])
 def proxy():
+    request_json = request.get_json(silent=True)
+    if not request_json:  # This should never happen.
+        abort(400, "Bad Request. Missing or invalid JSON.")
+
+    # JanitorAI, as of 2025.08.03, has an idiosyncratic way of handling errors.
+    # Should the proxy return an error, JanitorAI will show it to the user, but:
+    # - Normal chat requests expect a regular plain text response. (nice)
+    # - Proxy test requests expect a JSON object with an "error" key. (eww)
+    # First things first, we have to determine if the requests is a proxy test,
+    # then we can select an error handler that uses the right format.
+
+    proxy_test = is_proxy_test(request_json)
+    if proxy_test:
+
+        def make_error(message: str, status: int) -> Response:
+            return Response(
+                response=json.dumps({"error": message}),
+                status=status,
+                content_type="application/json; charset=utf-8",
+            )
+
+    else:  # Normal chat
+
+        def make_error(message: str, status: int) -> Response:
+            return Response(
+                response=message,
+                status=int(status),
+                content_type="text/plain; charset=utf-8",
+            )
+
+    # JanitorAI provides the user's API key through HTTP Bearer authentication.
+    # Google AI cannot be used without an API key and neither can this proxy.
+
     request_auth = request.headers.get("authorization", "").split(" ")
     if len(request_auth) != 2 or request_auth[0] != "Bearer":
-        return "Unauthorized. API key required.", 401
+        return make_error("Unauthorized. API key required.", 401)
+
+    api_key = request_auth[1]
 
     user = UserSettings(
         LocalUserStorage(),
-        XUID(request_auth[1], "The Quick Brown Fox Jumps Over The Lazy Dog"),
+        XUID(api_key, "The Quick Brown Fox Jumps Over The Lazy Dog"),
     )
 
     xlog(user, "Handling proxy")
 
-    return "Not Implemented", 501
+    return make_error("Not Implemented", 501)
 
 
 ################################################################################
