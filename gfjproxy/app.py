@@ -5,8 +5,8 @@ from colorama import just_fix_windows_console
 from flask import Flask, request, redirect
 from flask_cors import CORS
 from ._globals import PRODUCTION, PROXY_VERSION
-from .logging import hijack_loggers, logxuid
-from .xuiduser import XUID
+from .logging import hijack_loggers, xlog
+from .xuiduser import LocalUserStorage, UserSettings, XUID
 
 just_fix_windows_console()
 hijack_loggers()
@@ -38,7 +38,7 @@ def index():
     if requested_path != "/":
         return redirect("/", code=301)
 
-    logxuid(None, "Handling index")
+    xlog(None, "Handling index")
 
     return "Hello, World!", 200
 
@@ -46,8 +46,6 @@ def index():
 @app.route("/health")
 @app.route("/healthz")
 def health():
-    logxuid(None, "Handling health")
-
     return "All good.", 200
 
 
@@ -56,11 +54,16 @@ def health():
 @app.route("/quiet/", methods=["POST"])
 @app.route("/quiet/chat/completions", methods=["POST"])
 def proxy():
-    logxuid(None, "Handling proxy")
+    request_auth = request.headers.get("authorization", "").split(" ")
+    if len(request_auth) != 2 or request_auth[0] != "Bearer":
+        return "Unauthorized. API key required.", 401
 
-    xuid = XUID("john smith", "The Quick Brown Fox Jumps Over The Lazy Dog")
+    user = UserSettings(
+        LocalUserStorage(),
+        XUID(request_auth[1], "The Quick Brown Fox Jumps Over The Lazy Dog"),
+    )
 
-    logxuid(xuid, "Lorem Ipsum")
+    xlog(user, "Handling proxy")
 
     return "Not Implemented", 501
 

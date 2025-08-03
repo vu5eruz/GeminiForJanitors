@@ -1,12 +1,12 @@
 """Proxy Logging System."""
 
 import logging
-from .xuiduser import XUID
+from .xuiduser import XUID, UserSettings
 
 ################################################################################
 
 
-class CustomFilter(logging.Filter):
+class _CustomFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if not super().filter(record):
             return False
@@ -34,7 +34,7 @@ class CustomFilter(logging.Filter):
         return True
 
 
-class CustomFormatter(logging.Formatter):
+class _CustomFormatter(logging.Formatter):
     def __init__(self, filler: str | None = None):
         if filler is None:
             filler = "=" * XUID.LEN_PRETTY
@@ -49,9 +49,9 @@ class CustomFormatter(logging.Formatter):
         )
 
 
-def custom_handler(filler: str | None = None) -> logging.StreamHandler:
+def _custom_handler(filler: str | None = None) -> logging.StreamHandler:
     handler = logging.StreamHandler()
-    handler.setFormatter(CustomFormatter(filler))
+    handler.setFormatter(_CustomFormatter(filler))
     return handler
 
 
@@ -66,7 +66,7 @@ def hijack_loggers() -> list[str]:
     def sanitize(logger):
         """Remove all handlers other than our CustomFormatter."""
         for handler in logger.handlers:
-            if not isinstance(handler, CustomFormatter):
+            if not isinstance(handler, _CustomFormatter):
                 logger.removeHandler(handler)
 
     def is_logger_present(name):
@@ -75,8 +75,8 @@ def hijack_loggers() -> list[str]:
     def hijack():
         if is_logger_present("gunicorn.access"):
             logger = logging.getLogger("gunicorn.access")
-            logger.addFilter(CustomFilter())
-            logger.addHandler(custom_handler("gunicorn.access"))
+            logger.addFilter(_CustomFilter())
+            logger.addHandler(_custom_handler("gunicorn.access"))
             sanitize(logger)
 
         # Werkzeug's logger needs a delay otherwise hijacking has no effect
@@ -84,8 +84,8 @@ def hijack_loggers() -> list[str]:
 
         if is_logger_present("werkzeug"):
             logger = logging.getLogger("werkzeug")
-            logger.addFilter(CustomFilter())
-            logger.addHandler(custom_handler("werkzeug"))
+            logger.addFilter(_CustomFilter())
+            logger.addHandler(_custom_handler("werkzeug"))
             sanitize(logger)
 
     hijack_thread = Thread(target=hijack, daemon=True)
@@ -94,17 +94,19 @@ def hijack_loggers() -> list[str]:
 
 ################################################################################
 
-logger = logging.getLogger("gfjproxy")
-logger.addHandler(custom_handler())
-logger.propagate = False
-logger.setLevel(logging.INFO)
+_logger = logging.getLogger("gfjproxy")
+_logger.addHandler(_custom_handler())
+_logger.propagate = False
+_logger.setLevel(logging.INFO)
 
 
-def logxuid(xuid: XUID | None, msg: str, *args, **kwargs):
+def xlog(filler: UserSettings | XUID | None, msg: str, *args, **kwargs):
     extra = {}
-    if xuid is not None:
-        extra["filler"] = xuid.pretty()
-    logger.info(msg.strip(), *args, **kwargs, extra=extra)
+    if filler is not None:
+        if isinstance(filler, UserSettings):
+            filler = filler.xuid
+        extra["filler"] = filler.pretty()
+    _logger.info(msg.strip(), *args, **kwargs, extra=extra)
 
 
 ################################################################################
