@@ -151,9 +151,9 @@ class RedisUserStorage(UserStorage):
 
     def __init__(self, url: str = DEFAULT_URL, timeout: float = 30):
         try:
-            self._client = redis.from_url(url,
-                socket_timeout = timeout,
-                socket_connect_timeout = timeout)
+            self._client = redis.from_url(
+                url, socket_timeout=timeout, socket_connect_timeout=timeout
+            )
             self._client.ping()
         except redis.exceptions.RedisError:
             self._client = None
