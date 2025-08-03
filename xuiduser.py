@@ -39,10 +39,16 @@ class XUID:
       >>> XUID_SALT = secrets.token_bytes(32) # or os.environ["XUID_SALT"]
       >>> user_api_key = "..." # provided to the proxy during a request
       >>> xuid = xuiduser.XUID(user_api_key, XUID_SALT)
-    """
 
-    LEN_REPR = len("xuid:") + (4 * _hash_fun().digest_size + 2) // 3
+    Notes::
+
+      Comparing XUIDs with other types causes an exception, which can lead to
+      issues should a XUID be part of any collections with heterogeneous types.
+      This is the intended behavior. XUIDs must be handled with utmost care."""
+
+    LEN_REPR = (4 * _hash_fun().digest_size + 2) // 3
     LEN_STR = 8  # Arbitrary, could be made a global proxy settings
+    LEN_PRETTY = LEN_STR + 2  # Does not includes non-visible ANSI escape codes
 
     def __init__(self, user: str | bytes, salt: str | bytes):
         user = user.encode("utf-8") if isinstance(user, str) else user
@@ -57,7 +63,7 @@ class XUID:
     def __repr__(self) -> str:
         """Returns the full XUID value representation as a string.
         This is safe to handle and can be used as an alternative XUID form."""
-        return f"xuid:{self._xuid_str}"
+        return self._xuid_str
 
     def __str__(self) -> str:
         """Returns a shortened XUID value representation as a string.
@@ -65,29 +71,18 @@ class XUID:
         return self._xuid_str[: XUID.LEN_STR]
 
     def __eq__(self, other) -> bool:
+        """Returns true if both XUIDs represent the same user and salt.
+        Raises TypeError when comparing with any type other an XUID, even None.
+        Doing that is a severe program error that should not happen."""
         if not isinstance(other, XUID):
-            # This SHOULD NOT happen, raise a hard and explicit error
             raise TypeError(f"Can't compare a XUID with {type(other).__name__}")
         return self._xuid_raw == other._xuid_raw
 
-    def __ne__(self, other) -> bool:
-        if not isinstance(other, XUID):
-            # This SHOULD NOT happen, raise a hard and explicit error
-            raise TypeError(f"Can't compare a XUID with {type(other).__name__}")
-        return self._xuid_raw != other._xuid_raw
-
     def pretty(self) -> str:
         """Returns a prettified, shortened XUID value string for printing.
-        This includes ANSI escape codes and is not meant for processing."""
+        This includes ANSI escape codes and is only meant for logging."""
         color = _color_palette[hash(self) % len(_color_palette)]
         return f"{color}<{self}>{_color_reset}"
-
-
-################################################################################
-
-
-class UserSettings:
-    pass  # TODO
 
 
 ################################################################################
@@ -104,7 +99,7 @@ class UserStorage:
         raise NotImplementedError("UserStorage.get")
 
     def put(self, xuid: XUID, data: dict) -> bool:
-        """Puts the user data in the storage, overwriting any old data."""
+        """Puts the user data into the storage, overwriting any old data."""
         raise NotImplementedError("UserStorage.put")
 
     def rem(self, xuid: XUID):
@@ -136,6 +131,23 @@ class LocalUserStorage(UserStorage):
 
 class RedisUserStorage(UserStorage):
     pass  # TODO
+
+
+################################################################################
+
+
+class UserSettings:
+    """User Settings manager class.
+
+    :param storage: Any UserStorage instance.
+    :param xuid: XUID of the user.
+    """
+
+    def __init__(self, storage: UserStorage, xuid: XUID):
+        self._storage = storage
+        self._xuid = xuid
+
+        self._data, self._exists = self._storage.get(self._xuid)
 
 
 ################################################################################
