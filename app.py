@@ -1,6 +1,6 @@
 """Proxy Application."""
 
-from flask import Flask, Response, request, redirect, url_for
+from flask import Flask, request, redirect
 from flask_cors import CORS
 
 ################################################################################
@@ -14,16 +14,16 @@ CORS(app)
 @app.route("/index.html", methods=["GET"])
 def index():
     requested_path = request.path
-    if requested_path == "/index.html":
-        return redirect(url_for("index"), code=301)
+    if requested_path != "/":
+        return redirect("/", code=301)
 
-    return "Hello, World!", 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return "Hello, World!", 200
 
 
 @app.route("/health")
 @app.route("/healthz")
 def health():
-    return "All good.", 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return "All good.", 200
 
 
 @app.route("/", methods=["POST"])
@@ -31,7 +31,7 @@ def health():
 @app.route("/quiet/", methods=["POST"])
 @app.route("/quiet/chat/completions", methods=["POST"])
 def proxy():
-    return "Not Implemented", 501, {"Content-Type": "text/plain; charset=utf-8"}
+    return "Not Implemented", 501
 
 
 ################################################################################
