@@ -10,8 +10,6 @@ from colorama.ansi import Fore as _colorama_ansi_fore
 from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
 from hmac import digest as _hmac_digest
 
-__all__ = ["XUID", "UserSettings"]
-
 _color_palette = [
     # no black, it'd be unreadable on dark theme
     _colorama_ansi_fore.RED,
