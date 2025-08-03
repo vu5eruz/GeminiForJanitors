@@ -1,5 +1,5 @@
 <div align="center">
-  <h2>GeminiForJanitors</h1>
+  <h2>GeminiForJanitors</h2>
   <p>Google AI Studio Proxy for JanitorAI</p>
 </div>
 
