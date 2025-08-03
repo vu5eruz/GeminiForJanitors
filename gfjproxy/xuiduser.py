@@ -194,6 +194,10 @@ class UserSettings:
         self._data, self._exists = self._storage.get(self._xuid)
 
     @property
+    def exists(self):
+        return self._exists
+
+    @property
     def xuid(self):
         return self._xuid
 
