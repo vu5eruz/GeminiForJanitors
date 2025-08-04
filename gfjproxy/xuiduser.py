@@ -11,6 +11,7 @@ from base64 import urlsafe_b64encode as _base64
 from colorama.ansi import Fore as _colorama_ansi_fore
 from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
 from hmac import digest as _hmac_digest
+from time import time as _unix_time
 
 _color_palette = [
     # no black, it'd be unreadable on dark theme
@@ -193,6 +194,11 @@ class UserSettings:
 
         self._data, self._exists = self._storage.get(self._xuid)
 
+        if not self._exists:
+            self._data["timestamp_first_seen"] = int(_unix_time())
+
+        self._data["version"] = 1
+
     @property
     def exists(self):
         return self._exists
@@ -200,6 +206,26 @@ class UserSettings:
     @property
     def xuid(self):
         return self._xuid
+
+    #########################
+
+    def last_seen_msg(self) -> str:
+        time_now = int(_unix_time())
+        timestamp_last_seen = self._data.get("timestamp_last_seen")
+        if isinstance(timestamp_last_seen, int):
+            return f"User last seen {time_now - timestamp_last_seen}s ago"
+        return "User not seen before"
+
+    def save(self):
+        self._data["timestamp_last_seen"] = int(_unix_time())
+        self._storage.put(self._xuid, self._data)
+
+    def do_show_banner(self, banner_version):
+        last_seen_banner = self._data.get("banner", 0)
+        if last_seen_banner != banner_version:
+            self._data["banner"] = banner_version
+            return True
+        return False
 
 
 ################################################################################
