@@ -42,16 +42,33 @@ else:
 
 CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 
-################################################################################
+PREFILL = "prefill.txt"
 
 PROXY_AUTHORS = [
     "@undefinedundefined (vu5eruz on GitHub)",
 ]
 
-PROXY_VERSION = _append_git_version("2025.08.02")
+PROXY_NAME = "GeminiForJanitors"
+
+PROXY_VERSION = _append_git_version("2025.08.04")
+
+REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
+
+XUID_SECRET = os.environ.get("XUID_SECRET")
 
 ################################################################################
 
-REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
+BANNER = rf"""***
+# {PROXY_NAME} ({PROXY_VERSION})
+
+Proxy had a major internal rewrite, development should be smoother. The database has been reset.
+
+You should only see this banner if you are a new user or there's been a new update.
+If you don't want to see these banners, change your proxy URL to: https://geminiforjanitors.onrender.com/quiet/
+You can always use the command //banner to receive the latest news.
+
+Feel free to reroll or edit this message to remove this banner."""
+
+BANNER_VERSION = 1
 
 ################################################################################
