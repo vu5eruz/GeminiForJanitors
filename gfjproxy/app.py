@@ -1,21 +1,33 @@
 """Proxy Application."""
 
-import json
 from click import echo
 from colorama import just_fix_windows_console
-from flask import Flask, Response, abort, request, redirect
+from flask import Flask, abort, request, redirect
 from flask_cors import CORS
-from ._globals import CLOUDFLARED, PRODUCTION, PROXY_VERSION
-from .logging import hijack_loggers, xlog
-from .utils import is_proxy_test, run_cloudflared
-from .xuiduser import LocalUserStorage, UserSettings, XUID
+from google import genai
+from secrets import token_bytes
+from traceback import print_exception
+from ._globals import (
+    CLOUDFLARED,
+    DEVELOPMENT,
+    PREFILL,
+    PRODUCTION,
+    PROXY_VERSION,
+    REDIS_URL,
+    XUID_SECRET,
+)
+from .handlers import handle_chat_message, handle_proxy_test
+from .models import JaiRequest
+from .logging import hijack_loggers, xlog, xlogtime
+from .utils import ResponseHelper, is_proxy_test, run_cloudflared
+from .xuiduser import LocalUserStorage, RedisUserStorage, UserSettings, XUID
 
 just_fix_windows_console()
 hijack_loggers()
 
 ################################################################################
 
-# Proxy startup banner
+# Proxy initialization with startup banner
 # This is made to match up with Flask's own startup banner
 # Flask uses click.echo for these messages
 
@@ -28,6 +40,35 @@ else:
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
+
+if REDIS_URL is not None:
+    storage = RedisUserStorage(REDIS_URL)
+    echo(" * Using Redis user storage")
+elif DEVELOPMENT:
+    storage = LocalUserStorage()
+    echo(" * WARNING: Using local user storage")
+else:
+    echo(" * ERROR: No user storage")
+    exit(1)
+
+try:
+    with open(PREFILL, encoding="utf-8") as prefill:
+        prefill = prefill.read()
+    echo(f" * Loaded prefill from file {PREFILL} ({len(prefill)} characters)")
+except FileNotFoundError:
+    echo(f" * ERROR: Prefill file {PREFILL} not found.")
+    prefill = ""
+
+if XUID_SECRET is not None:
+    echo(" * Using provided XUID secret")
+    xuid_secret = XUID_SECRET.encode("utf-8")
+elif DEVELOPMENT:
+    echo(" * WARNING: Using development XUID secret")
+    xuid_secret = token_bytes(32)
+else:
+    echo(" * ERROR: Missing XUID secret")
+    exit(1)
+
 
 ################################################################################
 
@@ -63,49 +104,55 @@ def proxy():
     if not request_json:  # This should never happen.
         abort(400, "Bad Request. Missing or invalid JSON.")
 
-    # JanitorAI, as of 2025.08.03, has an idiosyncratic way of handling errors.
-    # Should the proxy return an error, JanitorAI will show it to the user, but:
-    # - Normal chat requests expect a regular plain text response. (nice)
-    # - Proxy test requests expect a JSON object with an "error" key. (eww)
-    # First things first, we have to determine if the requests is a proxy test,
-    # then we can select an error handler that uses the right format.
+    request_path = request.path
 
     proxy_test = is_proxy_test(request_json)
-    if proxy_test:
 
-        def make_error(message: str, status: int) -> Response:
-            return Response(
-                response=json.dumps({"error": message}),
-                status=status,
-                content_type="application/json; charset=utf-8",
-            )
-
-    else:  # Normal chat
-
-        def make_error(message: str, status: int) -> Response:
-            return Response(
-                response=message,
-                status=int(status),
-                content_type="text/plain; charset=utf-8",
-            )
+    response = ResponseHelper(wrap_errors=proxy_test)
 
     # JanitorAI provides the user's API key through HTTP Bearer authentication.
     # Google AI cannot be used without an API key and neither can this proxy.
 
     request_auth = request.headers.get("authorization", "").split(" ")
     if len(request_auth) != 2 or request_auth[0] != "Bearer":
-        return make_error("Unauthorized. API key required.", 401)
+        return response.build_error("Unauthorized. API key required.", 401)
 
     api_key = request_auth[1]
+    user = UserSettings(storage, XUID(api_key, xuid_secret))
 
-    user = UserSettings(
-        LocalUserStorage(),
-        XUID(api_key, "The Quick Brown Fox Jumps Over The Lazy Dog"),
-    )
+    # Handle user's request
 
-    xlog(user, "Handling proxy")
+    ref_time = xlogtime(user, f"Processing {request_path} ({user.last_seen_msg()})")
 
-    return make_error("Not Implemented", 501)
+    jai_req = JaiRequest.parse(request_json)
+    jai_req.quiet = "/quiet/" in request_path
+
+    if jai_req.stream:
+        return response.build_error("Text streaming is not supported.", 400)
+
+    try:
+        client = genai.Client(api_key=api_key)
+
+        if proxy_test:
+            response = handle_proxy_test(client, user, jai_req, response)
+        else:
+            response = handle_chat_message(client, user, jai_req, response)
+    except Exception as e:
+        response.add_error("Internal Proxy Error", 500)
+        print_exception(e)
+
+    if 200 <= response.status <= 299:
+        xlogtime(user, "Processing succeeded", ref_time)
+    else:
+        xlogtime(
+            user,
+            f"Processing failed: {response.message}",
+            ref_time,
+        )
+
+    user.save()
+
+    return response.build()
 
 
 ################################################################################
