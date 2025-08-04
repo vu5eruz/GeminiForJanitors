@@ -1,6 +1,8 @@
 """Proxy Logging System."""
 
 import logging
+from time import monotonic
+from threading import Timer
 from .xuiduser import XUID, UserSettings
 
 ################################################################################
@@ -60,35 +62,24 @@ def hijack_loggers() -> list[str]:
 
     This is very hacky and very illegal, lol."""
 
-    from time import sleep
-    from threading import Thread
+    def hijack(names):
+        for name in names:
+            # Check whether the logger is present or not
+            if name in logging.root.manager.loggerDict:
+                logger = logging.getLogger(name)
+                logger.addFilter(_CustomFilter())
+                logger.addHandler(_custom_handler(name.split(".")[0]))
 
-    def sanitize(logger):
-        """Remove all handlers other than our CustomFormatter."""
-        for handler in logger.handlers:
-            if not isinstance(handler, _CustomFormatter):
-                logger.removeHandler(handler)
+                # Remove all handlers other than our CustomFormatter
+                for handler in logger.handlers:
+                    if not isinstance(handler, _CustomFormatter):
+                        logger.removeHandler(handler)
 
-    def is_logger_present(name):
-        return name in logging.root.manager.loggerDict
+                xlog(None, f"Hijacked logger '{name}'")
 
-    def hijack():
-        if is_logger_present("gunicorn.access"):
-            logger = logging.getLogger("gunicorn.access")
-            logger.addFilter(_CustomFilter())
-            logger.addHandler(_custom_handler("gunicorn.access"))
-            sanitize(logger)
-
-        # Werkzeug's logger needs a delay otherwise hijacking has no effect
-        sleep(2.5)  # Completely arbitrary value
-
-        if is_logger_present("werkzeug"):
-            logger = logging.getLogger("werkzeug")
-            logger.addFilter(_CustomFilter())
-            logger.addHandler(_custom_handler("werkzeug"))
-            sanitize(logger)
-
-    hijack_thread = Thread(target=hijack, daemon=True)
+    # Delay is completely arbitrary but seems to work fine
+    hijack_thread = Timer(2.5, hijack, (["gunicorn.access", "werkzeug"],))
+    hijack_thread.daemon = True
     hijack_thread.start()
 
 
@@ -100,13 +91,23 @@ _logger.propagate = False
 _logger.setLevel(logging.INFO)
 
 
-def xlog(filler: UserSettings | XUID | None, msg: str, *args, **kwargs):
+def xlog(user: UserSettings | None, msg: str):
     extra = {}
-    if filler is not None:
-        if isinstance(filler, UserSettings):
-            filler = filler.xuid
-        extra["filler"] = filler.pretty()
-    _logger.info(msg.strip(), *args, **kwargs, extra=extra)
+    if user is not None:
+        extra["filler"] = user.xuid.pretty()
+    _logger.info(msg.strip(), extra=extra)
+
+
+def xlogtime(user: UserSettings | None, msg: str, prev_time=None) -> float:
+    curr_time = monotonic()
+
+    diff_time_str = ""
+    if isinstance(prev_time, float):
+        diff_time_str = f" ({curr_time - prev_time:.1f}s)"
+
+    xlog(user, msg + diff_time_str)
+
+    return curr_time
 
 
 ################################################################################
