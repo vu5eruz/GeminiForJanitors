@@ -9,6 +9,7 @@ from secrets import token_bytes
 from traceback import print_exception
 from ._globals import (
     CLOUDFLARED,
+    MODELS,
     DEVELOPMENT,
     PREFILL,
     PRODUCTION,
@@ -122,18 +123,23 @@ def proxy():
 
     # Handle user's request
 
-    ref_time = xlogtime(user, f"Processing {request_path} ({user.last_seen_msg()})")
-
     jai_req = JaiRequest.parse(request_json)
     jai_req.quiet = "/quiet/" in request_path
 
-    if jai_req.stream:
-        return response.build_error("Text streaming is not supported.", 400)
+    client = genai.Client(api_key=api_key)
+
+    ref_time = xlogtime(user, f"Processing {request_path} ({user.last_seen_msg()})")
 
     try:
-        client = genai.Client(api_key=api_key)
-
-        if proxy_test:
+        if not jai_req.model:
+            response.add_error("Please specify a Gemini 2.5 model.", 400)
+        elif jai_req.model not in MODELS:
+            response.add_error(
+                f"Invalid or unsupported Gemini 2.5 model: {jai_req.model}", 400
+            )
+        elif jai_req.stream:
+            response.add_error("Text streaming is not supported.", 400)
+        elif proxy_test:
             response = handle_proxy_test(client, user, jai_req, response)
         else:
             response = handle_chat_message(client, user, jai_req, response)
