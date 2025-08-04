@@ -1,6 +1,7 @@
 import pytest
 import secrets
 
+from gfjproxy._globals import REDIS_URL
 from gfjproxy.xuiduser import LocalUserStorage, RedisUserStorage, XUID
 
 ################################################################################
@@ -78,17 +79,21 @@ def test_xuid_len():
 @pytest.mark.parametrize(
     "storage",
     [
-        LocalUserStorage(),
-        RedisUserStorage(timeout=2.5),
+        LocalUserStorage,
+        RedisUserStorage,
     ],
 )
 def test_storage(storage):
     """Basic storage tests."""
 
-    if not storage.active():
-        # RedisUserStorage is inactive if there isn't any local Redis server
-        pytest.skip("Inactive storage")
-        return
+    if storage == RedisUserStorage:
+        if not REDIS_URL:
+            pytest.skip("No REDIS_URL provided")
+        storage = storage(REDIS_URL, timeout=2.5)
+    else:
+        storage = storage()
+
+    assert storage.active()
 
     salt = secrets.token_bytes(32)
 
