@@ -1,5 +1,6 @@
 """Handlers."""
 
+from httpx import ReadTimeout
 from google import genai
 from google.genai import types
 from ._globals import BANNER, BANNER_VERSION
@@ -8,11 +9,7 @@ from .logging import xlog
 from .xuiduser import UserSettings
 
 
-# XXX: Investigate: It seems genai returns "Google AI had an internal error" on
-# timeout instead of a normal timeout exception. It is still within the timeout,
-# but it's quite jarring not being able to differentiate between actual internal
-# errors from Google AI and timeout.
-REQUEST_TIMEOUT_IN_SECONDS: float = 60.0
+REQUEST_TIMEOUT_IN_SECONDS: float = 60
 
 ################################################################################
 
@@ -43,6 +40,7 @@ def _gen_content(
         "temperature": jai_req.temperature,
         "top_k": 50,
         "top_p": 0.95,
+        "candidate_count": 1,
         "safety_settings": [
             types.SafetySetting(
                 threshold=types.HarmBlockThreshold.BLOCK_NONE,
@@ -80,17 +78,16 @@ def _gen_content(
         result = client.models.generate_content(
             model=jai_req.model, contents=contents, config=config
         )
-    except genai.errors.APIError as e:
-        xlog(user, f"{type(e).__name__}: {e.code} {e.status}: {e.message}")
-
-        if isinstance(e, genai.errors.ClientError):
-            # This would be "API key not valid.", 400
-            return e.message, e.code
-
-        if isinstance(e, genai.errors.ServerError):
-            return "Google AI had an internal error.", 502
-
-        return "Google AI returned an unknown error.", 502
+    except ReadTimeout:
+        return "Gateway Timeout", 504
+    except genai.errors.ClientError as e:
+        return e.message, e.code
+    except genai.errors.ServerError as e:
+        xlog(user, repr(e))  # Log these fellas for they are anomalous
+        return "Google AI had an internal error.", 502
+    except Exception as e:
+        xlog(user, repr(e))  # These are R E A L L Y anomalous
+        return "Unhanded exception from Google AI.", 502
 
     if result.candidates is None:
         if result.prompt_feedback is None:
@@ -140,10 +137,13 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
 
     response.add_message(result.text)
 
-    xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
-    xlog(user, f" - Response tokens {result.usage_metadata.candidates_token_count}")
-    xlog(user, f" - Thinking tokens {result.usage_metadata.thoughts_token_count}")
-    xlog(user, f" - Total    tokens {result.usage_metadata.total_token_count}")
+    if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
+        xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
+        xlog(user, f" - Response tokens {result.usage_metadata.candidates_token_count}")
+        xlog(user, f" - Thinking tokens {result.usage_metadata.thoughts_token_count}")
+        xlog(user, f" - Total    tokens {result.usage_metadata.total_token_count}")
+    else:
+        xlog(user, " - No usage metadata")
 
     if not jai_req.quiet and user.do_show_banner(BANNER_VERSION):
         xlog(user, "Showing user the latest banner")
