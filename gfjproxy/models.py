@@ -49,6 +49,8 @@ class JaiRequest:
     stream: bool = False
     temperature: int = 0
     use_prefill: bool = False  # Set by //prefill command
+    use_nobot: bool = False  # Set by //nobot command
+    use_squash: bool = False  # Set by //squash command
 
     @staticmethod
     def parse(data: dict | str):
