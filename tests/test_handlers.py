@@ -1,7 +1,7 @@
 import pytest
 from httpx import ReadTimeout
 from gfjproxy._globals import BANNER, BANNER_VERSION
-from gfjproxy.models import JaiRequest
+from gfjproxy.models import JaiMessage, JaiRequest
 from gfjproxy.handlers import handle_chat_message, handle_proxy_test
 from gfjproxy.utils import ResponseHelper
 from gfjproxy.xuiduser import LocalUserStorage, UserSettings, XUID
@@ -54,16 +54,11 @@ def make_mock_response(text):
 # Any of these errors could occur during proxy test and chat message.
 # Thus, that are to be tested on both handlers.
 
-COMMON_ERRORS = []
-
-COMMON_ERRORS.append(
+COMMON_ERRORS = [
     {
         "generate_content_mock": ReadTimeout(""),
         "expected_result": ("Gateway Timeout", 504),
-    }
-)
-
-COMMON_ERRORS.append(
+    },
     {
         "generate_content_mock": genai.errors.APIError(
             code=418,
@@ -73,10 +68,7 @@ COMMON_ERRORS.append(
             },
         ),
         "expected_result": ("Unhanded exception from Google AI.", 502),
-    }
-)
-
-COMMON_ERRORS.append(
+    },
     {
         "generate_content_mock": genai.errors.ClientError(
             code=400,
@@ -86,10 +78,7 @@ COMMON_ERRORS.append(
             },
         ),
         "expected_result": ("API key not valid. Please pass a valid API key.", 400),
-    }
-)
-
-COMMON_ERRORS.append(
+    },
     {
         "generate_content_mock": genai.errors.ServerError(
             code=500,
@@ -99,20 +88,17 @@ COMMON_ERRORS.append(
             },
         ),
         "expected_result": ("Google AI had an internal error.", 502),
-    }
-)
+    },
+]
 
 ################################################################################
 
-PROXY_TESTS = []
-
-
-PROXY_TESTS.append(
+PROXY_TESTS = [
     {
         "generate_content_mock": make_mock_response("TEST"),
         "expected_result": ("TEST", 200),
-    }
-)
+    },
+]
 
 
 @pytest.mark.parametrize(
@@ -150,49 +136,34 @@ def test_proxy_test(params):
 ################################################################################
 
 
-CHAT_MESSAGE_TESTS = []
-
-# Blank-slate users should get the bot response plus the latest banner
-CHAT_MESSAGE_TESTS.append(
-    {
+CHAT_MESSAGE_TESTS = [
+    {  # Blank-slate users should get the bot response plus the latest banner
         "generate_content_mock": make_mock_response("Bot response."),
         "expected_result": ("Bot response.\n" + BANNER, 200),
         "extra_settings": [],
-    }
-)
-
-# Blank-slate users on /quiet/ should not see any banner
-CHAT_MESSAGE_TESTS.append(
-    {
+    },
+    {  # Blank-slate users on /quiet/ should not see any banner
         "generate_content_mock": make_mock_response("Bot response."),
         "expected_result": ("Bot response.", 200),
         "extra_settings": [
             ("jai_req_quiet", True),
         ],
-    }
-)
-
-# Users that already saw the latest banner should not see it again
-CHAT_MESSAGE_TESTS.append(
-    {
+    },
+    {  # Users that already saw the latest banner should not see it again
         "generate_content_mock": make_mock_response("Bot response."),
         "expected_result": ("Bot response.", 200),
         "extra_settings": [
             ("call_do_show_banner", BANNER_VERSION),
         ],
-    }
-)
-
-# Users that saw a different banner should see the newest one
-CHAT_MESSAGE_TESTS.append(
-    {
+    },
+    {  # Users that saw a different banner should see the newest one
         "generate_content_mock": make_mock_response("Bot response."),
         "expected_result": ("Bot response.\n" + BANNER, 200),
         "extra_settings": [
             ("call_do_show_banner", BANNER_VERSION - 1),
         ],
-    }
-)
+    },
+]
 
 
 @pytest.mark.parametrize(
@@ -202,16 +173,16 @@ CHAT_MESSAGE_TESTS.append(
 def test_chat_message(params):
     generate_content_mock = params["generate_content_mock"]
     expected_message, expected_status = params["expected_result"]
+    user_messages = params.get("user_messages", [JaiMessage()])
+    extra_settings = params.get("extra_settings", [])
 
     client = MockClient(generate_content_mock)
 
-    storage = LocalUserStorage()
-    xuid = XUID("john", "smith")
-    user = UserSettings(storage, xuid)
+    user = UserSettings(LocalUserStorage(), XUID("john", "smith"))
 
-    jai_req = JaiRequest()
+    jai_req = JaiRequest(messages=user_messages)
 
-    for key, value in params.get("extra_settings", []):
+    for key, value in extra_settings:
         if key == "call_do_show_banner":
             user.do_show_banner(value)
         elif key == "jai_req_quiet":
