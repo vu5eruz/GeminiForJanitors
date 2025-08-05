@@ -1,12 +1,9 @@
 """Proxy Application."""
 
-from click import echo
-from colorama import just_fix_windows_console
-from flask import Flask, abort, request, redirect
-from flask_cors import CORS
-from google import genai
-from secrets import token_bytes
-from traceback import print_exception
+################################################################################
+
+# Early initialization
+
 from ._globals import (
     CLOUDFLARED,
     MODELS,
@@ -17,6 +14,33 @@ from ._globals import (
     REDIS_URL,
     XUID_SECRET,
 )
+
+# Proxy initialization with startup banner
+# This is made to match up with Flask's own startup banner
+
+print(f"GeminiForJanitors ({PROXY_VERSION})")
+
+if PRODUCTION:
+    print(" * Production deployment")
+
+    # Production runs on gunicorn with gevent.
+    # Make sure to prevent issues with ssl monkey-patching.
+
+    from gevent import monkey
+
+    monkey.patch_all()
+else:
+    print(" * Development deployment")
+
+################################################################################
+
+# ruff: noqa: E402
+from colorama import just_fix_windows_console
+from flask import Flask, abort, request, redirect
+from flask_cors import CORS
+from google import genai
+from secrets import token_bytes
+from traceback import print_exception
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
 from .logging import hijack_loggers, xlog, xlogtime
@@ -28,48 +52,38 @@ hijack_loggers()
 
 ################################################################################
 
-# Proxy initialization with startup banner
-# This is made to match up with Flask's own startup banner
-# Flask uses click.echo for these messages
-
-echo(f"GeminiForJanitors ({PROXY_VERSION})")
-
-if PRODUCTION:
-    echo(" * Production deployment")
-else:
-    echo(" * Development deployment")
+# Late initialization
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
 
 if REDIS_URL is not None:
     storage = RedisUserStorage(REDIS_URL)
-    echo(" * Using Redis user storage")
+    print(" * Using Redis user storage")
 elif DEVELOPMENT:
     storage = LocalUserStorage()
-    echo(" * WARNING: Using local user storage")
+    print(" * WARNING: Using local user storage")
 else:
-    echo(" * ERROR: No user storage")
+    print(" * ERROR: No user storage")
+    exit(1)
+
+if XUID_SECRET is not None:
+    print(" * Using provided XUID secret")
+    xuid_secret = XUID_SECRET.encode("utf-8")
+elif DEVELOPMENT:
+    print(" * WARNING: Using development XUID secret")
+    xuid_secret = token_bytes(32)
+else:
+    print(" * ERROR: Missing XUID secret")
     exit(1)
 
 try:
     with open(PREFILL, encoding="utf-8") as prefill:
         prefill = prefill.read()
-    echo(f" * Loaded prefill from file {PREFILL} ({len(prefill)} characters)")
+    print(f" * Loaded prefill from file {PREFILL} ({len(prefill)} characters)")
 except FileNotFoundError:
-    echo(f" * ERROR: Prefill file {PREFILL} not found.")
+    print(f" * ERROR: Prefill file {PREFILL} not found.")
     prefill = ""
-
-if XUID_SECRET is not None:
-    echo(" * Using provided XUID secret")
-    xuid_secret = XUID_SECRET.encode("utf-8")
-elif DEVELOPMENT:
-    echo(" * WARNING: Using development XUID secret")
-    xuid_secret = token_bytes(32)
-else:
-    echo(" * ERROR: Missing XUID secret")
-    exit(1)
-
 
 ################################################################################
 
