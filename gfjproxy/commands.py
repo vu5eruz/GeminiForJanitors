@@ -113,6 +113,17 @@ def command(*, argspec: str = "", **kwargs):
 
 
 @command()
+def aboutme(args, user, jai_req, response):
+    return response.add_proxy_message(
+        f"Your user ID on this proxy is `{user.xuid!r}`."
+        + f" You were {user.last_seen_msg()}."
+        + " Your settings are:",
+        f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
+        f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
+        f"- //squash is {'enabled' if user.use_squash else 'disabled'}",
+    )
+
+@command()
 def banner(args, user, jai_req, response):
     user.do_show_banner(BANNER_VERSION)
     return response.add_proxy_message(BANNER, "***")
