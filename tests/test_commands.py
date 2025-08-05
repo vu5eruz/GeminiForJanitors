@@ -1,6 +1,7 @@
 import pytest
 
 from gfjproxy.commands import Command, parse_message, strip_message
+from gfjproxy.utils import ResponseHelper
 
 ################################################################################
 
@@ -44,80 +45,88 @@ def test_parse_message(sample):
 ################################################################################
 
 
-def test_strip_message_basic():
+SAMPLE_BASIC_MESSAGE_STRIPPING = [
+    # Don't alter simple messages
+    ("Hello, World!", "Hello, World!"),
+    # Strip leading/trailing lines
+    ("Hello, World!\n", "Hello, World!"),
+    ("\nHello, World!", "Hello, World!"),
+    ("\nHello, World!\n", "Hello, World!"),
+    # Remove leading/trailing white space around simple messages
+    ("  abcdef", "abcdef"),
+    ("abcdef  ", "abcdef"),
+    ("  abcdef  ", "abcdef"),
+    # Preserve markdown list indentations but still strip trailing white space
+    ("- The ", "- The"),
+    ("  - quick ", "  - quick"),
+    ("     - brown ", "     - brown"),
+    ("       - fox", "       - fox"),
+    ("* Jumps ", "* Jumps"),
+    ("  * over ", "  * over"),
+    ("     * lazy", "     * lazy"),
+    ("       * dog", "       * dog"),
+    # Coalesce spaces between words
+    ("a b c", "a b c"),
+    ("a   b   c", "a b c"),
+    ("   a   b     c ", "a b c"),
+    # Coalesce spaces between list markers and content
+    ("- Lorem", "- Lorem"),
+    ("  -   Ipsum", "  - Ipsum"),
+    ("* Lorem", "* Lorem"),
+    ("  *   Ipsum", "  * Ipsum"),
+    # Do not coalesce consecutive empty lines together
+    ("A\nB\nC", "A\nB\nC"),
+    ("A\n\nB\nC", "A\n\nB\nC"),
+    ("A\n\nB\n\n\nC", "A\n\nB\n\n\nC"),
+    # Remove leading/trailing white space per line
+    ("  A\nB  \n  C  ", "A\nB\nC"),
+]
+
+
+@pytest.mark.parametrize("sample", SAMPLE_BASIC_MESSAGE_STRIPPING)
+def test_strip_message_basic(sample):
     """Basic processing of model messages."""
 
-    # Don't alter simple messages
-    assert strip_message("Hello, World!") == "Hello, World!"
+    input_str, output_str = sample
 
-    # Strip leading/trailing lines
-    assert strip_message("Hello, World!\n") == "Hello, World!"
-    assert strip_message("\nHello, World!") == "Hello, World!"
-    assert strip_message("\nHello, World!\n") == "Hello, World!"
-
-    # Remove leading/trailing white space around simple messages
-    assert strip_message("  abcdef") == "abcdef"
-    assert strip_message("abcdef  ") == "abcdef"
-    assert strip_message("  abcdef  ") == "abcdef"
-
-    # Preserve markdown list indentations but still strip trailing white space
-    assert strip_message("- The ") == "- The"
-    assert strip_message("  - quick ") == "  - quick"
-    assert strip_message("     - brown ") == "     - brown"
-    assert strip_message("       - fox") == "       - fox"
-    assert strip_message("* Jumps ") == "* Jumps"
-    assert strip_message("  * over ") == "  * over"
-    assert strip_message("     * lazy") == "     * lazy"
-    assert strip_message("       * dog") == "       * dog"
-
-    # Coalesce spaces between words
-    assert strip_message("a b c") == "a b c"
-    assert strip_message("a   b   c") == "a b c"
-    assert strip_message("   a   b     c ") == "a b c"
-
-    # Coalesce spaces between list markers and content
-    assert strip_message("- Lorem") == "- Lorem"
-    assert strip_message("  -   Ipsum") == "  - Ipsum"
-    assert strip_message("* Lorem") == "* Lorem"
-    assert strip_message("  *   Ipsum") == "  * Ipsum"
-
-    # Do not coalesce consecutive empty lines together
-    assert strip_message("A\nB\nC") == "A\nB\nC"
-    assert strip_message("A\n\nB\nC") == "A\n\nB\nC"
-    assert strip_message("A\n\nB\n\n\nC") == "A\n\nB\n\n\nC"
-
-    # Remove leading/trailing white space per line
-    assert strip_message("  A\nB  \n  C  ") == "A\nB\nC"
+    assert strip_message(input_str) == output_str
 
 
-def test_strip_message_proxy():
-    """Removing <proxy></proxy> and its content from proxy messages."""
+################################################################################
 
+PROXY_OPEN = ResponseHelper.PROXY_TAG_OPEN
+PROXY_CLOSE = ResponseHelper.PROXY_TAG_CLOSE
+
+SAMPLE_PROXY_MESSAGE_STRIPPING = [
     # Whole message comes from proxy
-    assert strip_message("<proxy>Lorem Ipsum</proxy>") == ""
-
+    (f"{PROXY_OPEN}Lorem Ipsum{PROXY_CLOSE}", ""),
     # Handle leading/trailing model messages
-    assert strip_message("AAA<proxy>XXX</proxy>") == "AAA"
-    assert strip_message("<proxy>XXX</proxy>BBB") == "BBB"
-    assert strip_message("AAA<proxy>XXX</proxy>BBB") == "AAABBB"
-
+    (f"AAA{PROXY_OPEN}XXX{PROXY_CLOSE}", "AAA"),
+    (f"{PROXY_OPEN}XXX{PROXY_CLOSE}BBB", "BBB"),
+    (f"AAA{PROXY_OPEN}XXX{PROXY_CLOSE}BBB", "AAABBB"),
     # Handle model messages sandwiched in between proxy messages
-    assert strip_message("<proxy>XXX</proxy>ABC<proxy>YYY</proxy>") == "ABC"
-
+    (f"{PROXY_OPEN}XXX{PROXY_CLOSE}ABC{PROXY_OPEN}YYY{PROXY_CLOSE}", "ABC"),
     # Handle proxy messages that span across multiple lines
-    assert strip_message("ABCDEF<proxy>XXX\nYYY</proxy>") == "ABCDEF"
-    assert strip_message("<proxy>XXX\nYYY</proxy>ABCDEF") == "ABCDEF"
-    assert strip_message("ABC<proxy>XXX\nYYY</proxy>DEF") == "ABCDEF"
-
+    (f"ABCDEF{PROXY_OPEN}XXX\nYYY{PROXY_CLOSE}", "ABCDEF"),
+    (f"{PROXY_OPEN}XXX\nYYY{PROXY_CLOSE}ABCDEF", "ABCDEF"),
+    (f"ABC{PROXY_OPEN}XXX\nYYY{PROXY_CLOSE}DEF", "ABCDEF"),
     # Handle multiple multi-line proxy messages
-    assert (
-        strip_message(
-            "111<proxy>XXX\nYYY</proxy>\n"
-            + "<proxy>XXX\nYYY</proxy>222\n"
-            + "333<proxy>XXX\nYYY</proxy>444"
-        )
-        == "111\n222\n333444"
-    )
+    (
+        f"111{PROXY_OPEN}XXX\nYYY{PROXY_CLOSE}\n"
+        + f"{PROXY_OPEN}XXX\nYYY{PROXY_CLOSE}222\n"
+        + f"333{PROXY_OPEN}XXX\nYYY{PROXY_CLOSE}444",
+        "111\n222\n333444",
+    ),
+]
+
+
+@pytest.mark.parametrize("sample", SAMPLE_PROXY_MESSAGE_STRIPPING)
+def test_strip_message_proxy(sample):
+    """Removing proxy tags and their content from proxy messages."""
+
+    input_str, output_str = sample
+
+    assert strip_message(input_str) == output_str
 
 
 ################################################################################

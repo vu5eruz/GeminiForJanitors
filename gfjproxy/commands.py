@@ -4,6 +4,8 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
+from ._globals import BANNER, BANNER_VERSION
+from .utils import ResponseHelper
 
 ################################################################################
 
@@ -14,7 +16,16 @@ def _stripmultispace(string, *, regex=re.compile(r" +")):
     return regex.sub(" ", string)
 
 
-def _stripproxytext(string, *, regex=re.compile(r"<proxy>.*?</proxy>", re.S)):
+def _stripproxytext(
+    string,
+    *,
+    regex=re.compile(
+        re.escape(ResponseHelper.PROXY_TAG_OPEN)
+        + r".*?"
+        + re.escape(ResponseHelper.PROXY_TAG_CLOSE),
+        re.S,
+    ),
+):
     """Remove <proxy></proxy> tags and their content."""
 
     return regex.sub("", string)
@@ -58,7 +69,7 @@ class CommandError(Exception):
 COMMANDS = {}
 
 
-def command(*, argspec: str = ""):
+def command(*, argspec: str = "", **kwargs):
     if argspec:
         regex = re.compile(argspec)
 
@@ -73,6 +84,19 @@ def command(*, argspec: str = ""):
                 raise CommandError(
                     f'`//{cmd_name}` only accepts "`{argspec}`", not "`{args}`".'
                 )
+
+            if argspec == r"off|on|this" and (setting := kwargs.get("setting")):
+                attr = f"use_{setting}"
+
+                if args == "this":
+                    setattr(jai_req, attr, True)
+                elif args == "on":
+                    setattr(jai_req, attr, True)
+                    setattr(user, attr, True)
+                else:  # "off"
+                    setattr(jai_req, attr, False)
+                    setattr(user, attr, False)
+
             return func(args, user, jai_req, response)
 
         COMMANDS[cmd_name] = {
@@ -85,38 +109,52 @@ def command(*, argspec: str = ""):
     return outer_wrapper
 
 
+################################################################################
+
+
 @command()
 def banner(args, user, jai_req, response):
-    return f"//banner <{args}>"
+    user.do_show_banner(BANNER_VERSION)
+    return response.add_proxy_message(BANNER, "***")
 
 
-@command(argspec=r"off|on|this")
+################################################################################
+
+# To add a new "`off|on|this`" command named xyz do the following:
+# - Copy-paste one of the command follows here and write your command text
+# - Add a "use_xyz" field to models.JaiRequest
+# - Add a "use_xyz" getter/setter to xuiduser.UserSettings
+# - Implement your commands' additional logic inside handlers._gen_content
+
+
+@command(argspec=r"off|on|this", setting="nobot")
 def nobot(args, user, jai_req, response):
-    return f"//nobot <{args}>"
-
-
-@command(argspec=r"off|on|this")
-def prefill(args, user, jai_req, response):
-    if args == "this":
-        jai_req.use_prefill = True
-    elif args == "on":
-        jai_req.use_prefill = True
-    else:  # "off"
-        jai_req.use_prefill = False
-
-    # TODO: Set user's prefill setting
-
     return response.add_proxy_message(
-        f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
-        + " (for this message only)"
+        f"Bot description {'omitted' if jai_req.use_nobot else 'kept'}"
+        + " (for this message only)."
         if args == "this"
-        else ""
+        else "."
     )
 
 
-@command(argspec=r"off|on|this")
+@command(argspec=r"off|on|this", setting="prefill")
+def prefill(args, user, jai_req, response):
+    return response.add_proxy_message(
+        f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
+        + " (for this message only)."
+        if args == "this"
+        else "."
+    )
+
+
+@command(argspec=r"off|on|this", setting="squash")
 def squash(args, user, jai_req, response):
-    return f"//squash <{args}>"
+    return response.add_proxy_message(
+        f"Message squashing {'enabled' if jai_req.use_squash else 'disabled'}"
+        + " (for this message only)."
+        if args == "this"
+        else "."
+    )
 
 
 ################################################################################
