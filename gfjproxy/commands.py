@@ -123,6 +123,7 @@ def aboutme(args, user, jai_req, response):
         f"- //squash is {'enabled' if user.use_squash else 'disabled'}",
     )
 
+
 @command()
 def banner(args, user, jai_req, response):
     user.do_show_banner(BANNER_VERSION)

@@ -128,7 +128,9 @@ def proxy():
 
     client = genai.Client(api_key=api_key)
 
-    ref_time = xlogtime(user, f"Processing {request_path} (User {user.last_seen_msg()})")
+    ref_time = xlogtime(
+        user, f"Processing {request_path} (User {user.last_seen_msg()})"
+    )
 
     try:
         if not jai_req.model:
