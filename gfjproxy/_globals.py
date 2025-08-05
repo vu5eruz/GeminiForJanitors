@@ -65,7 +65,7 @@ PROXY_VERSION = _append_git_version("2025.08.04")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
-XUID_SECRET = _env.get("XUID_SECRET")
+XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
