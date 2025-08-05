@@ -209,6 +209,32 @@ class UserSettings:
 
     #########################
 
+    @property
+    def use_nobot(self) -> bool:
+        return bool(self._data.get("use_nobot", False))
+
+    @use_nobot.setter
+    def use_nobot(self, value):
+        self._data["use_nobot"] = bool(value)
+
+    @property
+    def use_prefill(self) -> bool:
+        return bool(self._data.get("use_prefill", False))
+
+    @use_prefill.setter
+    def use_prefill(self, value):
+        self._data["use_prefill"] = bool(value)
+
+    @property
+    def use_squash(self) -> bool:
+        return bool(self._data.get("use_squash", False))
+
+    @use_squash.setter
+    def use_squash(self, value):
+        self._data["use_squash"] = bool(value)
+
+    #########################
+
     def last_seen_msg(self) -> str:
         time_now = int(_unix_time())
         timestamp_last_seen = self._data.get("timestamp_last_seen")
