@@ -13,11 +13,16 @@ class _CustomFilter(logging.Filter):
         if not super().filter(record):
             return False
 
-        # Both gunicorn and werkzeug produces logs that look like:
+        # Gunicorn access logger passes a dict of atoms to be formatted.
+        # Werkzeug logger uses a more or less pre-formatted string.
+        # Both produce logs that look like this:
         # 127.0.0.1 - - [03/Aug/2025 12:21:14] "GET / HTTP/1.1" 200 -
         # The HTTP request info is good but everything before should be stripped
+        # We can hijack this and create our own format string.
 
-        if " - - [" in record.msg:
+        if record.name == "gunicorn.access" and isinstance(record.args, dict):
+            record.msg = '"%(r)s" %(s)s %(b)s "%(f)s"'
+        elif record.name == "werkzeug" and " - - [" in record.msg:
             index = record.msg.find('] "')
             if index != -1:
                 # Note the + 2 instead of + 3: don't cut off the opening quote
