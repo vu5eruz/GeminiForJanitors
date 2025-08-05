@@ -13,7 +13,7 @@ Any one of the following commands can be used to run the proxy. Running the prox
 
 ```sh
 flask --app gfjproxy.app run -h 127.0.0.1 -p 5000
-gunicorn -b 127.0.0.1:5000 -k gevent -w 3 -t 65 gfjproxy.app.app
+gunicorn -b 127.0.0.1:5000 -k gevent -w 3 -t 65 gfjproxy.app
 waitress-serve --listen=127.0.0.1:5000 gfjproxy.app.app
 ```
 
