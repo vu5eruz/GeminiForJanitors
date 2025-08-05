@@ -4,6 +4,7 @@ The name of some fields in here may not match with the source they are from."""
 
 from dataclasses import dataclass, field
 from json import loads
+from .commands import Command, parse_message, strip_message
 
 ################################################################################
 
@@ -12,8 +13,9 @@ from json import loads
 class JaiMessage:
     """JanitorAI Message."""
 
-    content: str = ""
-    role: str = ""
+    commands: list[Command] = field(default_factory=list)
+    content: str = "."
+    role: str = "user"
 
     @staticmethod
     def parse(data: dict | str):
@@ -23,8 +25,16 @@ class JaiMessage:
             raise TypeError("Invalid data")
 
         jai_msg = JaiMessage()
-        jai_msg.content = data.get("content", "")
-        jai_msg.role = data.get("role", "")
+
+        if role := data.get("role"):
+            jai_msg.role = role
+
+        if content := data.get("content"):
+            if role == "user":
+                jai_msg.commands, jai_msg.content = parse_message(content)
+            else:
+                jai_msg.content = strip_message(content)
+
         return jai_msg
 
 
@@ -38,6 +48,7 @@ class JaiRequest:
     quiet: bool = False  # This isn't from the request JSON but from the URL
     stream: bool = False
     temperature: int = 0
+    use_prefill: bool = False  # Set by //prefill command
 
     @staticmethod
     def parse(data: dict | str):
@@ -47,13 +58,22 @@ class JaiRequest:
             raise TypeError("Invalid data")
 
         jai_req = JaiRequest()
-        jai_req.max_tokens = data.get("max_tokens", 0)
-        jai_req.messages = [
-            JaiMessage.parse(jai_msg) for jai_msg in data.get("messages", [])
-        ]
-        jai_req.model = data.get("model", "")
-        jai_req.stream = data.get("stream", False)
-        jai_req.temperature = data.get("temperature", 0)
+
+        if max_tokens := data.get("max_tokens"):
+            jai_req.max_tokens = max_tokens
+
+        if messages := data.get("messages"):
+            jai_req.messages = [JaiMessage.parse(jai_msg) for jai_msg in messages]
+
+        if model := data.get("model"):
+            jai_req.model = model
+
+        if stream := data.get("stream"):
+            jai_req.stream = stream
+
+        if temperature := data.get("temperature"):
+            jai_req.temperature = temperature
+
         return jai_req
 
 
