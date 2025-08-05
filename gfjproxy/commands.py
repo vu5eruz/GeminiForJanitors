@@ -42,6 +42,18 @@ class Command:
     # Pointer to command function
     func: Callable = field(default=None, repr=False, compare=False, kw_only=True)
 
+    # Prefer to this method instead of directly calling func
+    def __call__(self, user, jai_req, response):
+        if self.func is None:
+            raise RuntimeError(f"Calling {self} without a function pointer")
+        return self.func(self.args, user, jai_req, response)
+
+
+class CommandError(Exception):
+    """User error raised by commands."""
+
+    pass
+
 
 COMMANDS = {}
 
@@ -57,9 +69,9 @@ def command(*, argspec: str = ""):
         def inner_wrapper(args, user, jai_req, response):
             if argspec and not regex.match(args):
                 if not args:
-                    raise ValueError(f"`//{cmd_name}` requires an argument")
-                raise ValueError(
-                    f'`//{cmd_name}` only accepts `{argspec}`, not "`{args}`".'
+                    raise CommandError(f"`//{cmd_name}` requires an argument")
+                raise CommandError(
+                    f'`//{cmd_name}` only accepts "`{argspec}`", not "`{args}`".'
                 )
             return func(args, user, jai_req, response)
 
@@ -85,7 +97,21 @@ def nobot(args, user, jai_req, response):
 
 @command(argspec=r"off|on|this")
 def prefill(args, user, jai_req, response):
-    return f"//prefill <{args}>"
+    if args == "this":
+        jai_req.use_prefill = True
+    elif args == "on":
+        jai_req.use_prefill = True
+    else:  # "off"
+        jai_req.use_prefill = False
+
+    # TODO: Set user's prefill setting
+
+    return response.add_proxy_message(
+        f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
+        + " (for this message only)"
+        if args == "this"
+        else ""
+    )
 
 
 @command(argspec=r"off|on|this")
