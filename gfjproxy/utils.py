@@ -11,6 +11,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from flask import Response
+from itertools import groupby
 
 ################################################################################
 
@@ -34,6 +35,10 @@ class ResponseMessage:
 
 class ResponseHelper:
     """Response helper to provide JanitorAI with valid responses."""
+
+    # U+200B ZERO WIDTH SPACE
+    PROXY_TAG_OPEN = "\u200b<proxy>\n"
+    PROXY_TAG_CLOSE = "\n\u200b</proxy>"
 
     def __init__(self, *, wrap_errors: bool = False):
         self._messages = []
@@ -112,6 +117,9 @@ class ResponseHelper:
         if not self._messages:
             return ""
 
+        proxy_open = ResponseHelper.PROXY_TAG_OPEN
+        proxy_close = ResponseHelper.PROXY_TAG_CLOSE
+
         if len(self._messages) == 1:
             if self._messages[0].kind == MessageKind.CHAT:
                 return self._messages[0].text
@@ -119,50 +127,27 @@ class ResponseHelper:
                 if self._wrap_errors:
                     return f"PROXY ERROR {self._messages[0].status_code}: {self._messages[0].text}"
                 return self._messages[0].text
-            return f"<proxy>{self._messages[0].text}\n</proxy>"
+            return f"{proxy_open}{self._messages[0].text}{proxy_close}"
 
-        last_msg = self._messages[0].kind
-        proxy_msg_group = last_msg == MessageKind.PROXY
+        def do_wrap_proxy(msg):
+            return msg.kind in (MessageKind.PROXY, MessageKind.ERROR)
+
         result = []
 
-        if proxy_msg_group:
-            result.append("<proxy>")
+        for wrap_proxy, msg_group in groupby(self._messages, do_wrap_proxy):
+            if wrap_proxy:
+                content = []
+                for msg in msg_group:
+                    if msg.kind == MessageKind.ERROR:
+                        text = f"Error {msg.status_code}: {msg.text}"
+                    else:  # PROXY message
+                        text = msg.text
+                    content.append(text)
+                result.append(f"{proxy_open}{'\n'.join(content)}{proxy_close}")
+            else:  # CHAT messages
+                result.append("\n".join(msg.text for msg in msg_group))
 
-        for i, msg in enumerate(self._messages):
-            if msg.kind == last_msg:
-                prefix = ""
-            elif msg.kind != MessageKind.CHAT:
-                prefix = "<proxy>" if not proxy_msg_group else ""
-                proxy_msg_group = True
-            elif proxy_msg_group:
-                prefix = "</proxy>"
-                proxy_msg_group = False
-            else:
-                prefix = ""
-
-            if msg.kind == MessageKind.ERROR:
-                if self._wrap_errors or proxy_msg_group:
-                    text = f"PROXY ERROR {msg.status_code}: {msg.text}"
-                    text = f"Error {msg.status_code}: {msg.text}\n"
-                else:
-                    text = msg.text
-            elif i != len(self._messages) - 1:  # Is this last msg
-                text = f"{msg.text}\n"
-            else:
-                text = msg.text
-
-            result.append(f"{prefix}{text}")
-
-            # TODO: Invariant: result[-1] always ends with a \n before last msg
-
-            last_msg = msg.kind
-
-        if proxy_msg_group:
-            if not result[-1].endswith("\n"):
-                result.append("\n")
-            result.append("</proxy>")
-
-        return "".join(result)
+        return "\n".join(result)
 
     @property
     def status(self) -> int:
