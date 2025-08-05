@@ -48,13 +48,13 @@ def _gen_content(
 
         xlog(
             user,
-            "Squashing chat messages before generation" + " (for this message only)."
+            "Squashing chat history" + " (for this message only)."
             if not user.use_prefill
             else ".",
         )
 
         if (
-            jai_req.messages[0].role == "assistant"
+            jai_req.messages[0].role == "system"
             and jai_req.messages[0].content[0] == "<"
             and (i := jai_req.messages[0].content.find("s Persona>")) != -1
         ):
@@ -81,7 +81,7 @@ def _gen_content(
             if jai_req.use_nobot or user.use_nobot:
                 xlog(
                     user,
-                    "Omitting character description from system prompt"
+                    "Omitting bot description from system prompt"
                     + " (for this message only)."
                     if not user.use_nobot
                     else ".",
