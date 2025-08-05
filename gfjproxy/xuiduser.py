@@ -239,8 +239,8 @@ class UserSettings:
         time_now = int(_unix_time())
         timestamp_last_seen = self._data.get("timestamp_last_seen")
         if isinstance(timestamp_last_seen, int):
-            return f"User last seen {time_now - timestamp_last_seen}s ago"
-        return "User not seen before"
+            return f"last seen {time_now - timestamp_last_seen}s ago"
+        return "not seen before"
 
     def save(self):
         self._data["timestamp_last_seen"] = int(_unix_time())
