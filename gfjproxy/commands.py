@@ -158,9 +158,7 @@ def nobot(args, user, jai_req, response):
         return response
     return response.add_proxy_message(
         f"Bot description {'omitted' if jai_req.use_nobot else 'kept'}"
-        + " (for this message only)."
-        if args == "this"
-        else "."
+        + (" (for this message only)." if args == "this" else ".")
     )
 
 
@@ -170,9 +168,7 @@ def prefill(args, user, jai_req, response):
         return response
     return response.add_proxy_message(
         f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
-        + " (for this message only)."
-        if args == "this"
-        else "."
+        + (" (for this message only)." if args == "this" else ".")
     )
 
 
