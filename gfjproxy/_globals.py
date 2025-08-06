@@ -1,6 +1,7 @@
 """Proxy global variables."""
 
 from os import environ as _env
+from os import scandir as _scandir
 
 
 # Based on https://github.com/numpy/numpy/blob/c6169853b871411ef207db1987a27f134a89b1cb/numpy/_build_utils/gitversion.py#L21
@@ -56,6 +57,13 @@ MODELS = [
 # XXX: FileNotFoundError
 with open("prefill.txt", encoding="utf-8") as prefill:
     PREFILL = prefill.read()
+
+PRESETS = {}
+for entry in _scandir("presets"):
+    if entry.is_file():
+        with open(f"presets/{entry.name}", encoding="utf-8") as preset:
+            PRESETS[entry.name.split(".")[0]] = preset.read()
+
 
 PROXY_AUTHORS = [
     "@undefinedundefined (vu5eruz on GitHub)",

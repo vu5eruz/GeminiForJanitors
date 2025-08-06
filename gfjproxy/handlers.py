@@ -92,6 +92,11 @@ def _gen_content(
         xlog(user, f"Squashed chat:\n{squashed_chat}")
         contents.append(types.UserContent({"text": squashed_chat}))
 
+    if jai_req.use_preset:
+        xlog(user, "Adding preset to system prompt")
+
+        system_instruction += jai_req.use_preset
+
     if jai_req.use_prefill or user.use_prefill:
         xlog(
             user,

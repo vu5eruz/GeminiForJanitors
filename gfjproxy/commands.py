@@ -4,7 +4,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
-from ._globals import BANNER, BANNER_VERSION
+from ._globals import PRESETS, BANNER, BANNER_VERSION
 from .utils import ResponseHelper
 
 ################################################################################
@@ -78,7 +78,7 @@ def command(*, argspec: str = "", **kwargs):
 
         @wraps(func)
         def inner_wrapper(args, user, jai_req, response):
-            if argspec and not regex.match(args):
+            if argspec and not regex.fullmatch(args):
                 if not args:
                     raise CommandError(f"`//{cmd_name}` requires an argument")
                 raise CommandError(
@@ -128,6 +128,20 @@ def aboutme(args, user, jai_req, response):
 def banner(args, user, jai_req, response):
     user.do_show_banner(BANNER_VERSION)
     return response.add_proxy_message(BANNER, "***")
+
+
+@command(argspec=r"[A-Za-z]+")
+def preset(args, user, jai_req, response):
+    if args not in PRESETS:
+        raise CommandError(
+            f'"`{args}`" is not a valid preset.'
+            + " Available presets: "
+            + ", ".join(f"`{key}`" for key in PRESETS.key)
+        )
+
+    jai_req.use_preset = PRESETS[args]
+
+    return response.add_proxy_message(f'Added preset "`{args}`" to this message.')
 
 
 ################################################################################
