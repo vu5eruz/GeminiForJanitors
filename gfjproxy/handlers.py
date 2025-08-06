@@ -31,9 +31,7 @@ def _gen_content(
                 xlog(
                     user,
                     "Omitting bot description from system prompt"
-                    + " (for this message only)."
-                    if not user.use_nobot
-                    else ".",
+                    + (" (for this message only)." if not user.use_nobot else "."),
                 )
             else:
                 contents.append(types.ModelContent({"text": msg.content}))
@@ -56,9 +54,8 @@ def _gen_content(
     if jai_req.use_prefill or user.use_prefill:
         xlog(
             user,
-            "Adding prefill to chat" + " (for this message only)."
-            if not user.use_prefill
-            else ".",
+            "Adding prefill to chat"
+            + (" (for this message only)." if not user.use_prefill else "."),
         )
 
         contents.append(types.ModelContent({"text": PREFILL}))
