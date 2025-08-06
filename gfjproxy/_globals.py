@@ -53,7 +53,9 @@ MODELS = [
     "gemini-2.5-pro-preview-06-05",
 ]
 
-PREFILL = "prefill.txt"
+# XXX: FileNotFoundError
+with open("prefill.txt", encoding="utf-8") as prefill:
+    PREFILL = prefill.read()
 
 PROXY_AUTHORS = [
     "@undefinedundefined (vu5eruz on GitHub)",

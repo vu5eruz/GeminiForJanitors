@@ -3,7 +3,7 @@
 from httpx import ReadTimeout
 from google import genai
 from google.genai import types
-from ._globals import BANNER, BANNER_VERSION
+from ._globals import BANNER, BANNER_VERSION, PREFILL
 from .commands import CommandError
 from .models import JaiRequest
 from .logging import xlog
@@ -25,19 +25,6 @@ def _gen_content(
 
     system_instruction = ""
 
-    if jai_req.use_prefill or user.use_prefill:
-        xlog(
-            user,
-            "Adding prefill to system prompt" + " (for this message only)."
-            if not user.use_prefill
-            else ".",
-        )
-
-        # XXX: Find a better way to retrieve the prefill without importing app
-        from .app import prefill
-
-        system_instruction = prefill
-
     bot_persona = "{{char}}"
     user_persona = "{{user}}"
     squashed_chat = None
@@ -49,14 +36,14 @@ def _gen_content(
         xlog(
             user,
             "Squashing chat history" + " (for this message only)."
-            if not user.use_prefill
+            if not user.use_squash
             else ".",
         )
 
         if (
             jai_req.messages[0].role == "system"
             and jai_req.messages[0].content[0] == "<"
-            and (i := jai_req.messages[0].content.find("s Persona>")) != -1
+            and (i := jai_req.messages[0].content.find("'s Persona>")) != -1
         ):
             bot_persona = jai_req.messages[0].content[1:i]
             xlog(user, f"{bot_persona = }")
@@ -105,6 +92,16 @@ def _gen_content(
         xlog(user, f"Squashed chat:\n{squashed_chat}")
         contents.append(types.UserContent({"text": squashed_chat}))
 
+    if jai_req.use_prefill or user.use_prefill:
+        xlog(
+            user,
+            "Adding prefill to chat" + " (for this message only)."
+            if not user.use_prefill
+            else ".",
+        )
+
+        contents.append(types.ModelContent({"text": PREFILL}))
+
     config = {
         "http_options": types.HttpOptions(
             timeout=REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
@@ -139,7 +136,7 @@ def _gen_content(
     }
 
     if squashed_chat:
-        config["stop_sequences"] = f"\n{user_persona}:"
+        config["stop_sequences"] = [f"\n{user_persona}:"]
 
     if jai_req.max_tokens > 0:
         config["max_output_tokens"] = jai_req.max_tokens

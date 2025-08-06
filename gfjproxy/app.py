@@ -77,14 +77,6 @@ else:
     print(" * ERROR: Missing XUID secret")
     exit(1)
 
-try:
-    with open(PREFILL, encoding="utf-8") as prefill:
-        prefill = prefill.read()
-    print(f" * Loaded prefill from file {PREFILL} ({len(prefill)} characters)")
-except FileNotFoundError:
-    print(f" * ERROR: Prefill file {PREFILL} not found.")
-    prefill = ""
-
 ################################################################################
 
 app = application = Flask(__name__)
