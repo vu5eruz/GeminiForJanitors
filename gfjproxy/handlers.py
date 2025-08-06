@@ -23,8 +23,6 @@ def _gen_content(
     Returns (GenerateContentResponse, 200) on success.
     On any errors, returns a string and a code other than one."""
 
-    system_instruction = ""
-
     contents = []
 
     for msg in jai_req.messages:
@@ -38,7 +36,7 @@ def _gen_content(
                     else ".",
                 )
             else:
-                system_instruction += msg.content
+                contents.append(types.ModelContent({"text": msg.content}))
             continue
 
         if msg.role == "assistant":
@@ -47,9 +45,9 @@ def _gen_content(
             contents.append(types.UserContent({"text": msg.content}))
 
     if jai_req.use_preset:
-        xlog(user, "Adding preset to system prompt")
+        xlog(user, "Adding preset to chat")
 
-        system_instruction += jai_req.use_preset
+        contents.append(types.ModelContent({"text": jai_req.use_preset}))
 
     if jai_req.use_prefill or user.use_prefill:
         xlog(
@@ -65,7 +63,6 @@ def _gen_content(
         "http_options": types.HttpOptions(
             timeout=REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
         ),
-        "system_instruction": system_instruction,
         "temperature": jai_req.temperature,
         "top_k": 50,
         "top_p": 0.95,
