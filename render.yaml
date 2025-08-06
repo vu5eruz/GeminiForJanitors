@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: GeminiForJanitors
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class gevent --workers 3 --timeout 65 GeminiForJanitors:app
-    plan: free
