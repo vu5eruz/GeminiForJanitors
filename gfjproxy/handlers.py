@@ -132,7 +132,7 @@ def _gen_content(
             reason = result.prompt_feedback.block_reason.name
         message = f"Response blocked due to {reason}."
         if not used_preset and not used_prefill:
-            message += "\nTry using `//prefill this` or `//preset gigakostyl`"
+            message += "\nTry using `//prefill this` (may or may not work)"
         return message, 502
 
     return result, 200
