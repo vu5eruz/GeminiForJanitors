@@ -6,8 +6,10 @@
 
 from ._globals import (
     CLOUDFLARED,
-    MODELS,
     DEVELOPMENT,
+    MODELS,
+    PREFILL,
+    PRESETS,
     PRODUCTION,
     PROXY_VERSION,
     REDIS_URL,
@@ -75,6 +77,16 @@ elif DEVELOPMENT:
 else:
     print(" * ERROR: Missing XUID secret")
     exit(1)
+
+if PRESETS:
+    print(" * Using presets: " + ", ".join(PRESETS.keys()))
+else:
+    print(" * WARNING: No presets loaded")
+
+if PREFILL:
+    print(f" * Using prefill ({len(PREFILL)} characters)")
+else:
+    print(" * WARNING: No prefill loaded")
 
 ################################################################################
 

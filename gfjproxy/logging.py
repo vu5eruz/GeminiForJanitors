@@ -21,7 +21,7 @@ class _CustomFilter(logging.Filter):
         # We can hijack this and create our own format string.
 
         if record.name == "gunicorn.access" and isinstance(record.args, dict):
-            record.msg = '"%(r)s" %(s)s %(b)s "%(f)s"'
+            record.msg = '"%(r)s" %(s)s %(b)s'
         elif record.name == "werkzeug" and " - - [" in record.msg:
             index = record.msg.find('] "')
             if index != -1:

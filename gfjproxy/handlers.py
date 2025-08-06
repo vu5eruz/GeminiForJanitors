@@ -49,6 +49,10 @@ def _gen_content(
 
         contents.append(types.ModelContent({"text": jai_req.use_preset}))
 
+        used_preset = True
+    else:
+        used_preset = False
+
     if jai_req.use_prefill or user.use_prefill:
         xlog(
             user,
@@ -58,6 +62,10 @@ def _gen_content(
         )
 
         contents.append(types.ModelContent({"text": PREFILL}))
+
+        used_prefill = True
+    else:
+        used_prefill = False
 
     config = {
         "http_options": types.HttpOptions(
@@ -122,7 +130,10 @@ def _gen_content(
         reason = "unknown reason"
         if isinstance(result.prompt_feedback.block_reason, types.BlockedReason):
             reason = result.prompt_feedback.block_reason.name
-        return f"Response blocked due to {reason}", 502
+        message = f"Response blocked due to {reason}."
+        if not used_preset and not used_prefill:
+            message += "\nTry using `//prefill this` or `//preset gigakostyl`"
+        return message, 502
 
     return result, 200
 
@@ -194,7 +205,9 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
         xlog(user, " - No usage metadata")
 
     if not jai_req.quiet and user.do_show_banner(BANNER_VERSION):
-        xlog(user, "Showing user the latest banner")
+        xlog(
+            user, f"Showing{' new ' if not user.exists else ' '}user the latest banner"
+        )
         response.add_message(BANNER)
 
     return response
