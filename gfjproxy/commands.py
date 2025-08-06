@@ -136,7 +136,7 @@ def preset(args, user, jai_req, response):
         raise CommandError(
             f'"`{args}`" is not a valid preset.'
             + " Available presets: "
-            + ", ".join(f"`{key}`" for key in PRESETS.key)
+            + ", ".join(f"`{key}`" for key in PRESETS.keys())
         )
 
     jai_req.use_preset = PRESETS[args]
