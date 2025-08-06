@@ -210,7 +210,10 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
 
     This handles when the user sends a simple chat message to the bot."""
 
-    xlog(user, "Handling chat message ...")
+    if jai_req.messages[-1].content.startswith("Rewrite/Enhance this message: "):
+        xlog(user, "Handling enhance message ...")
+    else:
+        xlog(user, "Handling chat message ...")
 
     for command in jai_req.messages[-1].commands:
         xlog(user, f"//{command.name} {command.args}")

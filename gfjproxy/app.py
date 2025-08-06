@@ -8,7 +8,6 @@ from ._globals import (
     CLOUDFLARED,
     MODELS,
     DEVELOPMENT,
-    PREFILL,
     PRODUCTION,
     PROXY_VERSION,
     REDIS_URL,
