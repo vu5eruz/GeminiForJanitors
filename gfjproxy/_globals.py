@@ -86,8 +86,6 @@ The proxy has had a major internal rewrite and development should now be smoothe
 
 Use the commands "`//prefill on`" and "`//prefill off`" to enable or disable Eslezer's prefill. Use "`//prefill this`" to enable the prefill for a single message. This could help prevent PROHIBITED_CONTENT errors, but that is not guaranteed.
 
-Likewise, you can use the commands "`//squash on`", "`//squash off`" and "`//squash this`" to apply NoAss Extension's message squashing before sending your chat to the model. This too could help prevent PROHIBITED_CONTENT errors, not guaranteed, but it could also introduce artifacts into your chat messages.
-
 Use the commands "`//nobot on`", "`//nobot off`" and "`//nobot this`" to remove the entire bot description from the prompt. If all else fails, try it out. THIS WILL NEGATIVELY AFFECT YOUR CHAT UNLESS YOU ALREADY HAVE PLENTY OF MESSAGES WITH THE BOT. The model depends on the bot description to know what to say. Without this, the model will depend exclusively on your chat messages. Make sure to have plenty of messages and a very high Context Size set in your Generation Settings.
 
 You can use multiple commands in the same message (make sure to separate them with spaces!) for their combined effect.

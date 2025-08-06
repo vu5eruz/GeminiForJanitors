@@ -225,14 +225,6 @@ class UserSettings:
     def use_prefill(self, value):
         self._data["use_prefill"] = bool(value)
 
-    @property
-    def use_squash(self) -> bool:
-        return bool(self._data.get("use_squash", False))
-
-    @use_squash.setter
-    def use_squash(self, value):
-        self._data["use_squash"] = bool(value)
-
     #########################
 
     def last_seen_msg(self) -> str:

@@ -120,7 +120,6 @@ def aboutme(args, user, jai_req, response):
         + " Your settings are:",
         f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
         f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
-        f"- //squash is {'enabled' if user.use_squash else 'disabled'}",
     )
 
 
@@ -171,18 +170,6 @@ def prefill(args, user, jai_req, response):
         return response
     return response.add_proxy_message(
         f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
-        + " (for this message only)."
-        if args == "this"
-        else "."
-    )
-
-
-@command(argspec=r"off|on|this", setting="squash")
-def squash(args, user, jai_req, response):
-    if jai_req.quiet_commands:
-        return response
-    return response.add_proxy_message(
-        f"Message squashing {'enabled' if jai_req.use_squash else 'disabled'}"
         + " (for this message only)."
         if args == "this"
         else "."

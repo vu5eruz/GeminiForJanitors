@@ -25,42 +25,6 @@ def _gen_content(
 
     system_instruction = ""
 
-    bot_persona = "{{char}}"
-    user_persona = "{{user}}"
-    squashed_chat = None
-
-    if jai_req.use_squash or user.use_squash:
-        if len(jai_req.messages) < 3:
-            return "Invalid request with //squash.", 400
-
-        xlog(
-            user,
-            "Squashing chat history" + " (for this message only)."
-            if not user.use_squash
-            else ".",
-        )
-
-        if (
-            jai_req.messages[0].role == "system"
-            and jai_req.messages[0].content[0] == "<"
-            and (i := jai_req.messages[0].content.find("'s Persona>")) != -1
-        ):
-            bot_persona = jai_req.messages[0].content[1:i]
-            xlog(user, f"{bot_persona = }")
-        else:
-            xlog(user, "Couldn't extract bot's persona")
-
-        if (
-            jai_req.messages[-1].role == "user"
-            and (i := jai_req.messages[-1].content.find(": ")) != -1
-        ):
-            user_persona = jai_req.messages[-1].content[:i]
-            xlog(user, f"{user_persona = }")
-        else:
-            xlog(user, "Couldn't extract user's persona")
-
-        squashed_chat = ""
-
     contents = []
 
     for msg in jai_req.messages:
@@ -78,19 +42,9 @@ def _gen_content(
             continue
 
         if msg.role == "assistant":
-            if squashed_chat:
-                squashed_chat += f"{bot_persona}: {msg.content}\n\n"
-            else:
-                contents.append(types.ModelContent({"text": msg.content}))
+            contents.append(types.ModelContent({"text": msg.content}))
         else:
-            if squashed_chat:
-                squashed_chat += f"{user_persona}: {msg.content}\n\n"
-            else:
-                contents.append(types.UserContent({"text": msg.content}))
-
-    if squashed_chat:
-        xlog(user, f"Squashed chat:\n{squashed_chat}")
-        contents.append(types.UserContent({"text": squashed_chat}))
+            contents.append(types.UserContent({"text": msg.content}))
 
     if jai_req.use_preset:
         xlog(user, "Adding preset to system prompt")
@@ -139,9 +93,6 @@ def _gen_content(
             ),
         ],
     }
-
-    if squashed_chat:
-        config["stop_sequences"] = [f"\n{user_persona}:"]
 
     if jai_req.max_tokens > 0:
         config["max_output_tokens"] = jai_req.max_tokens

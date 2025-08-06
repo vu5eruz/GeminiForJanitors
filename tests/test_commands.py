@@ -13,7 +13,6 @@ SAMPLE_PARSED_MESSAGES = [
     ("//banner", "", [Command("banner")]),  # This one requires no argument
     ("//nobot on", "", [Command("nobot", "on")]),
     ("//prefill on", "", [Command("prefill", "on")]),
-    ("//squash on", "", [Command("squash", "on")]),
     # Multiple commands and white space
     ("//banner//banner//banner", "", [Command("banner")] * 3),
     ("//banner //banner //banner", "", [Command("banner")] * 3),
