@@ -16,6 +16,9 @@ class MockClientModels:
     """Mock google.genai.Client.models class."""
 
     def __init__(self, mock):
+        self.given_model = None
+        self.given_contents = None
+        self.given_config = None
         self.mock = mock
 
     def generate_content(
@@ -25,6 +28,9 @@ class MockClientModels:
         contents: Union[types.ContentListUnion, types.ContentListUnionDict],
         config: Optional[types.GenerateContentConfigOrDict] = None,
     ) -> types.GenerateContentResponse:
+        self.given_model = model
+        self.given_contents = contents
+        self.given_config = config
         if isinstance(self.mock, Exception):
             raise self.mock
         return self.mock
@@ -34,11 +40,7 @@ class MockClient:
     """Mock google.genai.Client class."""
 
     def __init__(self, mock):
-        self.mock = mock
-
-    @property
-    def models(self):
-        return MockClientModels(self.mock)
+        self.models = MockClientModels(mock)
 
 
 def make_mock_response(text):
@@ -163,6 +165,19 @@ CHAT_MESSAGE_TESTS = [
             ("call_do_show_banner", BANNER_VERSION - 1),
         ],
     },
+    {  # Ensure the //prefill command has an actual effect on the prompt
+        "generate_content_mock": make_mock_response("Bot response."),
+        "expected_result": ("Bot response.", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//prefill this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+        "extra_after_tests": [("look_for_prefill_in_contents", True)],
+    },
 ]
 
 
@@ -175,6 +190,7 @@ def test_chat_message(params):
     expected_message, expected_status = params["expected_result"]
     user_messages = params.get("user_messages", [JaiMessage()])
     extra_settings = params.get("extra_settings", [])
+    extra_after_tests = params.get("extra_after_tests", [])
 
     client = MockClient(generate_content_mock)
 
@@ -185,10 +201,14 @@ def test_chat_message(params):
     for key, value in extra_settings:
         if key == "call_do_show_banner":
             user.do_show_banner(value)
+        elif key == "jai_add_message":
+            jai_req.messages.append(value)
         elif key == "jai_req_quiet":
             jai_req.quiet = value
+        elif key == "jai_req_quiet_commands":
+            jai_req.quiet_commands = value
         else:
-            assert False  # Invalid extra_settings key
+            assert 0  # Invalid extra_settings key
 
     response = handle_chat_message(
         client, user, jai_req, ResponseHelper(wrap_errors=False)
@@ -198,6 +218,17 @@ def test_chat_message(params):
         expected_message,
         expected_status,
     )
+
+    for key, value in extra_after_tests:
+        if key == "look_for_prefill_in_contents":
+            for content in client.models.given_contents:
+                # XXX: This needs to be updated should the prefill text change
+                if "<interaction-config>" in content.parts[0].text:
+                    break
+            else:
+                assert 0  # No prefill found
+        else:
+            assert 0  # Invalid extra_after_tests key
 
 
 ################################################################################

@@ -141,6 +141,8 @@ def banner(args, user, jai_req, response):
 
 @command(argspec=r"off|on|this", setting="nobot")
 def nobot(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
     return response.add_proxy_message(
         f"Bot description {'omitted' if jai_req.use_nobot else 'kept'}"
         + " (for this message only)."
@@ -151,6 +153,8 @@ def nobot(args, user, jai_req, response):
 
 @command(argspec=r"off|on|this", setting="prefill")
 def prefill(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
     return response.add_proxy_message(
         f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
         + " (for this message only)."
@@ -161,6 +165,8 @@ def prefill(args, user, jai_req, response):
 
 @command(argspec=r"off|on|this", setting="squash")
 def squash(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
     return response.add_proxy_message(
         f"Message squashing {'enabled' if jai_req.use_squash else 'disabled'}"
         + " (for this message only)."

@@ -46,6 +46,7 @@ class JaiRequest:
     messages: list[JaiMessage] = field(default_factory=list)
     model: str = ""
     quiet: bool = False  # This isn't from the request JSON but from the URL
+    quiet_commands: bool = False  # This is to make testing easier
     stream: bool = False
     temperature: int = 0
     use_prefill: bool = False  # Set by //prefill command
