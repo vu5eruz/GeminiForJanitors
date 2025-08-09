@@ -15,6 +15,29 @@ REQUEST_TIMEOUT_IN_SECONDS: float = 60
 ################################################################################
 
 
+def _get_feedback(response: types.GenerateContentResponse) -> str | None:
+    """Extracts a human-readable message from a failed GenerateContentResponse.
+
+    Returns None if no message could be extracted."""
+
+    if prompt_feedback := response.prompt_feedback:
+        if prompt_feedback.block_reason_message:
+            return str(prompt_feedback.block_reason_message)
+        if isinstance(prompt_feedback.block_reason, types.BlockedReason):
+            return prompt_feedback.block_reason.name
+
+    if candidates := response.candidates:
+        if (
+            isinstance(candidates, list)
+            and len(candidates) >= 1
+            and isinstance(candidates[0], types.Candidate)
+            and isinstance(candidates[0].finish_reason, types.FinishReason)
+        ):
+            return candidates[0].finish_reason.name
+
+    return None
+
+
 def _gen_content(
     client: genai.Client, user: UserSettings, jai_req: JaiRequest, overrides=dict()
 ):
@@ -120,16 +143,18 @@ def _gen_content(
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         return "Unhanded exception from Google AI.", 502
 
-    if result.candidates is None:
-        if result.prompt_feedback is None:
-            return "Google AI returned no response", 502
+    if not result.text:
+        # Rejection
 
-        reason = "unknown reason"
-        if isinstance(result.prompt_feedback.block_reason, types.BlockedReason):
-            reason = result.prompt_feedback.block_reason.name
-        message = f"Response blocked due to {reason}."
+        reason = _get_feedback(result)
+        if not reason:
+            xlog(user, f"No result text: {result}")
+            reason = "unknown reason"
+
+        message = f"Response blocked/empty due to {reason}."
         if not used_preset and not used_prefill:
-            message += "\nTry using `//prefill this` (may or may not work)"
+            message += "\nTry using `//prefill this` (may or may not work)."
+
         return message, 502
 
     return result, 200
@@ -191,11 +216,7 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    text = result.text
-    response.add_message(text)
-    if not text:
-        # XXX: This log is temporary, we need to collect data on these cases
-        xlog(user, f"No result text: {result}")
+    response.add_message(result.text)
 
     if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
         xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")

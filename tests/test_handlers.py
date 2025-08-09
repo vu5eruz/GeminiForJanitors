@@ -178,6 +178,32 @@ CHAT_MESSAGE_TESTS = [
         ],
         "extra_after_tests": [("look_for_prefill_in_contents", True)],
     },
+    {  # Handle rejections (case 1)
+        "generate_content_mock": types.GenerateContentResponse(
+            prompt_feedback=types.GenerateContentResponsePromptFeedback(
+                block_reason=types.BlockedReason.SAFETY,
+            ),
+        ),
+        "expected_result": (
+            "Response blocked/empty due to SAFETY."
+            + "\nTry using `//prefill this` (may or may not work).",
+            502,
+        ),
+    },
+    {  # Handle rejections (case 2)
+        "generate_content_mock": types.GenerateContentResponse(
+            candidates=[
+                types.Candidate(
+                    finish_reason=types.FinishReason.RECITATION,
+                )
+            ],
+        ),
+        "expected_result": (
+            "Response blocked/empty due to RECITATION."
+            + "\nTry using `//prefill this` (may or may not work).",
+            502,
+        ),
+    },
 ]
 
 
