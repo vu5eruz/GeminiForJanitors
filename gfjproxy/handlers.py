@@ -191,7 +191,11 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    response.add_message(result.text)
+    text = result.text
+    response.add_message(text)
+    if not text:
+        # XXX: This log is temporary, we need to collect data on these cases
+        xlog(user, f"No result text: {result}")
 
     if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
         xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
