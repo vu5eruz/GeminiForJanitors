@@ -68,8 +68,11 @@ class JaiRequest:
         if messages := data.get("messages"):
             jai_req.messages = [JaiMessage.parse(jai_msg) for jai_msg in messages]
 
-        if model := data.get("model"):
-            jai_req.model = model
+        if model := data.get("model").strip():
+            if model.startswith("google/gemini"):  # OpenRouter
+                jai_req.model = model.split("/")[1]
+            else:
+                jai_req.model = model
 
         if stream := data.get("stream"):
             jai_req.stream = stream
