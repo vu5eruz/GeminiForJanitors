@@ -152,7 +152,10 @@ def _gen_content(
             reason = "unknown reason"
 
         message = f"Response blocked/empty due to {reason}."
-        if not used_preset and not used_prefill:
+
+        if reason == "MAX_TOKENS":
+            message += '\nTry increasing "Max tokens" in your Generation Settings or set it to zero to disable it.'
+        elif not used_preset and not used_prefill:
             message += "\nTry using `//prefill this` (may or may not work)."
 
         return message, 502
@@ -168,7 +171,7 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
 
     The sole purpose of this is to test out the user's API key and model."""
 
-    xlog(user, "Handling proxy test ...")
+    xlog(user, f"Handling proxy test ({jai_req.model}) ...")
 
     # We need to provide _gen_content with empty user settings to prevent any of
     # the user's actual settings from altering the request at all. Pass on the
@@ -197,9 +200,9 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     This handles when the user sends a simple chat message to the bot."""
 
     if jai_req.messages[-1].content.startswith("Rewrite/Enhance this message: "):
-        xlog(user, "Handling enhance message ...")
+        xlog(user, f"Handling enhance message ({jai_req.model}) ...")
     else:
-        xlog(user, "Handling chat message ...")
+        xlog(user, f"Handling chat message ({jai_req.model}) ...")
 
     for command in jai_req.messages[-1].commands:
         xlog(user, f"//{command.name} {command.args}")

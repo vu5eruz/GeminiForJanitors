@@ -46,6 +46,7 @@ CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 # XXX: Manually keep this up to date
 MODELS = [
     "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
     "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.5-flash-preview-05-20",
     "gemini-2.5-pro",
@@ -82,7 +83,13 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
-The proxy has had a major internal rewrite and development should now be smoother. Tell your `/quiet/` friends about this!
+Minor update! Tell your `/quiet/` friends about this!
+
+You can now use `gemini-2.5-flash-lite` as model.
+
+If you are getting MAX_TOKENS errors, the proxy will now tell you to adjust "Max tokens" inside your Generation Settings. Set this value to zero in your settings to disable it entirely.
+
+***
 
 Use the commands "`//prefill on`" and "`//prefill off`" to enable or disable Eslezer's prefill. Use "`//prefill this`" to enable the prefill for a single message. This could help prevent PROHIBITED_CONTENT errors, but that is not guaranteed.
 
@@ -92,10 +99,10 @@ You can use multiple commands in the same message (make sure to separate them wi
 
 ***
 
-You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `https://geminiforjanitors.onrender.com/quiet/`. You are going to miss on updates if you use this URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
+You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `https://geminiforjanitors.onrender.com/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
 
 Feel free to reroll or edit this message to remove this banner."""
 
-BANNER_VERSION = 1
+BANNER_VERSION = 2
 
 ################################################################################
