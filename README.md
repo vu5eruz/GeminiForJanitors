@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="gfjproxy/static/gfjproxy.png" alt="Logo" />
   <h3>GeminiForJanitors</h3>
   <p>Google AI Studio Proxy for JanitorAI</p>
 </div>

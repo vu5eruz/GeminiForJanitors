@@ -11,6 +11,7 @@ from ._globals import (
     PREFILL,
     PRESETS,
     PRODUCTION,
+    PROXY_NAME,
     PROXY_VERSION,
     REDIS_URL,
     XUID_SECRET,
@@ -37,7 +38,7 @@ else:
 
 # ruff: noqa: E402
 from colorama import just_fix_windows_console
-from flask import Flask, abort, request, redirect
+from flask import Flask, abort, request, redirect, render_template, send_from_directory
 from flask_cors import CORS
 from google import genai
 from secrets import token_bytes
@@ -98,13 +99,17 @@ CORS(app)
 @app.route("/index", methods=["GET"])
 @app.route("/index.html", methods=["GET"])
 def index():
-    requested_path = request.path
-    if requested_path != "/":
+    if request.path != "/":
         return redirect("/", code=301)
 
     xlog(None, "Handling index")
 
-    return "Hello, World!", 200
+    return render_template("index.html", title=PROXY_NAME, version=PROXY_VERSION)
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory("static", "favicon.ico")
 
 
 @app.route("/health")
@@ -169,11 +174,10 @@ def proxy():
     if 200 <= response.status <= 299:
         xlogtime(user, "Processing succeeded", ref_time)
     else:
-        xlogtime(
-            user,
-            f"Processing failed: {response.message}",
-            ref_time,
-        )
+        messages = response.message.split("\n")
+        xlogtime(user, f"Processing failed: {messages[0]}", ref_time)
+        for message in messages[1:]:
+            xlog(user, f"> {message}")
 
     user.save()
 

@@ -72,7 +72,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.08.06")
+PROXY_VERSION = _append_git_version("2025.08.10")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
