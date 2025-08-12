@@ -72,7 +72,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.08.10")
+PROXY_VERSION = _append_git_version("2025.08.12")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -85,9 +85,7 @@ BANNER = rf"""***
 
 Minor update! Tell your `/quiet/` friends about this!
 
-You can now use `gemini-2.5-flash-lite` as model.
-
-If you are getting MAX_TOKENS errors, the proxy will now tell you to adjust "Max tokens" inside your Generation Settings. Set this value to zero in your settings to disable it entirely.
+This proxy now ignores the "Max tokens" setting. This should solve *some* cases of responses being cut off.
 
 ***
 
@@ -103,6 +101,6 @@ You should only see this banner if you are a new user or if there has been a new
 
 Feel free to reroll or edit this message to remove this banner."""
 
-BANNER_VERSION = 2
+BANNER_VERSION = 3
 
 ################################################################################

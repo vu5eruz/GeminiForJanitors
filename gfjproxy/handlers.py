@@ -119,8 +119,11 @@ def _gen_content(
         ],
     }
 
-    if jai_req.max_tokens > 0:
-        config["max_output_tokens"] = jai_req.max_tokens
+    # At some point in the future, we might want to add a //maxtokens command
+    # to turn this settings on and off. Meanwhile, this is out.
+    #
+    # if jai_req.max_tokens > 0:
+    #     config["max_output_tokens"] = jai_req.max_tokens
 
     for key, value in overrides.items():
         if value is None and key in config:
