@@ -94,7 +94,6 @@ def _gen_content(
         "temperature": jai_req.temperature,
         "top_k": 50,
         "top_p": 0.95,
-        "candidate_count": 1,
         "safety_settings": [
             types.SafetySetting(
                 threshold=types.HarmBlockThreshold.BLOCK_NONE,
