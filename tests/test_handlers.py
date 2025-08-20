@@ -91,6 +91,16 @@ COMMON_ERRORS = [
         ),
         "expected_result": ("Google AI had an internal error.", 502),
     },
+    {
+        "generate_content_mock": genai.errors.ServerError(
+            code=503,
+            response_json={
+                "message": "The model is overloaded. Please try again later.",
+                "status": "UNAVAILABLE",
+            },
+        ),
+        "expected_result": ("The model is overloaded. Please try again later.", 503),
+    },
 ]
 
 ################################################################################

@@ -139,6 +139,10 @@ def _gen_content(
     except genai.errors.ClientError as e:
         return e.message, e.code
     except genai.errors.ServerError as e:
+        if e.status == "UNAVAILABLE":
+            # 503 UNAVAILABLE "The model is overloaded. Please try again later."
+            return e.message, e.code
+
         xlog(user, repr(e))  # Log these fellas for they are anomalous
         return "Google AI had an internal error.", 502
     except Exception as e:
