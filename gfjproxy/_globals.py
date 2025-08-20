@@ -72,7 +72,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.08.12")
+PROXY_VERSION = _append_git_version("2025.08.20")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -85,9 +85,15 @@ BANNER = rf"""***
 
 Minor update! Tell your `/quiet/` friends about this!
 
-This proxy now ignores the "Max tokens" setting. This should solve *some* cases of responses being cut off.
+The command "`//preset gigakostyl`" is now documented.
+
+The proxy should now tell you if Gemini is overloaded instead of saying "Google AI had an internal error."
+
+If get an error "The model is overloaded. Please try again later." then just wait a little. This is a transient error and not the proxy's fault.
 
 ***
+
+Use the command "`//preset gigakostyl`" to enhance any sex scenes in the bot's response. A quirk of this preset is that it adds an "X-RAY" section to scene descriptions. You cannot turn a preset on, you have to include this command everytime you want to enhance sex scenes. It is recomended that you use "`//prefill on`" or "`//prefill this`" as well.
 
 Use the commands "`//prefill on`" and "`//prefill off`" to enable or disable Eslezer's prefill. Use "`//prefill this`" to enable the prefill for a single message. This could help prevent PROHIBITED_CONTENT errors, but that is not guaranteed.
 
@@ -101,6 +107,6 @@ You should only see this banner if you are a new user or if there has been a new
 
 Feel free to reroll or edit this message to remove this banner."""
 
-BANNER_VERSION = 3
+BANNER_VERSION = 4
 
 ################################################################################
