@@ -89,7 +89,7 @@ COMMON_ERRORS = [
                 "status": "INTERNAL",
             },
         ),
-        "expected_result": ("Google AI had an internal error.", 502),
+        "expected_result": ("Google AI had an internal error. Try again later.", 503),
     },
     {
         "generate_content_mock": genai.errors.ServerError(
