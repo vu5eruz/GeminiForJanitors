@@ -143,6 +143,12 @@ def _gen_content(
             # 503 UNAVAILABLE "The model is overloaded. Please try again later."
             return e.message, e.code
 
+        if e.status == "INTERNAL":
+            # 500 INTERNAL "An internal error has occurred."
+            # The actual message is longer and not really relevant to the users.
+            # Skip logging these errors and return our own message instead.
+            return "Google AI had an internal error. Try again later.", 503
+
         xlog(user, repr(e))  # Log these fellas for they are anomalous
         return "Google AI had an internal error.", 502
     except Exception as e:
