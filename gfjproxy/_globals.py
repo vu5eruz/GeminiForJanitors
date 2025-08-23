@@ -112,7 +112,7 @@ You cannot use multiple presets at the same time. Only the last one will take ef
 
 You can use multiple commands in the same message (make sure to separate them with spaces!) for their combined effect.
 
-Use the command "`//aboutme`" (has no effect on the chat) to see what commands you have turned on or off. All these settings are specific to an API key.
+Use the command "`//aboutme`" (has no effect on the bot) to see what commands you have turned on or off. All these settings are specific to an API key.
 
 ***
 
