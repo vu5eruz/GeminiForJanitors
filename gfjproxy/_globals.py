@@ -105,7 +105,7 @@ Use the command "`//preset gigakostyl`" or "`//preset minipopka`" to enhance any
 
 You cannot use multiple presets at the same time. Only the last one will take effect.
 
-"`//preset minipopka`" can influence the overall writing of a scene and the mannerisms of characters.
+"`//preset minipopka`" will influence the overall writing, mannerisms of characters, and possibly make the bot speak for you.
 "`//preset gigakostyl`" is simpler but has a quirk that it adds an "X-RAY" section to scene descriptions.
 
 ***
