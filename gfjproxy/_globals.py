@@ -58,6 +58,8 @@ MODELS = [
 # XXX: FileNotFoundError
 with open("prefill.txt", encoding="utf-8") as prefill:
     PREFILL = prefill.read()
+with open("think.txt", encoding="utf-8") as think:
+    THINK = think.read()
 
 PRESETS = {}
 for entry in _scandir("presets"):

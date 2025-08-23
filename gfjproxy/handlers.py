@@ -3,7 +3,7 @@
 from httpx import ReadTimeout
 from google import genai
 from google.genai import types
-from ._globals import BANNER, BANNER_VERSION, PREFILL
+from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError
 from .models import JaiRequest
 from .logging import xlog
@@ -65,6 +65,19 @@ def _gen_content(
         else:
             contents.append(types.UserContent({"text": msg.content}))
 
+    if jai_req.use_think or user.use_think:
+        xlog(
+            user,
+            "Adding thinking to chat"
+            + (" (for this message only)." if not user.use_think else "."),
+        )
+
+        contents.append(types.ModelContent({"text": THINK}))
+
+        used_think = True
+    else:
+        used_think = False
+
     if jai_req.use_preset:
         xlog(user, "Adding preset to chat")
 
@@ -86,6 +99,10 @@ def _gen_content(
         used_prefill = True
     else:
         used_prefill = False
+
+    if used_think:
+        contents.append(types.ModelContent({"text": "Remember to use <think>...</think> for your reasoning and <response>...</response> for your roleplay content."}))
+        contents.append(types.ModelContent({"text": "<think>"}))
 
     config = {
         "http_options": types.HttpOptions(
@@ -155,7 +172,7 @@ def _gen_content(
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         return "Unhanded exception from Google AI.", 502
 
-    if not result.text:
+    if not (text := result.text):
         # Rejection
 
         reason = _get_feedback(result)
@@ -171,6 +188,10 @@ def _gen_content(
             message += "\nTry using `//prefill this` (may or may not work)."
 
         return message, 502
+
+    if used_think:
+        _ = text
+        pass
 
     return result, 200
 

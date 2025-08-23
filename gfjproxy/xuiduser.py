@@ -225,6 +225,14 @@ class UserSettings:
     def use_prefill(self, value):
         self._data["use_prefill"] = bool(value)
 
+    @property
+    def use_think(self) -> bool:
+        return bool(self._data.get("use_think", False))
+
+    @use_think.setter
+    def use_think(self, value):
+        self._data["use_think"] = bool(value)
+
     #########################
 
     def last_seen_msg(self) -> str:
