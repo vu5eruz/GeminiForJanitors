@@ -108,7 +108,7 @@ def _gen_content(
                 }
             )
         )
-        contents.append(types.ModelContent({"text": "<think>"}))
+        contents.append(types.ModelContent({"text": "<think>\n➛ Okay! Understood."}))
 
     config = {
         "http_options": types.HttpOptions(
