@@ -202,7 +202,9 @@ def _gen_content(
         t_open = text.find("<think>")  # len = 7
         t_close = text.find("</think>")  # len = 8
 
-        if -1 < t_open < t_close:
+        if -1 == t_open == t_close:
+            xlog(user, f"No thinking tags found")
+        elif -1 < t_open < t_close:
             xlog(user, f"Removing thinking (case #1) {t_open} to {t_close + 8}")
             text = text[:t_open] + text[t_close + 8 :]
         elif -1 < t_close:
@@ -214,7 +216,9 @@ def _gen_content(
         r_open = text.find("<response>")  # len = 10
         r_close = text.find("</response>")  # len = 11
 
-        if -1 < r_open < r_close:
+        if -1 == r_open == r_close:
+            xlog(user, f"No response tags found")
+        elif -1 < r_open < r_close:
             xlog(user, f"Parsing response (case #1) {r_open + 10} to {r_close}")
             text = text[r_open + 10 : r_close]
         elif -1 < r_open:
