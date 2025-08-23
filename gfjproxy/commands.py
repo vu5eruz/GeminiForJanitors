@@ -180,7 +180,7 @@ def think(args, user, jai_req, response):
     if jai_req.quiet_commands:
         return response
     return response.add_proxy_message(
-        f"Thinking {'enabled' if jai_req.use_prefill else 'disabled'}"
+        f"Thinking {'enabled' if jai_req.use_think else 'disabled'}"
         + (" (for this message only)." if args == "this" else ".")
     )
 
