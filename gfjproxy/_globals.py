@@ -58,6 +58,8 @@ MODELS = [
 # XXX: FileNotFoundError
 with open("prefill.txt", encoding="utf-8") as prefill:
     PREFILL = prefill.read()
+with open("think.txt", encoding="utf-8") as think:
+    THINK = think.read()
 
 PRESETS = {}
 for entry in _scandir("presets"):
@@ -72,7 +74,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.08.20")
+PROXY_VERSION = _append_git_version("2025.08.23")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -83,23 +85,34 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
-Minor update! Tell your `/quiet/` friends about this!
+Major update! Tell your `/quiet/` friends about this!
 
-The command "`//preset gigakostyl`" is now documented.
+**Added "`//think`" command to to help prevent rejections. If you are getting too many STOP or PROHIBITED_CONTENT errors, try this out!**
 
-The proxy should now tell you if Gemini is overloaded instead of saying "Google AI had an internal error."
-
-If get an error "The model is overloaded. Please try again later." then just wait a little. This is a transient error and not the proxy's fault.
+Added "`//preset minipopka`" as an alternative to `gigakostyl`.
 
 ***
 
-Use the command "`//preset gigakostyl`" to enhance any sex scenes in the bot's response. A quirk of this preset is that it adds an "X-RAY" section to scene descriptions. You cannot turn a preset on, you have to include this command everytime you want to enhance sex scenes. It is recomended that you use "`//prefill on`" or "`//prefill this`" as well.
+Use the commands "`//prefill on`" and "`//prefill off`" to enable or disable Eslezer's prefill. Use "`//prefill this`" to enable the prefill for a single message. This could help prevent STOP or PROHIBITED_CONTENT errors, but that is not guaranteed.
 
-Use the commands "`//prefill on`" and "`//prefill off`" to enable or disable Eslezer's prefill. Use "`//prefill this`" to enable the prefill for a single message. This could help prevent PROHIBITED_CONTENT errors, but that is not guaranteed.
+Use the commands "`//think on`", "`//think off`" and "`//think this`" to confuse Gemini into doing it's chain of thought in the response message, potentially bypassing content filters and reducing STOP or PROHIBITED_CONTENT errors. The proxy will attempt to remove any stray <think> or <responses> from the result, but it might fail sometimes.
 
 Use the commands "`//nobot on`", "`//nobot off`" and "`//nobot this`" to remove the entire bot description from the prompt. If all else fails, try it out. THIS WILL NEGATIVELY AFFECT YOUR CHAT UNLESS YOU ALREADY HAVE PLENTY OF MESSAGES WITH THE BOT. The model depends on the bot description to know what to say. Without this, the model will depend exclusively on your chat messages. Make sure to have plenty of messages and a very high Context Size set in your Generation Settings.
 
+***
+
+Use the command "`//preset gigakostyl`" or "`//preset minipopka`" to enhance any sex scenes in the bot's response. You cannot turn a preset on, you have to include this command everytime you want to enhance sex scenes. It is recomended that you use "`//prefill`" or "`//think`" as well.
+
+You cannot use multiple presets at the same time. Only the last one will take effect.
+
+"`//preset minipopka`" will influence the overall writing, mannerisms of characters, and possibly make the bot speak for you.
+"`//preset gigakostyl`" is simpler but has a quirk that it adds an "X-RAY" section to scene descriptions.
+
+***
+
 You can use multiple commands in the same message (make sure to separate them with spaces!) for their combined effect.
+
+Use the command "`//aboutme`" (has no effect on the chat) to see what commands you have turned on or off. All these settings are specific to an API key.
 
 ***
 

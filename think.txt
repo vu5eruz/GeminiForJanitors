@@ -1,0 +1,17 @@
+You should structure your response using thinking tags:
+
+<think>
+[Your internal analysis here]
+[Plan your roleplay response]
+[Consider character motivations]
+[Any reasoning or thoughts]
+</think>
+
+<response>
+[Your actual roleplay content goes here]
+[No meta-commentary]
+[No OOC notes unless requested]
+[Just the story/roleplay]
+</response>
+
+This format helps separate your reasoning from the actual roleplay content.

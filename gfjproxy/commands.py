@@ -120,6 +120,7 @@ def aboutme(args, user, jai_req, response):
         + " Your settings are:",
         f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
         f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
+        f"- //think is {'enabled' if user.use_prefill else 'disabled'}",
     )
 
 
@@ -168,6 +169,16 @@ def prefill(args, user, jai_req, response):
         return response
     return response.add_proxy_message(
         f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
+
+
+@command(argspec=r"off|on|this", setting="think")
+def think(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Thinking {'enabled' if jai_req.use_prefill else 'disabled'}"
         + (" (for this message only)." if args == "this" else ".")
     )
 
