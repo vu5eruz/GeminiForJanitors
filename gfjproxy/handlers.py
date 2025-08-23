@@ -101,7 +101,13 @@ def _gen_content(
         used_prefill = False
 
     if used_think:
-        contents.append(types.ModelContent({"text": "Remember to use <think>...</think> for your reasoning and <response>...</response> for your roleplay content."}))
+        contents.append(
+            types.ModelContent(
+                {
+                    "text": "Remember to use <think>...</think> for your reasoning and <response>...</response> for your roleplay content."
+                }
+            )
+        )
         contents.append(types.ModelContent({"text": "<think>"}))
 
     config = {
@@ -190,10 +196,34 @@ def _gen_content(
         return message, 502
 
     if used_think:
-        _ = text
-        pass
+        # Try first to remove any thinking and then try to recover the response
+        # Make sure to remove the tags as well
 
-    return result, 200
+        t_open = text.find("<think>")  # len = 7
+        t_close = text.find("</think>")  # len = 8
+
+        if -1 < t_open < t_close:
+            xlog(user, f"Removing thinking (case #1) {t_open} to {t_close + 8}")
+            text = text[:t_open] + text[t_close + 8 :]
+        elif -1 < t_close:
+            xlog(user, f"Removing thinking (case #2) up until {t_close + 8}")
+            text = text[t_close + 8 :]
+        else:
+            xlog(user, f"Removing thinking failure")
+
+        r_open = text.find("<response>")  # len = 10
+        r_close = text.find("</response>")  # len = 11
+
+        if -1 < r_open < r_close:
+            xlog(user, f"Parsing response (case #1) {r_open + 10} to {r_close}")
+            text = text[r_open + 10 : r_close]
+        elif -1 < r_open:
+            xlog(user, f"Parsing response (case #2) {r_open + 10} onwards")
+            text = text[r_open + 10 :]
+        else:
+            xlog(user, f"Parsing response failure")
+
+    return (result, text), 200
 
 
 ################################################################################
@@ -224,7 +254,9 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    return response.add_message(result.text)
+    result, text = result
+
+    return response.add_message(text)
 
 
 def handle_chat_message(client: genai.Client, user, jai_req, response):
@@ -252,7 +284,9 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    response.add_message(result.text)
+    result, text = result
+
+    response.add_message(text)
 
     if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
         xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
