@@ -188,6 +188,106 @@ CHAT_MESSAGE_TESTS = [
         ],
         "extra_after_tests": [("look_for_prefill_in_contents", True)],
     },
+    {  # //think should not alter "plain" response
+        "generate_content_mock": make_mock_response("ABC XYZ"),
+        "expected_result": ("ABC XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think should handle the ideal case and extract only the response
+        "generate_content_mock": make_mock_response(
+            "<think>ABC</think><response>XYZ</response>"
+        ),
+        "expected_result": ("XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think ideal case but out of order
+        "generate_content_mock": make_mock_response(
+            "<response>XYZ</response><think>ABC</think>"
+        ),
+        "expected_result": ("XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think should remove any thinking while leaving everything else intact
+        "generate_content_mock": make_mock_response("123<think>ABC</think>XYZ"),
+        "expected_result": ("123XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think should recover the bot's response if it was correctly wrapped in tags
+        "generate_content_mock": make_mock_response("ABC<response>XYZ</response>DEF"),
+        "expected_result": ("XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think should extract everything after a lone response
+        "generate_content_mock": make_mock_response("ABC<response>XYZ"),
+        "expected_result": ("XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think should remove everything before a lone think
+        "generate_content_mock": make_mock_response("ABC</think>XYZ"),
+        "expected_result": ("XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
+    {  # //think given a lone think and response in order, recover response
+        "generate_content_mock": make_mock_response("ABC</think><response>XYZ"),
+        "expected_result": ("XYZ", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "//think this Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+        ],
+    },
     {  # Handle rejections (case 1)
         "generate_content_mock": types.GenerateContentResponse(
             prompt_feedback=types.GenerateContentResponsePromptFeedback(
