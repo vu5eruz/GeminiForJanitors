@@ -120,6 +120,6 @@ You should only see this banner if you are a new user or if there has been a new
 
 Feel free to reroll or edit this message to remove this banner."""
 
-BANNER_VERSION = 4
+BANNER_VERSION = 5
 
 ################################################################################
