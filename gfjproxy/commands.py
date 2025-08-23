@@ -80,7 +80,9 @@ def command(*, argspec: str = "", **kwargs):
         def inner_wrapper(args, user, jai_req, response):
             if argspec and not regex.fullmatch(args):
                 if not args:
-                    raise CommandError(f"`//{cmd_name}` requires an argument")
+                    raise CommandError(
+                        f'`//{cmd_name}` requires an argument "`{argspec}`".'
+                    )
                 raise CommandError(
                     f'`//{cmd_name}` only accepts "`{argspec}`", not "`{args}`".'
                 )

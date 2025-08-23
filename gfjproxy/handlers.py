@@ -83,10 +83,6 @@ def _gen_content(
 
         contents.append(types.ModelContent({"text": jai_req.use_preset}))
 
-        used_preset = True
-    else:
-        used_preset = False
-
     if jai_req.use_prefill or user.use_prefill:
         xlog(
             user,
@@ -190,8 +186,8 @@ def _gen_content(
 
         if reason == "MAX_TOKENS":
             message += '\nTry increasing "Max tokens" in your Generation Settings or set it to zero to disable it.'
-        elif not used_preset and not used_prefill:
-            message += "\nTry using `//prefill this` (may or may not work)."
+        elif not used_prefill and not used_think:
+            message += "\nTry using `//prefill this` and/or `//think this`"
 
         return message, 502
 
