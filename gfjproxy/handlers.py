@@ -156,8 +156,34 @@ def _gen_content(
     except ReadTimeout:
         return "Gateway Timeout", 504
     except genai.errors.ClientError as e:
-        xlog(user, repr(e))  # Temporarily log these errors to collect them
+        if e.status == "INVALID_ARGUMENT":
+            # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
+            return e.message, e.code
 
+        if e.status == "RESOURCE_EXHAUSTED":
+            details = e.details.get(
+                "details", e.details.get("error", {}).get("details", [])
+            )
+
+            for detail in details:
+                if not isinstance(detail, dict):
+                    continue
+                if detail.get("@type") != "type.googleapis.com/google.rpc.QuotaFailure":
+                    continue
+
+                for violation in detail.get("violations", []):
+                    qid = violation.get("quotaId")
+
+                    if qid == "GenerateRequestsPerMinutePerProjectPerModel-FreeTier":
+                        return "Requests per Minute quota exceeded.", 429
+
+                    if qid == "GenerateRequestsPerDayPerProjectPerModel-FreeTier":
+                        return "Requests per Day quota exceeded.", 429
+
+            # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
+            return e.message, e.code
+
+        xlog(user, repr(e))  # Log these fellas for they are anomalous
         return e.message, e.code
     except genai.errors.ServerError as e:
         if e.status == "UNAVAILABLE":

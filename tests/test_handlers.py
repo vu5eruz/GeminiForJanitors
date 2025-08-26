@@ -82,6 +82,58 @@ COMMON_ERRORS = [
         "expected_result": ("API key not valid. Please pass a valid API key.", 400),
     },
     {
+        "generate_content_mock": genai.errors.ClientError(
+            code=429,
+            response_json={
+                "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
+                "status": "RESOURCE_EXHAUSTED",
+                "details": [
+                    {
+                        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                        "violations": [
+                            {
+                                "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+                                "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+                                "quotaDimensions": {
+                                    "model": "gemini-2.5-pro",
+                                    "location": "global",
+                                },
+                                "quotaValue": "2",
+                            },
+                        ],
+                    },
+                ],
+            },
+        ),
+        "expected_result": ("Requests per Minute quota exceeded.", 429),
+    },
+    {
+        "generate_content_mock": genai.errors.ClientError(
+            code=429,
+            response_json={
+                "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
+                "status": "RESOURCE_EXHAUSTED",
+                "details": [
+                    {
+                        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                        "violations": [
+                            {
+                                "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+                                "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+                                "quotaDimensions": {
+                                    "location": "global",
+                                    "model": "gemini-2.5-pro",
+                                },
+                                "quotaValue": "50",
+                            }
+                        ],
+                    },
+                ],
+            },
+        ),
+        "expected_result": ("Requests per Day quota exceeded.", 429),
+    },
+    {
         "generate_content_mock": genai.errors.ServerError(
             code=500,
             response_json={
