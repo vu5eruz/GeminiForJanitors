@@ -156,6 +156,8 @@ def _gen_content(
     except ReadTimeout:
         return "Gateway Timeout", 504
     except genai.errors.ClientError as e:
+        xlog(user, repr(e))  # Temporarily log these errors to collect them
+
         return e.message, e.code
     except genai.errors.ServerError as e:
         if e.status == "UNAVAILABLE":
