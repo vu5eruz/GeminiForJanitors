@@ -180,6 +180,9 @@ def _gen_content(
                     if qid == "GenerateRequestsPerDayPerProjectPerModel-FreeTier":
                         return "Requests per Day quota exceeded.", 429
 
+                    if qid == "GenerateContentInputTokensPerModelPerMinute-FreeTier":
+                        return "Input Tokens per Minute quota exceeded.", 429
+
             # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
             return e.message, e.code
 
