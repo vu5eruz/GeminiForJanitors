@@ -160,11 +160,31 @@ def _gen_content(
             # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
             return e.message, e.code
 
-        if e.status == "RESOURCE_EXHAUSTED":
-            details = e.details.get(
-                "details", e.details.get("error", {}).get("details", [])
-            )
+        details = e.details.get(
+            "details", e.details.get("error", {}).get("details", [])
+        )
 
+        if e.status == "PERMISSION_DENIED":
+            for detail in details:
+                if not isinstance(detail, dict):
+                    continue
+                if detail.get("@type") != "type.googleapis.com/google.rpc.ErrorInfo":
+                    continue
+
+                if reason := detail.get("reason"):
+                    if reason == "SERVICE_DISABLED":
+                        # This error could either refer to an misconfigured API
+                        # key or an banned user.
+                        return "Generative Language API needs to be enabled", 403
+
+                    if reason == "CONSUMER_SUSPENDED":
+                        # This error is most likely a banned user.
+                        return "Customer suspended. You might be banned.", 403
+
+            # 403 PERMISSION_DENIED "Consumer 'api_key:*' has been suspended."
+            return e.message, e.code
+
+        if e.status == "RESOURCE_EXHAUSTED":
             for detail in details:
                 if not isinstance(detail, dict):
                     continue

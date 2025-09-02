@@ -134,6 +134,52 @@ COMMON_ERRORS = [
         "expected_result": ("Requests per Day quota exceeded.", 429),
     },
     {
+        "generate_content_mock": genai.errors.ClientError(
+            code=403,
+            response_json={
+                "message": "Generative Language API has not been used in project * before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",
+                "status": "PERMISSION_DENIED",
+                "details": [
+                    {
+                        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                        "reason": "SERVICE_DISABLED",
+                        "domain": "googleapis.com",
+                        "metadata": {
+                            "activationUrl": "https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091",
+                            "service": "generativelanguage.googleapis.com",
+                            "serviceTitle": "Generative Language API",
+                            "containerInfo": "*",
+                            "consumer": "projects/*",
+                        },
+                    },
+                ],
+            },
+        ),
+        "expected_result": ("Generative Language API needs to be enabled", 403),
+    },
+    {
+        "generate_content_mock": genai.errors.ClientError(
+            code=403,
+            response_json={
+                "message": "Permission denied: Consumer 'api_key:*' has been suspended.",
+                "status": "PERMISSION_DENIED",
+                "details": [
+                    {
+                        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                        "reason": "CONSUMER_SUSPENDED",
+                        "domain": "googleapis.com",
+                        "metadata": {
+                            "service": "generativelanguage.googleapis.com",
+                            "containerInfo": "api_key:*",
+                            "consumer": "projects/*",
+                        },
+                    },
+                ],
+            },
+        ),
+        "expected_result": ("Customer suspended. You might be banned.", 403),
+    },
+    {
         "generate_content_mock": genai.errors.ServerError(
             code=500,
             response_json={
