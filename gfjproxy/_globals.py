@@ -74,7 +74,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.08.23")
+PROXY_VERSION = _append_git_version("2025.09.08")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -85,11 +85,13 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
-Major update! Tell your `/quiet/` friends about this!
+Experimental update! Tell your `/quiet/` friends about this!
 
-**Added "`//think`" command to to help prevent rejections. If you are getting too many STOP or PROHIBITED_CONTENT errors, try this out!**
+The proxy will now lock concurrent usage. If you send a message without waiting for another one to finish, you will get an error, regardless of your per minute quotas. This is to reduce load on the proxy, as well as to prevent users from spamming the proxy.
 
-Added "`//preset minipopka`" as an alternative to `gigakostyl`.
+You can now specify more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
+
+Added the command "`//advsettings on|off`" to enable the use of JanitorAI generation settings, such as Max Tokens, Top K, Top P, and Repetition Penalty. Turn this on to make the proxy use your settings instead of its default values. Use this only if you know what you are doing.
 
 ***
 
