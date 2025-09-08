@@ -82,6 +82,8 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
+BANNER_VERSION = 6
+
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
@@ -121,7 +123,5 @@ Use the command "`//aboutme`" (has no effect on the bot) to see what commands yo
 You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `https://geminiforjanitors.onrender.com/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
 
 Feel free to reroll or edit this message to remove this banner."""
-
-BANNER_VERSION = 5
 
 ################################################################################
