@@ -43,12 +43,16 @@ class JaiRequest:
     """JanitorAI Request."""
 
     max_tokens: int = 0
+    frequency_penalty: float = 0.0
     messages: list[JaiMessage] = field(default_factory=list)
     model: str = ""
     quiet: bool = False  # This isn't from the request JSON but from the URL
     quiet_commands: bool = False  # This is to make testing easier
     stream: bool = False
     temperature: int = 0
+    top_k: int = 0
+    top_p: float = 0.0
+    use_advsettings: bool = False  # Set by //advsettings command
     use_prefill: bool = False  # Set by //prefill command
     use_preset: str = None  # Set by //preset command
     use_nobot: bool = False  # Set by //nobot command
@@ -80,6 +84,15 @@ class JaiRequest:
 
         if temperature := data.get("temperature"):
             jai_req.temperature = temperature
+
+        if top_k := data.get("top_k"):
+            jai_req.top_k = top_k
+
+        if top_p := data.get("top_p"):
+            jai_req.top_p = top_p
+
+        if frequency_penalty := data.get("frequency_penalty"):
+            jai_req.frequency_penalty = frequency_penalty
 
         return jai_req
 

@@ -146,3 +146,71 @@ def test_storage(storage):
 
 
 ################################################################################
+
+
+@pytest.mark.parametrize(
+    "storage",
+    [
+        LocalUserStorage,
+        RedisUserStorage,
+    ],
+)
+def test_locking(storage):
+    """Basic storage locking tests."""
+
+    if storage == RedisUserStorage:
+        if not REDIS_URL:
+            pytest.skip("No REDIS_URL provided")
+        storage = storage(REDIS_URL, timeout=2.5)
+    else:
+        storage = storage()
+
+    assert storage.active()
+
+    salt = secrets.token_bytes(32)
+
+    user_1 = XUID("user-1", salt)
+    user_2 = XUID("user-2", salt)
+
+    # Ensure that locking and unlocking allow serial access
+    assert storage.lock(user_1)
+    storage.unlock(user_1)
+    assert storage.lock(user_2)
+    storage.unlock(user_2)
+    assert storage.lock(user_1)
+    storage.unlock(user_1)
+    assert storage.lock(user_2)
+    storage.unlock(user_2)
+
+    assert storage.lock(user_1)
+    storage.unlock(user_1)
+    assert storage.lock(user_1)
+    storage.unlock(user_1)
+    assert storage.lock(user_2)
+    storage.unlock(user_2)
+    assert storage.lock(user_2)
+    storage.unlock(user_2)
+
+    assert storage.lock(user_1)
+    assert storage.lock(user_2)
+    storage.unlock(user_1)
+    storage.unlock(user_2)
+    assert storage.lock(user_2)
+    assert storage.lock(user_1)
+    storage.unlock(user_2)
+    storage.unlock(user_1)
+    assert storage.lock(user_1)
+    assert storage.lock(user_2)
+    storage.unlock(user_2)
+    storage.unlock(user_1)
+
+    # Ensure that locking and unlocking prevent concurrent access
+    assert storage.lock(user_1)
+    assert not storage.lock(user_1)
+    storage.unlock(user_1)
+    assert storage.lock(user_2)
+    assert not storage.lock(user_2)
+    storage.unlock(user_2)
+
+
+################################################################################
