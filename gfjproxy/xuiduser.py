@@ -153,8 +153,6 @@ class LocalUserStorage(UserStorage):
 
     def rem(self, xuid: XUID):
         del self._storage[xuid]
-        if xuid in self._locks:
-            del self._locks[xuid]
 
     def lock(self, xuid: XUID) -> bool:
         lockid = xuid.lockid()
@@ -163,10 +161,8 @@ class LocalUserStorage(UserStorage):
         return self._locks[lockid].acquire(blocking=False)
 
     def unlock(self, xuid: XUID):
-        lockid = xuid.lockid()
-        if lockid in self._locks:
-            self._locks[lockid].release()
-            del self._locks[lockid]
+        if lock := self._locks.pop(xuid.lockid(), None):
+            lock.release()
 
 
 class RedisUserStorage(UserStorage):
@@ -206,8 +202,6 @@ class RedisUserStorage(UserStorage):
     def rem(self, xuid: XUID):
         if self._client.delete(repr(xuid)) == 0:
             raise KeyError(repr(xuid))
-        if xuid in self._locks:
-            del self._locks[xuid]
 
     def lock(self, xuid: XUID) -> bool:
         lockid = xuid.lockid()
@@ -216,10 +210,11 @@ class RedisUserStorage(UserStorage):
         return self._locks[lockid].acquire(blocking=False)
 
     def unlock(self, xuid: XUID):
-        lockid = xuid.lockid()
-        if lockid in self._locks:
-            self._locks[lockid].release()
-            del self._locks[lockid]
+        if lock := self._locks.pop(xuid.lockid(), None):
+            try:
+                lock.release()
+            except redis.exceptions.LockNotOwnedError:
+                pass
 
 
 ################################################################################
