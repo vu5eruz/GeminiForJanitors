@@ -149,10 +149,20 @@ def preset(args, user, jai_req, response):
 ################################################################################
 
 # To add a new "`off|on|this`" command named xyz do the following:
-# - Copy-paste one of the command follows here and write your command text
+# - Copy-paste any of the commands in here and write your command text
 # - Add a "use_xyz" field to models.JaiRequest
 # - Add a "use_xyz" getter/setter to xuiduser.UserSettings
 # - Implement your commands' additional logic inside handlers._gen_content
+
+
+@command(argspec=r"off|on|this", setting="advsettings")
+def advsettings(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Advanced generation settings {'enabled' if jai_req.use_advsettings else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
 
 
 @command(argspec=r"off|on|this", setting="nobot")

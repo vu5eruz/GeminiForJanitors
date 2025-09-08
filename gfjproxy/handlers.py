@@ -137,11 +137,30 @@ def _gen_content(
         ],
     }
 
-    # At some point in the future, we might want to add a //maxtokens command
-    # to turn this settings on and off. Meanwhile, this is out.
-    #
-    # if jai_req.max_tokens > 0:
-    #     config["max_output_tokens"] = jai_req.max_tokens
+    if jai_req.use_advsettings or user.use_advsettings:
+        advsettings_used = []
+
+        if jai_req.max_tokens > 0:
+            advsettings_used.append("max_tokens")
+            config["max_output_tokens"] = jai_req.max_tokens
+
+        if jai_req.top_k > 0:
+            advsettings_used.append("top_k")
+            config["top_k"] = jai_req.top_k
+
+        if jai_req.top_p > 0:
+            advsettings_used.append("top_p")
+            config["top_p"] = jai_req.top_p
+
+        if jai_req.frequency_penalty > 0:
+            advsettings_used.append("frequency_penalty")
+            config["frequency_penalty"] = jai_req.frequency_penalty
+
+        xlog(
+            user,
+            f"Adding settings {', '.join(advsettings_used)} to chat"
+            + (" (for this message only)." if not user.use_prefill else "."),
+        )
 
     for key, value in overrides.items():
         if value is None and key in config:
@@ -158,6 +177,7 @@ def _gen_content(
     except genai.errors.ClientError as e:
         if e.status == "INVALID_ARGUMENT":
             # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
+            # 400 INVALID_ARGUMENT "Penalty is not enabled for models/*"
             return e.message, e.code
 
         details = e.details.get(
