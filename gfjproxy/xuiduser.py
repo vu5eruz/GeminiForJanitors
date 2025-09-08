@@ -307,7 +307,6 @@ class UserSettings:
     def save(self):
         self._data["timestamp_last_seen"] = int(_unix_time())
         self._storage.put(self._xuid, self._data)
-        self._storage.unlock(self._xuid)
 
     def do_show_banner(self, banner_version):
         last_seen_banner = self._data.get("banner", 0)
