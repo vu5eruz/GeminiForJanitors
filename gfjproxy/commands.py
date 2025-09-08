@@ -118,7 +118,7 @@ def command(*, argspec: str = "", **kwargs):
 def aboutme(args, user, jai_req, response):
     return response.add_proxy_message(
         f"Your user ID on this proxy is `{user.xuid!r}`."
-        + f" You were {user.last_seen_msg()}."
+        + f" You were {user.last_seen_msg()}. Your request counter is {user.get_rcounter()}."
         + " Your settings are:",
         f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
         f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
