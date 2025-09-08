@@ -141,7 +141,14 @@ def proxy():
         return response.build_error("Unauthorized. API key required.", 401)
 
     api_key = request_auth[1]
-    user = UserSettings(storage, XUID(api_key, xuid_secret))
+    xuid = XUID(api_key, xuid_secret)
+
+    if not storage.lock(xuid):
+        return response.build_error(
+            "Concurrent use is not allowed. Wait a moment and try again.", 403
+        )
+
+    user = UserSettings(storage, xuid)
 
     # Handle user's request
 
@@ -180,6 +187,8 @@ def proxy():
             xlog(user, f"> {message}")
 
     user.save()
+
+    storage.unlock(xuid)
 
     return response.build()
 

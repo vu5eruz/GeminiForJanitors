@@ -11,6 +11,7 @@ from base64 import urlsafe_b64encode as _base64
 from colorama.ansi import Fore as _colorama_ansi_fore
 from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
 from hmac import digest as _hmac_digest
+from threading import Lock as _threading_Lock
 from time import time as _unix_time
 
 _color_palette = [
@@ -81,6 +82,10 @@ class XUID:
             raise TypeError(f"Can't compare a XUID with {type(other).__name__}")
         return self._xuid_raw == other._xuid_raw
 
+    def lockid(self) -> str:
+        """Returns a XUID value string that can be used to identify a lock."""
+        return f"{self._xuid_str}:lock"
+
     def pretty(self) -> str:
         """Returns a prettified, shortened XUID value string for printing.
         This includes ANSI escape codes and is only meant for logging."""
@@ -115,12 +120,22 @@ class UserStorage:
         Raises a KeyError if the user is not present on the storage."""
         raise NotImplementedError("UserStorage.rem")
 
+    def lock(self, xuid: XUID) -> bool:
+        """Try locking the storage to prevent concurrent access.
+        Returns True if the storage isn't locked, False otherwise."""
+        raise NotImplementedError("UserStorage.lock")
+
+    def unlock(self, xuid: XUID):
+        """Unlocks the storage and allow future access."""
+        raise NotImplementedError("UserStorage.unlock")
+
 
 class LocalUserStorage(UserStorage):
     """Implements a non-persistent in-memory user storage."""
 
     def __init__(self):
         self._storage: dict[XUID, dict] = dict()
+        self._locks: dict[XUID, _threading_Lock] = dict()
 
     def active(self) -> bool:
         return True
@@ -138,6 +153,20 @@ class LocalUserStorage(UserStorage):
 
     def rem(self, xuid: XUID):
         del self._storage[xuid]
+        if xuid in self._locks:
+            del self._locks[xuid]
+
+    def lock(self, xuid: XUID) -> bool:
+        lockid = xuid.lockid()
+        if lockid not in self._locks:
+            self._locks[lockid] = _threading_Lock()
+        return self._locks[lockid].acquire(blocking=False)
+
+    def unlock(self, xuid: XUID):
+        lockid = xuid.lockid()
+        if lockid in self._locks:
+            self._locks[lockid].release()
+            del self._locks[lockid]
 
 
 class RedisUserStorage(UserStorage):
@@ -151,6 +180,7 @@ class RedisUserStorage(UserStorage):
     EXPIRY_TIME_IN_SECONDS = 30 * 24 * 60 * 60  # Arbitrary
 
     def __init__(self, url: str = DEFAULT_URL, timeout: float = 30):
+        self._locks: dict[XUID, redis.lock.Lock] = dict()
         try:
             self._client = redis.from_url(
                 url, socket_timeout=timeout, socket_connect_timeout=timeout
@@ -176,6 +206,20 @@ class RedisUserStorage(UserStorage):
     def rem(self, xuid: XUID):
         if self._client.delete(repr(xuid)) == 0:
             raise KeyError(repr(xuid))
+        if xuid in self._locks:
+            del self._locks[xuid]
+
+    def lock(self, xuid: XUID) -> bool:
+        lockid = xuid.lockid()
+        if lockid not in self._locks:
+            self._locks[lockid] = self._client.lock(name=lockid, timeout=60)
+        return self._locks[lockid].acquire(blocking=False)
+
+    def unlock(self, xuid: XUID):
+        lockid = xuid.lockid()
+        if lockid in self._locks:
+            self._locks[lockid].release()
+            del self._locks[lockid]
 
 
 ################################################################################
@@ -245,6 +289,7 @@ class UserSettings:
     def save(self):
         self._data["timestamp_last_seen"] = int(_unix_time())
         self._storage.put(self._xuid, self._data)
+        self._storage.unlock(self._xuid)
 
     def do_show_banner(self, banner_version):
         last_seen_banner = self._data.get("banner", 0)
