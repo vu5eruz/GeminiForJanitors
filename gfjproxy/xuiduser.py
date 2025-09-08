@@ -253,6 +253,16 @@ class UserSettings:
 
     #########################
 
+    def get_rcounter(self) -> int:
+        """Returns the user's request counter."""
+        return int(self._data.get("rcounter", 0))
+
+    def inc_rcounter(self):
+        """Increases the user's request counter by one."""
+        self._data["rcounter"] = self.get_rcounter() + 1
+
+    #########################
+
     @property
     def use_nobot(self) -> bool:
         return bool(self._data.get("use_nobot", False))
