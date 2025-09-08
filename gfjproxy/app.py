@@ -136,12 +136,12 @@ def proxy():
     # JanitorAI provides the user's API key through HTTP Bearer authentication.
     # Google AI cannot be used without an API key and neither can this proxy.
 
-    request_auth = request.headers.get("authorization", "").split(" ")
-    if len(request_auth) != 2 or request_auth[0] != "Bearer":
+    request_auth = request.headers.get("authorization", "").split(" ", maxsplit=1)
+    if len(request_auth) != 2 or request_auth[0].lower() != "bearer":
         return response.build_error("Unauthorized. API key required.", 401)
 
-    api_key = request_auth[1]
-    xuid = XUID(api_key, xuid_secret)
+    api_keys = [k.strip() for k in request_auth[1].split(",")]
+    xuid = XUID(api_keys[0], xuid_secret)
 
     if not storage.lock(xuid):
         return response.build_error(
@@ -150,6 +150,8 @@ def proxy():
 
     user = UserSettings(storage, xuid)
 
+    api_key_index = user.get_rcounter() % len(api_keys)
+
     user.inc_rcounter()
 
     # Handle user's request
@@ -157,11 +159,19 @@ def proxy():
     jai_req = JaiRequest.parse(request_json)
     jai_req.quiet = "/quiet/" in request_path
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_keys[api_key_index])
+
+    log_details = [
+        f"User {user.last_seen_msg()}",
+        f"Request #{user.get_rcounter()}",
+    ]
+
+    if len(api_keys) > 1:
+        log_details.append(f"Key {api_key_index + 1}/{len(api_keys)}")
 
     ref_time = xlogtime(
         user,
-        f"Processing {request_path} (User {user.last_seen_msg()}, Request #{user.get_rcounter()})",
+        f"Processing {request_path} ({', '.join(log_details)})",
     )
 
     try:
