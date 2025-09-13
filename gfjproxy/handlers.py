@@ -233,6 +233,10 @@ def _gen_content(
             # 503 UNAVAILABLE "The model is overloaded. Please try again later."
             return e.message, e.code
 
+        if e.status == "DEADLINE_EXCEEDED":
+            # 504 DEADLINE_EXCEEDED "The request timed out. Please try again."
+            return "Google AI timed out.", e.code
+
         if e.status == "INTERNAL":
             # 500 INTERNAL "An internal error has occurred."
             # The actual message is longer and not really relevant to the users.
