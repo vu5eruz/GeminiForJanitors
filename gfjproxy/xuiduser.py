@@ -89,7 +89,7 @@ class XUID:
     def pretty(self) -> str:
         """Returns a prettified, shortened XUID value string for printing.
         This includes ANSI escape codes and is only meant for logging."""
-        color = _color_palette[hash(self) % len(_color_palette)]
+        color = _color_palette[self._xuid_raw[-1] % len(_color_palette)]
         return f"{color}<{self}>{_color_reset}"
 
 
