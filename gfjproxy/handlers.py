@@ -10,7 +10,12 @@ from .logging import xlog
 from .xuiduser import LocalUserStorage, UserSettings
 
 
+# Changing this has an impact on whether the runner (specifically gunicorn) will
+# forcefully reset a worker after taking too long to answer a request. When
+# deploying using gunicorn, make sure to provide a -t value larger than the one
+# in here, to prevent issues from arising at run-time.
 REQUEST_TIMEOUT_IN_SECONDS: float = 60
+
 
 ################################################################################
 
