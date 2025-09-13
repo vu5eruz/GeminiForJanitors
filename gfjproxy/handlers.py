@@ -231,11 +231,11 @@ def _gen_content(
     except genai.errors.ServerError as e:
         if e.status == "UNAVAILABLE":
             # 503 UNAVAILABLE "The model is overloaded. Please try again later."
-            return e.message, e.code
+            return "The model is overloaded. Try again later.", e.code
 
         if e.status == "DEADLINE_EXCEEDED":
             # 504 DEADLINE_EXCEEDED "The request timed out. Please try again."
-            return "Google AI timed out.", e.code
+            return "Google AI timed out. Try again later.", e.code
 
         if e.status == "INTERNAL":
             # 500 INTERNAL "An internal error has occurred."
@@ -244,7 +244,7 @@ def _gen_content(
             return "Google AI had an internal error. Try again later.", 503
 
         xlog(user, repr(e))  # Log these fellas for they are anomalous
-        return "Google AI had an internal error.", 502
+        return "Google AI had an internal error. Try again later.", 502
     except Exception as e:
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         return "Unhanded exception from Google AI.", 502

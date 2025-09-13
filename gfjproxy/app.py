@@ -145,7 +145,7 @@ def proxy():
 
     if not storage.lock(xuid):
         return response.build_error(
-            "Concurrent use is not allowed. Wait a moment and try again.", 403
+            "Concurrent use is not allowed. Try again later.", 403
         )
 
     user = UserSettings(storage, xuid)

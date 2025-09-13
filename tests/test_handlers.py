@@ -197,7 +197,7 @@ COMMON_ERRORS = [
                 "status": "UNAVAILABLE",
             },
         ),
-        "expected_result": ("The model is overloaded. Please try again later.", 503),
+        "expected_result": ("The model is overloaded. Try again later.", 503),
     },
 ]
 
