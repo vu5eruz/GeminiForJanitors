@@ -1,7 +1,7 @@
 """Proxy Logging System."""
 
 import logging
-from time import monotonic
+from time import monotonic, gmtime
 from threading import Timer
 from .xuiduser import XUID, UserSettings
 
@@ -42,6 +42,8 @@ class _CustomFilter(logging.Filter):
 
 
 class _CustomFormatter(logging.Formatter):
+    converter = gmtime
+
     def __init__(self, filler: str | None = None):
         if filler is None:
             filler = "=" * XUID.LEN_PRETTY
@@ -50,7 +52,7 @@ class _CustomFormatter(logging.Formatter):
 
         super().__init__(
             fmt="%(asctime)s %(filler)s %(message)s",
-            datefmt="[%Y-%m-%d %H:%M:%S %z]",
+            datefmt="[%Y%m%dT%H%M%SZ]",
             style="%",
             defaults={"filler": filler.rjust(XUID.LEN_PRETTY)},
         )
