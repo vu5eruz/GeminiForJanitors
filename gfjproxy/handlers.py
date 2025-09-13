@@ -38,6 +38,28 @@ def _get_feedback(response: types.GenerateContentResponse) -> str | None:
     return None
 
 
+def _get_quota_violation_feedback(qid: str) -> str | None:
+    """Converts a quota ID into a human-readable message.
+
+    Returns None if an unknown quota ID is given."""
+
+    if qid.startswith("GenerateContentInputTokensPerModelPerMinute") or qid.startswith(
+        "GenerateContentPaidTierInputTokensPerModelPerMinute"
+    ):
+        return "Input Tokens per Minute quota exceeded."
+
+    if qid.startswith("GenerateContentInputTokensPerModelPerDay"):
+        return "Input Tokens per Day quota exceeded."
+
+    if qid.startswith("GenerateRequestsPerMinutePerProjectPerModel"):
+        return "Requests per Minute quota exceeded."
+
+    if qid.startswith("GenerateRequestsPerDayPerProjectPerModel"):
+        return "Requests per Day quota exceeded."
+
+    return None
+
+
 def _gen_content(
     client: genai.Client, user: UserSettings, jai_req: JaiRequest, overrides=dict()
 ):
@@ -214,14 +236,8 @@ def _gen_content(
                 for violation in detail.get("violations", []):
                     qid = violation.get("quotaId")
 
-                    if qid == "GenerateRequestsPerMinutePerProjectPerModel-FreeTier":
-                        return "Requests per Minute quota exceeded.", 429
-
-                    if qid == "GenerateRequestsPerDayPerProjectPerModel-FreeTier":
-                        return "Requests per Day quota exceeded.", 429
-
-                    if qid == "GenerateContentInputTokensPerModelPerMinute-FreeTier":
-                        return "Input Tokens per Minute quota exceeded.", 429
+                    if feedback := _get_quota_violation_feedback(qid):
+                        return feedback, 429
 
             # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
             return e.message, e.code
