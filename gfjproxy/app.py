@@ -158,6 +158,7 @@ def proxy():
 
     if PRODUCTION and (jai_req.quiet or user.get_rcounter() < 199):
         xlog(user, "User locked out")
+        storage.unlock(xuid)
         return response.build_error(
             f"{PROXY_NAME} is locking out /quiet/ and infrequent users. Sorry.", 403
         )
