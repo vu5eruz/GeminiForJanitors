@@ -183,6 +183,10 @@ def _gen_content(
             advsettings_used.append("frequency_penalty")
             config["frequency_penalty"] = jai_req.frequency_penalty
 
+        if jai_req.repetition_penalty > 0:
+            advsettings_used.append("repetition_penalty")
+            config["presence_penalty"] = jai_req.repetition_penalty
+
         xlog(
             user,
             f"Adding settings {', '.join(advsettings_used)} to chat"
@@ -362,12 +366,17 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
 
     This handles when the user sends a simple chat message to the bot."""
 
-    if jai_req.messages[-1].content.startswith("Rewrite/Enhance this message: "):
+    last_user_message = jai_req.messages[-1]
+    if jai_req.messages[-1].role == "assistant":
+        xlog(user, "User set prefill detected")
+        last_user_message = jai_req.messages[-2]
+
+    if last_user_message.content.startswith("Rewrite/Enhance this message: "):
         xlog(user, f"Handling enhance message ({jai_req.model}) ...")
     else:
         xlog(user, f"Handling chat message ({jai_req.model}) ...")
 
-    for command in jai_req.messages[-1].commands:
+    for command in last_user_message.commands:
         xlog(user, f"//{command.name} {command.args}")
 
         try:

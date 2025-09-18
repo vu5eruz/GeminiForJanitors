@@ -44,6 +44,7 @@ class JaiRequest:
 
     max_tokens: int = 0
     frequency_penalty: float = 0.0
+    repetition_penalty: float = 0.0
     messages: list[JaiMessage] = field(default_factory=list)
     model: str = ""
     quiet: bool = False  # This isn't from the request JSON but from the URL
@@ -93,6 +94,9 @@ class JaiRequest:
 
         if frequency_penalty := data.get("frequency_penalty"):
             jai_req.frequency_penalty = frequency_penalty
+
+        if repetition_penalty := data.get("repetition_penalty"):
+            jai_req.repetition_penalty = repetition_penalty
 
         return jai_req
 
