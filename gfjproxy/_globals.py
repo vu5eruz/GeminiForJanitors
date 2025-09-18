@@ -74,7 +74,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.09.08")
+PROXY_VERSION = _append_git_version("2025.09.18")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -82,43 +82,61 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 6
+BANNER_VERSION = 7
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
-Experimental update! Tell your `/quiet/` friends about this!
+**ATENTION! EMERGENCY UPDATE!**
 
-The proxy will now lock concurrent usage. If you send a message without waiting for another one to finish, you will get an error, regardless of your per minute quotas. This is to reduce load on the proxy, as well as to prevent users from spamming the proxy.
+This proxy runs on a free plan on Render.com, serving many users and consuming its bandwidth allowances. If the proxy exceeds its bandwidth quota, it will be suspended until October 1st. **`/quiet/` users and those with less than 200 messages on the proxy will be locked out to save bandwidth.**
 
-You can now specify more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
+Apologies for the inconvenience, please spread the word!
 
-Added the command "`//advsettings on|off`" to enable the use of JanitorAI generation settings, such as Max Tokens, Top K, Top P, and Repetition Penalty. Turn this on to make the proxy use your settings instead of its default values. Use this only if you know what you are doing.
-
-***
-
-Use the commands "`//prefill on`" and "`//prefill off`" to enable or disable Eslezer's prefill. Use "`//prefill this`" to enable the prefill for a single message. This could help prevent STOP or PROHIBITED_CONTENT errors, but that is not guaranteed.
-
-Use the commands "`//think on`", "`//think off`" and "`//think this`" to confuse Gemini into doing it's chain of thought in the response message, potentially bypassing content filters and reducing STOP or PROHIBITED_CONTENT errors. The proxy will attempt to remove any stray <think> or <responses> from the result, but it might fail sometimes.
-
-Use the commands "`//nobot on`", "`//nobot off`" and "`//nobot this`" to remove the entire bot description from the prompt. If all else fails, try it out. THIS WILL NEGATIVELY AFFECT YOUR CHAT UNLESS YOU ALREADY HAVE PLENTY OF MESSAGES WITH THE BOT. The model depends on the bot description to know what to say. Without this, the model will depend exclusively on your chat messages. Make sure to have plenty of messages and a very high Context Size set in your Generation Settings.
+(Messages started being counted after the September 8 update)
 
 ***
 
-Use the command "`//preset gigakostyl`" or "`//preset minipopka`" to enhance any sex scenes in the bot's response. You cannot turn a preset on, you have to include this command everytime you want to enhance sex scenes. It is recomended that you use "`//prefill`" or "`//think`" as well.
+## Commands
 
-You cannot use multiple presets at the same time. Only the last one will take effect.
+You can include one or more commands in your messages, separated by spaces. You turn on some commands and they will apply across all messages in all chats. Some commands can be called with `this` to make them only apply to the next message. Preset commands need to be called every time you want to use them.
 
-"`//preset minipopka`" will influence the overall writing, mannerisms of characters, and possibly make the bot speak for you.
-"`//preset gigakostyl`" is simpler but has a quirk that it adds an "X-RAY" section to scene descriptions.
+- `//aboutme`
+
+  Shows you info about your proxy usage and what commands you have turned on or off.
+
+- `//banner`
+
+  Shows you this banner, regardless of whether you have seen it before or if you use the `/quiet/` URL.
+
+- `//advsettings on|off|this`
+
+  Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing.
+
+- `//prefill on|off|this`
+
+  Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
+
+- `//think on|off|this`
+
+  Tricks Gemini into doing its thinking inside the response to bypass content filters. *Note:* this might cause <think>/<response> to leak into messages.
+
+- `//nobot on|off|this`
+
+  Removes the bot's description from the chat, in case it contains ToS-breaking content. *Note:* use this only as a last resort. This will negatively impact your chat.
+
+- `//preset gigakostyl`
+
+  Adds a simple writing guideline for NSFW roleplay, plus "X-ray views" to sex scenes.
+
+- `//preset minipopka`
+  Adds a longer writing guideline to enhance narration and NSFW roleplay.
 
 ***
 
-You can use multiple commands in the same message (make sure to separate them with spaces!) for their combined effect.
+## Extras
 
-Use the command "`//aboutme`" (has no effect on the bot) to see what commands you have turned on or off. All these settings are specific to an API key.
-
-***
+You can use more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
 
 You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `https://geminiforjanitors.onrender.com/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
 

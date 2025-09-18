@@ -148,16 +148,25 @@ def proxy():
             "Concurrent use is not allowed. Try again later.", 403
         )
 
+    jai_req = JaiRequest.parse(request_json)
+    jai_req.quiet = "/quiet/" in request_path
+
     user = UserSettings(storage, xuid)
+
+    # Temporal measure, remove on Oct 1st, 2025.
+    # rcounter starts at zero and on the 200th request is equal to 199
+
+    if PRODUCTION and (jai_req.quiet or user.get_rcounter() < 199):
+        xlog(user, "User locked out")
+        return response.build_error(
+            f"{PROXY_NAME} is locking out /quiet/ and infrequent users. Sorry.", 403
+        )
+
+    # Handle user's request
 
     api_key_index = user.get_rcounter() % len(api_keys)
 
     user.inc_rcounter()
-
-    # Handle user's request
-
-    jai_req = JaiRequest.parse(request_json)
-    jai_req.quiet = "/quiet/" in request_path
 
     client = genai.Client(api_key=api_keys[api_key_index])
 
