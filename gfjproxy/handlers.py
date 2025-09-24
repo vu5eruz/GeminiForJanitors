@@ -157,10 +157,6 @@ def _gen_content(
                 threshold=types.HarmBlockThreshold.BLOCK_NONE,
                 category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
             ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-            ),
         ],
     }
 
