@@ -367,6 +367,11 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
         xlog(user, "User set prefill detected")
         last_user_message = jai_req.messages[-2]
 
+    fwp_prefill = "SYSTEM NOTE: Do not include the following words/phrases in your output under any circumstances: "
+    fwp_index = last_user_message.content.find(fwp_prefill)
+    if fwp_index != -1:
+        xlog(user, "User set forbidden words/phrases detected")
+
     if last_user_message.content.startswith("Rewrite/Enhance this message: "):
         xlog(user, f"Handling enhance message ({jai_req.model}) ...")
     else:
