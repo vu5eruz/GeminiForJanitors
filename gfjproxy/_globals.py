@@ -48,11 +48,16 @@ MODELS = [
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash-lite-preview-06-17",
+    "gemini-2.5-flash-lite-preview-09-2025",
     "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-flash-preview-09-2025",
     "gemini-2.5-pro",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
     "gemini-2.5-pro-preview-06-05",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-pro-latest",
 ]
 
 # XXX: FileNotFoundError
@@ -74,7 +79,7 @@ PROXY_AUTHORS = [
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _append_git_version("2025.09.18")
+PROXY_VERSION = _append_git_version("2025.09.25")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -82,18 +87,25 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 7
+BANNER_VERSION = 8
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
-**ATENTION! EMERGENCY UPDATE!**
+Minor update.
 
-This proxy runs on a free plan on Render.com, serving many users and consuming its bandwidth allowances. If the proxy exceeds its bandwidth quota, it will be suspended until October 1st. **`/quiet/` users and those with less than 200 messages on the proxy will be locked out to save bandwidth.**
+It seems JanitorAI doesn't send **Top K**, **Top P** settings to proxies, meaning that //advsettings only works with **Max Tokens**, and **Frequency/Repetition Penalty**.
 
-Apologies for the inconvenience, please spread the word!
+**Response Prefill** and **Forbidden Words and Phrases** don't require //advsettings to work.
 
-(Messages started being counted after the September 8 update)
+Support for the following models have been added:
+- `gemini-2.5-flash-lite-preview-09-2025`
+- `gemini-2.5-flash-preview-09-2025`
+- `gemini-flash-latest`
+- `gemini-flash-lite-latest`
+- `gemini-pro-latest`
+
+The proxy is still locked out from new and infrequent users until Oct 1st. That hasn't changed.
 
 ***
 
