@@ -85,25 +85,18 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 8
+BANNER_VERSION = 9
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 
 Minor update.
 
-It seems JanitorAI doesn't send **Top K**, **Top P** settings to proxies, meaning that //advsettings only works with **Max Tokens**, and **Frequency/Repetition Penalty**.
+All users must now wait 90 seconds after each request they make (message, enhance, summarize, proxy test), regardless of whether it succeeded or failed with an error. This is to reduce the bandwidth load on the proxy.
 
-**Response Prefill** and **Forbidden Words and Phrases** don't require //advsettings to work.
+This rate limit does not cost API calls, and will not consume your quotas.
 
-Support for the following models have been added:
-- `gemini-2.5-flash-lite-preview-09-2025`
-- `gemini-2.5-flash-preview-09-2025`
-- `gemini-flash-latest`
-- `gemini-flash-lite-latest`
-- `gemini-pro-latest`
-
-The proxy is still locked out from new and infrequent users until Oct 1st. That hasn't changed.
+The proxy is still locked out from new and infrequent users until Oct 1st.
 
 ***
 
@@ -121,7 +114,7 @@ You can include one or more commands in your messages, separated by spaces. You 
 
 - `//advsettings on|off|this`
 
-  Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing.
+  Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing. *Note:* Top K/P may have no effect.
 
 - `//prefill on|off|this`
 
