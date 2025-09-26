@@ -292,11 +292,14 @@ class UserSettings:
 
     #########################
 
+    def last_seen(self) -> int | None:
+        if seconds := self._data.get("timestamp_last_seen"):
+            return int(_unix_time() - seconds)
+        return None
+
     def last_seen_msg(self) -> str:
-        time_now = int(_unix_time())
-        timestamp_last_seen = self._data.get("timestamp_last_seen")
-        if isinstance(timestamp_last_seen, int):
-            return f"last seen {time_now - timestamp_last_seen}s ago"
+        if seconds := self.last_seen():
+            return f"last seen {seconds:,}s ago"
         return "not seen before"
 
     def save(self):

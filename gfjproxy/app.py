@@ -146,7 +146,7 @@ def proxy():
 
     if not storage.lock(xuid):
         return response.build_error(
-            "Concurrent use is not allowed. Try again later.", 403
+            "Concurrent use is not allowed. Please wait a moment.", 403
         )
 
     jai_req = JaiRequest.parse(request_json)
@@ -165,6 +165,15 @@ def proxy():
         return response.build_error(
             f"{PROXY_NAME} is locking out /quiet/ and infrequent users. Sorry.", 403
         )
+
+    # Cheap and easy rate limiting
+
+    if seconds := user.last_seen():
+        if seconds < 90:
+            delay = 90 - seconds
+            xlog(user, f"User told to wait {delay} seconds")
+            storage.unlock(xuid)
+            return response.build_error(f"Please wait {delay} seconds.", 429)
 
     # Handle user's request
 
