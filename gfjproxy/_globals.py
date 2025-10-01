@@ -85,20 +85,10 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 9
+BANNER_VERSION = 10
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
-
-Minor update.
-
-All users must now wait 90 seconds after each request they make (message, enhance, summarize, proxy test), regardless of whether it succeeded or failed with an error. This is to reduce the bandwidth load on the proxy.
-
-This rate limit does not cost API calls, and will not consume your quotas.
-
-The proxy is still locked out from new and infrequent users until Oct 1st.
-
-***
 
 ## Commands
 

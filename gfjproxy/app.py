@@ -42,7 +42,6 @@ from flask import Flask, abort, request, redirect, render_template, send_from_di
 from flask_cors import CORS
 from google import genai
 from secrets import token_bytes
-from time import time
 from traceback import print_exception
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
@@ -153,18 +152,6 @@ def proxy():
     jai_req.quiet = "/quiet/" in request_path
 
     user = UserSettings(storage, xuid)
-
-    # Temporal measure, remove on Oct 1st, 2025.
-    # rcounter starts at zero and on the 200th request is equal to 199
-
-    if (PRODUCTION and time() < 1759291200) and (
-        jai_req.quiet or user.get_rcounter() < 199
-    ):
-        xlog(user, "User locked out")
-        storage.unlock(xuid)
-        return response.build_error(
-            f"{PROXY_NAME} is locking out /quiet/ and infrequent users. Sorry.", 403
-        )
 
     # Cheap and easy rate limiting
 
