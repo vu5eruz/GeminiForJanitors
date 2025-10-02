@@ -1,0 +1,29 @@
+services:
+  # Main gfjproxy server
+  - type: web
+    name: GeminiForJanitors
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t 90 gfjproxy.app
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: GFJPROXY_REDIS_URL
+        fromService:
+          name: GeminiForJanitors-redis
+          type: keyvalue
+          property: connectionString
+      - key: GFJPROXY_XUID_SECRET
+        generateValue: true
+      - key: PORT
+        value: 5000
+
+  # Key Value storage for gfjproxy user settings
+  - type: keyvalue
+    name: GeminiForJanitors-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
