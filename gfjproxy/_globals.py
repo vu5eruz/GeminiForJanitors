@@ -72,8 +72,10 @@ for entry in _scandir("presets"):
 
 
 PROXY_AUTHORS = [
-    "@undefinedundefined (vu5eruz on GitHub)",
+    "@undefinedundefined (@undefined_anon on Discord, vu5eruz on GitHub)",
 ]
+
+PROXY_ADMIN = _env.get("GFJPROXY_ADMIN", PROXY_AUTHORS[0])
 
 if PROXY_COOLDOWN := _env.get("GFJPROXY_COOLDOWN"):
     PROXY_COOLDOWN = int(PROXY_COOLDOWN, base=10)
@@ -103,6 +105,7 @@ BANNER_VERSION = 11
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
+*Hosted by {PROXY_ADMIN}.*
 
 Big news! An alt link is being deployed!
 

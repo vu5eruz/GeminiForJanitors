@@ -11,6 +11,7 @@ from ._globals import (
     PREFILL,
     PRESETS,
     PRODUCTION,
+    PROXY_ADMIN,
     PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
@@ -105,7 +106,9 @@ def index():
 
     xlog(None, "Handling index")
 
-    return render_template("index.html", title=PROXY_NAME, version=PROXY_VERSION)
+    return render_template(
+        "index.html", admin=PROXY_ADMIN, title=PROXY_NAME, version=PROXY_VERSION
+    )
 
 
 @app.route("/favicon.ico")
