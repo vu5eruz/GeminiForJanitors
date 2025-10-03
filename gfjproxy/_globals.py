@@ -130,7 +130,7 @@ You can include one or more commands in your messages, separated by spaces. You 
   Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
 
 - `//think on|off|this`
-  Tricks Gemini into doing its thinking inside the response to bypass content filters. *Note:* this might cause <think>/<response> to leak into messages.
+  Tricks Gemini into doing its thinking inside the response to bypass content filters. *Note:* this might cause ᐸthinkᐳ/ᐸresponseᐳ to leak into the bot's messages.
 
 - `//nobot on|off|this`
   Removes the bot's description from the chat, in case it contains ToS-breaking content. *Note:* use this only as a last resort. This will negatively impact your chat.
