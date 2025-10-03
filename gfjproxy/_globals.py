@@ -85,10 +85,16 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 10
+BANNER_VERSION = 11
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
+
+Big news! An alt link is being deployed!
+
+https://geminiforjanitors-s34l.onrender.com/
+
+It is hosted by MajestyLotus221 in collaboration with me, undefinedundefined.
 
 ## Commands
 
