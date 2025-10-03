@@ -10,7 +10,7 @@ services:
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
-      - key: PROXY_ADMIN
+      - key: GFJPROXY_ADMIN
         sync: false
       - key: GFJPROXY_COOLDOWN
         value: 60
