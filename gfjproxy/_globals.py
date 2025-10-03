@@ -75,6 +75,13 @@ PROXY_AUTHORS = [
     "@undefinedundefined (vu5eruz on GitHub)",
 ]
 
+if PROXY_COOLDOWN := _env.get("GFJPROXY_COOLDOWN"):
+    PROXY_COOLDOWN = int(PROXY_COOLDOWN, base=10)
+elif PRODUCTION:
+    PROXY_COOLDOWN = 60  # Same value in render.yaml
+else:
+    PROXY_COOLDOWN = 0
+
 PROXY_NAME = "GeminiForJanitors"
 
 PROXY_VERSION = _make_git_version()
@@ -84,6 +91,7 @@ if not PROXY_URL:
     PROXY_URL = _env.get("RENDER_EXTERNAL_URL", "").rstrip("/")
     if not PROXY_URL:
         PROXY_URL = "https://geminiforjanitors.onrender.com"
+
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 

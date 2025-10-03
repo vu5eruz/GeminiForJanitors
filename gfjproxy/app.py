@@ -11,6 +11,7 @@ from ._globals import (
     PREFILL,
     PRESETS,
     PRODUCTION,
+    PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
     REDIS_URL,
@@ -156,8 +157,8 @@ def proxy():
     # Cheap and easy rate limiting
 
     if seconds := user.last_seen():
-        if seconds < 90:
-            delay = 90 - seconds
+        if seconds < PROXY_COOLDOWN:
+            delay = PROXY_COOLDOWN - seconds
             xlog(user, f"User told to wait {delay} seconds")
             storage.unlock(xuid)
             return response.build_error(f"Please wait {delay} seconds.", 429)

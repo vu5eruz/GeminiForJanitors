@@ -10,6 +10,8 @@ services:
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
+      - key: GFJPROXY_COOLDOWN
+        value: 60
       - key: GFJPROXY_REDIS_URL
         fromService:
           name: GeminiForJanitors-redis
