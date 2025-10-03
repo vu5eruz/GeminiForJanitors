@@ -105,7 +105,7 @@ BANNER_VERSION = 11
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
-*Hosted by {PROXY_ADMIN}.*
+*Hosted by {PROXY_ADMIN}*
 
 Big news! An alt link is being deployed!
 
@@ -115,7 +115,7 @@ It is hosted by MajestyLotus221 in collaboration with me, undefinedundefined.
 
 ## Commands
 
-You can include one or more commands in your messages, separated by spaces. You turn on some commands and they will apply across all messages in all chats. Some commands can be called with `this` to make them only apply to the next message. Preset commands need to be called every time you want to use them.
+You can include one or more commands in your messages, separated by spaces. You can turn on some commands and they will apply across all messages in all chats. Some commands can be called with `this` to make them only apply to the next message. Preset commands need to be called every time you want to use them.
 
 - `//aboutme`
   Shows you info about your proxy usage and what commands you have turned on or off.
