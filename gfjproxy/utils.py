@@ -40,9 +40,10 @@ class ResponseHelper:
     PROXY_TAG_OPEN = "\u200b<proxy>\n"
     PROXY_TAG_CLOSE = "\n\u200b</proxy>"
 
-    def __init__(self, *, wrap_errors: bool = False):
+    def __init__(self, *, use_stream: bool = False, wrap_errors: bool = False):
         self._messages = []
         self._status = 200
+        self._use_stream = use_stream
         self._wrap_errors = wrap_errors
 
     def add_error(self, message, status_code: int):
@@ -84,7 +85,27 @@ class ResponseHelper:
                     status=self._status,
                     content_type="text/plain; charset=utf-8",
                 )
-        else:  # self._status == 200 or complex multi-line message
+        elif self._use_stream:
+            return Response(
+                response=[
+                    json.dumps(
+                        {
+                            "choices": [
+                                {
+                                    "index": 0,
+                                    "delta": {
+                                        "content": self.message,
+                                    },
+                                    "finish_reason": "stop",
+                                }
+                            ]
+                        }
+                    ).join(("data: ", "\n\ndata: [DONE]\n\n")),
+                ],
+                status=200,
+                content_type="text/event-stream; charset=utf-8",
+            )
+        else:
             return Response(
                 response=[
                     json.dumps(

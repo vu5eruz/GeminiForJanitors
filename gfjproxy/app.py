@@ -133,9 +133,12 @@ def proxy():
 
     request_path = request.path
 
+    jai_req = JaiRequest.parse(request_json)
+    jai_req.quiet = "/quiet/" in request_path
+
     proxy_test = is_proxy_test(request_json)
 
-    response = ResponseHelper(wrap_errors=proxy_test)
+    response = ResponseHelper(use_stream=jai_req.stream, wrap_errors=proxy_test)
 
     # JanitorAI provides the user's API key through HTTP Bearer authentication.
     # Google AI cannot be used without an API key and neither can this proxy.
@@ -151,9 +154,6 @@ def proxy():
         return response.build_error(
             "Concurrent use is not allowed. Please wait a moment.", 403
         )
-
-    jai_req = JaiRequest.parse(request_json)
-    jai_req.quiet = "/quiet/" in request_path
 
     user = UserSettings(storage, xuid)
 
@@ -184,7 +184,7 @@ def proxy():
 
     ref_time = xlogtime(
         user,
-        f"Processing {request_path} ({', '.join(log_details)})",
+        f"Processing {'stream ' if jai_req.stream else ''}{request_path} ({', '.join(log_details)})",
     )
 
     try:
@@ -194,8 +194,6 @@ def proxy():
             response.add_error(
                 f"Invalid or unsupported Gemini 2.5 model: {jai_req.model}", 400
             )
-        elif jai_req.stream:
-            response.add_error("Text streaming is not supported.", 400)
         elif proxy_test:
             response = handle_proxy_test(client, user, jai_req, response)
         else:
