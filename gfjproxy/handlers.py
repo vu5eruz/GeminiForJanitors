@@ -123,6 +123,20 @@ def _gen_content(
     else:
         used_prefill = False
 
+    if jai_req.use_ooctrick or user.use_ooctrick:
+        xlog(
+            user,
+            "Adding OOC trick to chat"
+            + (" (for this message only)." if not user.use_ooctrick else "."),
+        )
+
+        contents.append(types.ModelContent({"text": "(OOC: Continue?)"}))
+        contents.append(types.UserContent({"text": "(OOC: Yes)"}))
+
+        used_ooctrick = True
+    else:
+        used_ooctrick = False
+
     if used_think:
         contents.append(
             types.ModelContent(
@@ -282,8 +296,8 @@ def _gen_content(
 
         if reason == "MAX_TOKENS":
             message += '\nTry increasing "Max tokens" in your Generation Settings or set it to zero to disable it.'
-        elif not used_prefill and not used_think:
-            message += "\nTry using `//prefill this` and/or `//think this`"
+        elif not used_ooctrick and not used_prefill and not used_think:
+            message += "\nTry using: `//ooctrick on`, `//prefill on`, `//think on`"
 
         return message, 502
 

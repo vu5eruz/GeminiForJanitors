@@ -275,6 +275,14 @@ class UserSettings:
         self._data["use_nobot"] = bool(value)
 
     @property
+    def use_ooctrick(self) -> bool:
+        return bool(self._data.get("use_ooctrick", False))
+
+    @use_ooctrick.setter
+    def use_ooctrick(self, value):
+        self._data["use_ooctrick"] = bool(value)
+
+    @property
     def use_prefill(self) -> bool:
         return bool(self._data.get("use_prefill", False))
 
