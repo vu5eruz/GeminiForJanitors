@@ -101,17 +101,19 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 11
+BANNER_VERSION = 12
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-Big news! An alt link is being deployed!
+Minor update!
 
-https://geminiforjanitors-s34l.onrender.com/
+New command //ooctrick has been added as a lightweight, low-impact alternative to //prefill and //think.
 
-It is hosted by MajestyLotus221 in collaboration with me, undefinedundefined.
+The proxy no longer throws an error when using Text Streaming, so that new users won't have to fiddle with this setting. Bot responses themselves are NOT streamed, though, the proxy still has to wait for a full response before sending it to you.
+
+Please give feedback and report any bugs under **@MajestyLotus221**'s pinned comment on the Gemini Proxy Guide.
 
 ## Commands
 
@@ -125,6 +127,9 @@ You can include one or more commands in your messages, separated by spaces. You 
 
 - `//advsettings on|off|this`
   Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing. *Note:* Top K/P may have no effect.
+
+- `//ooctrick on|off|this`
+  Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.
 
 - `//prefill on|off|this`
   Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
