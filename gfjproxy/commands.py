@@ -121,6 +121,7 @@ def aboutme(args, user, jai_req, response):
         + f" You were {user.last_seen_msg()}. Your request counter is {user.get_rcounter()}."
         + " Your settings are:",
         f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
+        f"- //ooctrick is {'enabled' if user.use_ooctrick else 'disabled'}",
         f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
         f"- //think is {'enabled' if user.use_think else 'disabled'}",
         f"- //advsettings is {'enabled' if user.use_nobot else 'disabled'}",
