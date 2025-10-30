@@ -101,19 +101,17 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 12
+BANNER_VERSION = 13
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-Minor update!
+The main proxy link is suspended! Here are some alts:
 
-New command //ooctrick has been added as a lightweight, low-impact alternative to //prefill and //think.
-
-The proxy no longer throws an error when using Text Streaming, so that new users won't have to fiddle with this setting. Bot responses themselves are NOT streamed, though, the proxy still has to wait for a full response before sending it to you.
-
-Please give feedback and report any bugs under **@MajestyLotus221**'s pinned comment on the Gemini Proxy Guide.
+- `https://geminiforjanitors-s34l.onrender.com/` by @MajestyLotus221
+- `https://geminiforjanitors-i7zd.onrender.com/` by @MajestyLotus221
+- `https://geminiforjanitors-rhuc.onrender.com/` bu @.shiro.
 
 ## Commands
 
