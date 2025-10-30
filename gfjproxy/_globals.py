@@ -109,9 +109,9 @@ BANNER = rf"""***
 
 The main proxy link is suspended! Here are some alts:
 
-- `https://geminiforjanitors-s34l.onrender.com/` by @MajestyLotus221
-- `https://geminiforjanitors-i7zd.onrender.com/` by @MajestyLotus221
-- `https://geminiforjanitors-rhuc.onrender.com/` bu @.shiro.
+- `https://geminiforjanitors-s34l.onrender.com/` by @MajestyLotus221 (cooldown 60 seconds)
+- `https://geminiforjanitors-i7zd.onrender.com/` by @MajestyLotus221 (no cooldown)
+- `https://geminiforjanitors-rhuc.onrender.com/` by @.shiro. (no cooldown)
 
 ## Commands
 
