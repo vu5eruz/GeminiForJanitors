@@ -101,17 +101,18 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 13
+BANNER_VERSION = 14
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-The main proxy link is suspended! Here are some alts:
+This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 
 - `https://geminiforjanitors-s34l.onrender.com/` by @MajestyLotus221 (cooldown 60 seconds)
 - `https://geminiforjanitors-i7zd.onrender.com/` by @MajestyLotus221 (no cooldown)
 - `https://geminiforjanitors-rhuc.onrender.com/` by @.shiro. (no cooldown)
+- `https://geminiforjanitors-r7wu.onrender.com/` by @NixGG (cooldown 30 seconds)
 
 ## Commands
 
