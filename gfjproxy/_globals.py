@@ -53,6 +53,7 @@ MODELS = [
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
     "gemini-2.5-pro-preview-06-05",
+    "gemini-3-pro-preview",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
     "gemini-pro-latest",
