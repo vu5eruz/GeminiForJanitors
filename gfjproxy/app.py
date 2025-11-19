@@ -151,6 +151,7 @@ def proxy():
     xuid = XUID(api_keys[0], xuid_secret)
 
     if not storage.lock(xuid):
+        xlog(xuid, "User attempted concurrent use")
         return response.build_error(
             "Concurrent use is not allowed. Please wait a moment.", 403
         )

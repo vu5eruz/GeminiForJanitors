@@ -98,14 +98,16 @@ _logger.propagate = False
 _logger.setLevel(logging.INFO)
 
 
-def xlog(user: UserSettings | None, msg: str):
+def xlog(user: UserSettings | XUID | None, msg: str):
     extra = {}
     if user is not None:
-        extra["filler"] = user.xuid.pretty()
+        extra["filler"] = (
+            user.xuid.pretty() if isinstance(user, UserSettings) else user.pretty()
+        )
     _logger.info(msg.strip(), extra=extra)
 
 
-def xlogtime(user: UserSettings | None, msg: str, prev_time=None) -> float:
+def xlogtime(user: UserSettings | XUID | None, msg: str, prev_time=None) -> float:
     curr_time = monotonic()
 
     diff_time_str = ""
