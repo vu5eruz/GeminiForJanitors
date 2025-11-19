@@ -102,11 +102,13 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 14
+BANNER_VERSION = 15
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
+
+You can now use gemini-3-pro-preview as model. This is a paid model, if you don't have it paid you will get quota errors.
 
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 
@@ -114,6 +116,8 @@ This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwid
 - `https://geminiforjanitors-i7zd.onrender.com/` by @MajestyLotus221 (no cooldown)
 - `https://geminiforjanitors-rhuc.onrender.com/` by @.shiro. (no cooldown)
 - `https://geminiforjanitors-r7wu.onrender.com/` by @NixGG (cooldown 30 seconds)
+
+***
 
 ## Commands
 
