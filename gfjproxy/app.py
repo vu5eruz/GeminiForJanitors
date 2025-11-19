@@ -219,52 +219,39 @@ def proxy():
 ################################################################################
 
 
-@app.route("/admin", methods=["POST"])
+@app.route("/admin/dump-all", methods=["GET"])
 def admin():
-    request_json = request.get_json(silent=True)
-    if not request_json:
+    if request.args.get("secret") != XUID_SECRET:
         return {
-            "error": "Bad Request. Missing or invalid JSON.",
-        }, 400
-
-    if request.headers.get("x-gfjproxy-xuid-secret") != XUID_SECRET:
-        return {
-            "error": "Unauthorized. Correct XUID_SECRET required.",
-        }, 401
-
-    request_command = request_json.get("command")
-
-    if request_command == "dump":
-        if isinstance(storage, RedisUserStorage):
-            r = storage._client
-
-            locks = 0
-            dump = dict()
-            for key in map(bytes.decode, r.scan_iter(match="*", count=100)):
-                if key.endswith(":lock"):
-                    locks += 1
-                else:
-                    dump[key] = ...
-
-            from itertools import batched
-            from json import loads
-
-            for batch in batched(dump.keys(), 100):
-                for key, value in zip(batch, map(loads, r.mget(batch))):
-                    dump[key] = value
-
-            return {
-                "locks": locks,
-                "dump": dump,
-            }
-        else:
-            return {
-                "error": "Storage is not redis.",
-            }, 403
-    else:
-        return {
-            "error": "Missing or invalid command.",
+            "error": "secret required.",
         }, 403
+
+    if not isinstance(storage, RedisUserStorage):
+        return {
+            "error": "storage is not redis.",
+        }, 403
+
+    r = storage._client
+
+    locks = list()
+    dump = dict()
+    for key in map(bytes.decode, r.scan_iter(match="*", count=100)):
+        if key.endswith(":lock"):
+            locks.append(key)
+        else:
+            dump[key] = ...
+
+    from itertools import batched
+    from json import loads
+
+    for batch in batched(dump.keys(), 100):
+        for key, value in zip(batch, map(loads, r.mget(batch))):
+            dump[key] = value
+
+    return {
+        "locks": locks,
+        "dump": dump,
+    }
 
 
 ################################################################################
