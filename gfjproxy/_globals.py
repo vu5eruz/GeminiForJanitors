@@ -76,7 +76,7 @@ PROXY_AUTHORS = [
     "@undefinedundefined (@undefined_anon on Discord, vu5eruz on GitHub)",
 ]
 
-PROXY_ADMIN = _env.get("GFJPROXY_ADMIN", PROXY_AUTHORS[0])
+PROXY_ADMIN = _env.get("GFJPROXY_ADMIN", "Anonymous")
 
 if PROXY_COOLDOWN := _env.get("GFJPROXY_COOLDOWN"):
     PROXY_COOLDOWN = int(PROXY_COOLDOWN, base=10)
