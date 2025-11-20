@@ -119,7 +119,11 @@ def favicon():
 @app.route("/health")
 @app.route("/healthz")
 def health():
-    return "All good.", 200
+    return {
+        "admin": PROXY_ADMIN,
+        "cooldown": PROXY_COOLDOWN,
+        "version": PROXY_VERSION,
+    }, 200
 
 
 @app.route("/", methods=["POST"])
