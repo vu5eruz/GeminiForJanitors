@@ -119,9 +119,14 @@ def favicon():
 @app.route("/health")
 @app.route("/healthz")
 def health():
+    keyspace = -1
+    if isinstance(storage, RedisUserStorage):
+        keyspace = storage._client.info("keyspace").get("db0", {}).get("keys", -1)
+
     return {
         "admin": PROXY_ADMIN,
         "cooldown": PROXY_COOLDOWN,
+        "keyspace": keyspace,
         "version": PROXY_VERSION,
     }, 200
 
