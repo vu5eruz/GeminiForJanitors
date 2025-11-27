@@ -5,8 +5,8 @@ services:
     runtime: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t 90 gfjproxy.app
+    buildCommand: uv sync --locked --all-extras --dev
+    startCommand: uv run gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t 90 gfjproxy.app
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
@@ -25,6 +25,8 @@ services:
         generateValue: true
       - key: PORT
         value: 5000
+      - key: UV_VERSION
+        value: "0.9.13"
 
   # Key Value storage for gfjproxy user settings
   - type: keyvalue
