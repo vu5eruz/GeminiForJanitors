@@ -258,6 +258,8 @@ def _gen_content(
                     if feedback := _get_quota_violation_feedback(qid):
                         return feedback, 429
 
+            xlog(user, repr(e))
+
             # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
             return e.message, e.code
 

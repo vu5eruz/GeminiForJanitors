@@ -107,7 +107,11 @@ def index():
     xlog(None, "Handling index")
 
     return render_template(
-        "index.html", admin=PROXY_ADMIN, title=PROXY_NAME, version=PROXY_VERSION
+        "index.html",
+        admin=PROXY_ADMIN,
+        annoucement=storage.annoucement,
+        title=PROXY_NAME,
+        version=PROXY_VERSION,
     )
 
 
@@ -244,7 +248,7 @@ def admin_annoucement():
             "error": "payload missing.",
         }, 400
 
-    if not isinstance((message := payload.get("message"), str)):
+    if not isinstance((message := payload.get("message")), str):
         return {
             "error": "payload message missing.",
         }, 400
