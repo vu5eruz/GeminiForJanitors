@@ -239,23 +239,30 @@ def proxy():
 def admin_annoucement():
     if request.args.get("secret") != XUID_SECRET:
         return {
+            "success": False,
             "error": "secret required.",
         }, 403
 
     payload = request.get_json(silent=True)
     if not payload:
         return {
+            "success": False,
             "error": "payload missing.",
         }, 400
 
     if not isinstance((message := payload.get("message")), str):
         return {
+            "success": False,
             "error": "payload message missing.",
         }, 400
 
     storage.announcement = message.strip()
 
     xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
+
+    return {
+        "success": True,
+    }
 
 
 @app.route("/admin/dump-all", methods=["GET"])
