@@ -225,7 +225,10 @@ def proxy():
         for message in messages[1:]:
             xlog(user, f"> {message}")
 
-    user.save()
+    if user.valid:
+        user.save()
+    else:
+        xlog(user, "Invalid user not saved")
 
     storage.unlock(xuid)
 

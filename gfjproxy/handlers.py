@@ -217,6 +217,9 @@ def _gen_content(
         return "Gateway Timeout", 504
     except genai.errors.ClientError as e:
         if e.status == "INVALID_ARGUMENT":
+            if "API key not valid" in e.message:
+                user.valid = False
+
             # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
             # 400 INVALID_ARGUMENT "Penalty is not enabled for models/*"
             return e.message, e.code

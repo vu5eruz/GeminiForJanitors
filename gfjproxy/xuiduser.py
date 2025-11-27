@@ -274,6 +274,8 @@ class UserSettings:
 
         self._data["version"] = 1
 
+        self.valid = True
+
     @property
     def exists(self):
         return self._exists
