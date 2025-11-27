@@ -19,6 +19,8 @@ services:
           name: GeminiForJanitors-redis
           type: keyvalue
           property: connectionString
+      - key: GFJPROXY_RENDER_API_KEY
+        value: ~
       - key: GFJPROXY_XUID_SECRET
         generateValue: true
       - key: PORT
