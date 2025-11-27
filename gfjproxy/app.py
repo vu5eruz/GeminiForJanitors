@@ -305,11 +305,13 @@ def admin_bandwidth_usage():
 def admin_dump_all():
     if request.args.get("secret") != XUID_SECRET:
         return {
+            "success": False,
             "error": "secret required.",
         }, 403
 
     if not isinstance(storage, RedisUserStorage):
         return {
+            "success": False,
             "error": "storage is not redis.",
         }, 403
 
@@ -331,6 +333,7 @@ def admin_dump_all():
             dump[key] = value
 
     return {
+        "success": True,
         "locks": locks,
         "dump": dump,
     }
