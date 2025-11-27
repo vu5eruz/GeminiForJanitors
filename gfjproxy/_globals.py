@@ -95,6 +95,7 @@ if not PROXY_URL:
     if not PROXY_URL:
         PROXY_URL = "https://geminiforjanitors.onrender.com"
 
+RENDER_API_KEY = _env.get("GFJPROXY_RENDER_API_KEY")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
@@ -102,7 +103,7 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 15
+BANNER_VERSION = 16
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
@@ -112,10 +113,9 @@ You can now use gemini-3-pro-preview as model. This is a paid model, if you don'
 
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 
-- `https://geminiforjanitors-s34l.onrender.com/` by @MajestyLotus221 (cooldown 60 seconds)
-- `https://geminiforjanitors-i7zd.onrender.com/` by @MajestyLotus221 (no cooldown)
-- `https://geminiforjanitors-rhuc.onrender.com/` by @.shiro. (no cooldown)
 - `https://geminiforjanitors-r7wu.onrender.com/` by @NixGG (cooldown 30 seconds)
+- `https://geminiforjanitors-rhuc.onrender.com/` by @.shiro. (no cooldown)
+- `https://geminiforjanitors-s34l.onrender.com/` by @MajestyLotus221 (no cooldown)
 
 ***
 
