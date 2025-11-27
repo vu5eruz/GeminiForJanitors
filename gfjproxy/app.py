@@ -15,6 +15,7 @@ from ._globals import (
     PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
+    RENDER_API_KEY,
     REDIS_URL,
     XUID_SECRET,
 )
@@ -45,6 +46,7 @@ from flask_cors import CORS
 from google import genai
 from secrets import token_bytes
 from traceback import print_exception
+from .bandwidth import bandwidth_usage
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
 from .logging import hijack_loggers, xlog, xlogtime
@@ -267,6 +269,35 @@ def admin_announcement():
 
     return {
         "success": True,
+    }
+
+
+@app.route("/admin/bandwidth-usage", methods=["GET"])
+def admin_bandwidth_usage():
+    if request.args.get("secret") != XUID_SECRET:
+        return {
+            "success": False,
+            "error": "secret required.",
+        }, 403
+
+    if not RENDER_API_KEY:
+        return {
+            "success": False,
+            "error": "no render api key.",
+        }, 400
+
+    total, unit = bandwidth_usage()
+
+    if total == -1:
+        return {
+            "success": False,
+            "error": "unknown error.",
+        }, 502
+
+    return {
+        "success": True,
+        "total": total,
+        "unit": unit,
     }
 
 
