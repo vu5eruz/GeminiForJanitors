@@ -13,8 +13,8 @@ from gfjproxy.xuiduser import LocalUserStorage, RedisUserStorage
         RedisUserStorage,
     ],
 )
-def test_annoucement_basic(storage):
-    """Basic functionality test for annoucement storage."""
+def test_announcement_basic(storage):
+    """Basic functionality test for announcement storage."""
 
     if storage == RedisUserStorage:
         if not REDIS_URL:
@@ -25,10 +25,10 @@ def test_annoucement_basic(storage):
 
     assert storage.active()
 
-    assert storage.annoucement == ""
+    assert storage.announcement == ""
 
-    storage.annoucement = "Lorem Ipsum"
-    assert storage.annoucement == "Lorem Ipsum"
+    storage.announcement = "Lorem Ipsum"
+    assert storage.announcement == "Lorem Ipsum"
 
-    storage.annoucement = ""
-    assert storage.annoucement == ""
+    storage.announcement = ""
+    assert storage.announcement == ""

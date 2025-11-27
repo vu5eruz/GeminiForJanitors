@@ -108,14 +108,14 @@ class UserStorage:
         raise NotImplementedError("UserStorage.active")
 
     @property
-    def annoucement(self) -> str:
+    def announcement(self) -> str:
         """Announcement text, if any, to be included in bot responses.
-        If there is no annoucement text, an empty string is returned."""
-        raise NotImplementedError("UserStorage.annoucement")
+        If there is no announcement text, an empty string is returned."""
+        raise NotImplementedError("UserStorage.announcement")
 
-    @annoucement.setter
-    def annoucement(self, text):
-        raise NotImplementedError("UserStorage.annoucement_setter")
+    @announcement.setter
+    def announcement(self, text):
+        raise NotImplementedError("UserStorage.announcement_setter")
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         """Gets the user data if they exist in the storage."""
@@ -144,7 +144,7 @@ class LocalUserStorage(UserStorage):
     """Implements a non-persistent in-memory user storage."""
 
     def __init__(self):
-        self._annoucement = ""
+        self._announcement = ""
         self._storage: dict[XUID, dict] = dict()
         self._locks: dict[XUID, _threading_Lock] = dict()
 
@@ -152,15 +152,15 @@ class LocalUserStorage(UserStorage):
         return True
 
     @property
-    def annoucement(self) -> str:
-        return self._annoucement
+    def announcement(self) -> str:
+        return self._announcement
 
-    @annoucement.setter
-    def annoucement(self, text):
+    @announcement.setter
+    def announcement(self, text):
         if text:
-            self._annoucement = str(text)
+            self._announcement = str(text)
         else:
-            self._annoucement = ""
+            self._announcement = ""
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         data = self._storage.get(xuid)
@@ -211,18 +211,18 @@ class RedisUserStorage(UserStorage):
         return self._client is not None
 
     @property
-    def annoucement(self) -> str:
-        data = self._client.get(":annoucement")
+    def announcement(self) -> str:
+        data = self._client.get(":announcement")
         if data:
             return data.decode()
         return ""
 
-    @annoucement.setter
-    def annoucement(self, text):
+    @announcement.setter
+    def announcement(self, text):
         if text:
-            self._client.set(":annoucement", str(text))
+            self._client.set(":announcement", str(text))
         else:
-            self._client.delete(":annoucement")
+            self._client.delete(":announcement")
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         data = self._client.get(repr(xuid))

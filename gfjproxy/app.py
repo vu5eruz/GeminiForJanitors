@@ -109,7 +109,7 @@ def index():
     return render_template(
         "index.html",
         admin=PROXY_ADMIN,
-        annoucement=storage.annoucement,
+        announcement=storage.announcement,
         title=PROXY_NAME,
         version=PROXY_VERSION,
     )
@@ -217,8 +217,8 @@ def proxy():
     if 200 <= response.status <= 299:
         xlogtime(user, "Processing succeeded", ref_time)
 
-        if annoucement := storage.annoucement:
-            response.add_proxy_message(f"***\n{annoucement}\n***")
+        if announcement := storage.announcement:
+            response.add_proxy_message(f"***\n{announcement}\n***")
     else:
         messages = response.message.split("\n")
         xlogtime(user, f"Processing failed: {messages[0]}", ref_time)
@@ -238,8 +238,8 @@ def proxy():
 ################################################################################
 
 
-@app.route("/admin/annoucement", methods=["POST"])
-def admin_annoucement():
+@app.route("/admin/announcement", methods=["POST"])
+def admin_announcement():
     if request.args.get("secret") != XUID_SECRET:
         return {
             "success": False,
@@ -265,9 +265,9 @@ def admin_annoucement():
             "error": "payload message empty.",
         }, 400
 
-    storage.annoucement = message.strip()
+    storage.announcement = message.strip()
 
-    xlog(None, "Admin annoucement " + ("updated" if message else "cleared"))
+    xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
 
     return {
         "success": True,
