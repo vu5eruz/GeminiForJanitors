@@ -259,9 +259,15 @@ def admin_annoucement():
             "error": "payload message missing.",
         }, 400
 
-    storage.announcement = message.strip()
+    if not (message := message.strip()):
+        return {
+            "success": False,
+            "error": "payload message empty.",
+        }, 400
 
-    xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
+    storage.annoucement = message.strip()
+
+    xlog(None, "Admin annoucement " + ("updated" if message else "cleared"))
 
     return {
         "success": True,
