@@ -212,6 +212,9 @@ def proxy():
 
     if 200 <= response.status <= 299:
         xlogtime(user, "Processing succeeded", ref_time)
+
+        if annoucement := storage.annoucement:
+            response.add_proxy_message(f"***\n{annoucement}\n***")
     else:
         messages = response.message.split("\n")
         xlogtime(user, f"Processing failed: {messages[0]}", ref_time)
@@ -228,8 +231,31 @@ def proxy():
 ################################################################################
 
 
+@app.route("/admin/annoucement", methods=["POST"])
+def admin_annoucement():
+    if request.args.get("secret") != XUID_SECRET:
+        return {
+            "error": "secret required.",
+        }, 403
+
+    payload = request.get_json(silent=True)
+    if not payload:
+        return {
+            "error": "payload missing.",
+        }, 400
+
+    if not isinstance((message := payload.get("message"), str)):
+        return {
+            "error": "payload message missing.",
+        }, 400
+
+    storage.announcement = message.strip()
+
+    xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
+
+
 @app.route("/admin/dump-all", methods=["GET"])
-def admin():
+def admin_dump_all():
     if request.args.get("secret") != XUID_SECRET:
         return {
             "error": "secret required.",
