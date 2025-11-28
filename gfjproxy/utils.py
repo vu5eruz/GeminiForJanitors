@@ -4,7 +4,7 @@ import atexit
 import click
 import json
 import re
-import requests
+import httpx
 import subprocess
 import threading
 import time
@@ -240,13 +240,13 @@ def _runner(cloudflared: str):
 
     for _ in range(10):
         try:
-            metrics = requests.get("http://127.0.0.1:5001/metrics").text
+            metrics = httpx.get("http://127.0.0.1:5001/metrics").text
             url = re.search(
                 r"(?P<url>https?:\/\/[^\s]+.trycloudflare.com)", metrics
             ).group("url")
             click.echo(f" * Tunnel on {url}")
             return
-        except requests.exceptions.RequestException:
+        except httpx.HTTPError:
             time.sleep(1)
     else:
         click.echo(" * Couldn't get cloudflared link")

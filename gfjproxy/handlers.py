@@ -217,6 +217,9 @@ def _gen_content(
         return "Gateway Timeout", 504
     except genai.errors.ClientError as e:
         if e.status == "INVALID_ARGUMENT":
+            if "API key not valid" in e.message:
+                user.valid = False
+
             # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
             # 400 INVALID_ARGUMENT "Penalty is not enabled for models/*"
             return e.message, e.code
@@ -257,6 +260,8 @@ def _gen_content(
 
                     if feedback := _get_quota_violation_feedback(qid):
                         return feedback, 429
+
+            xlog(user, repr(e))
 
             # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
             return e.message, e.code
@@ -356,12 +361,17 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     # proxy test is set too low and guarantees the model to fail. Unbound the
     # token limit so that if everything is good then we can get a good response.
 
+    empty_user = UserSettings(LocalUserStorage(), user.xuid)
+
     result, status = _gen_content(
         client,
-        UserSettings(LocalUserStorage(), user.xuid),
+        empty_user,
         jai_req,
         {"max_output_tokens": None},
     )
+
+    # The caller (app.proxy) would like to know if the user had an invalid API key
+    user.valid = empty_user.valid
 
     if status != 200:
         return response.add_error(result, status)

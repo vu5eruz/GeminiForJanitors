@@ -19,6 +19,10 @@
       <h2>Google AI Studio Proxy for JanitorAI</h2>
       <p style="font-style: italic">Hosted by {{ admin }}</p>
       <hr />
+      {% if announcement %}
+        <p>{{ announcement|e }}</p>
+        <hr />
+      {% endif %}
       <img src="/static/guide-1.png" alt="Open a chat, open API Settings, select Proxy and then Add Configuration." />
       <img src="/static/guide-2.png" alt="Put a Gemini 2.5 model in Model Name (preview models work too), add the Proxy URL, your API Key, then press Save twice (to help with network errors)." />
       <img src="/static/guide-3.png" alt="You must first Save and reload before you test a different URL. Make sure it's Active before reload. Press Test and wait a bit. If you get “Valid API Key. Configuration works!” then you are good to go. If you get “Network error. Try again later!” then try: Edit, Save Changes, Edit, Save Changes, Save Settings, reload and test again. Doing Edit/Save twice seems to work." />

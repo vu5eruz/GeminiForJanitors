@@ -107,6 +107,16 @@ class UserStorage:
         Using an inactive storage will most likely cause errors."""
         raise NotImplementedError("UserStorage.active")
 
+    @property
+    def announcement(self) -> str:
+        """Announcement text, if any, to be included in bot responses.
+        If there is no announcement text, an empty string is returned."""
+        raise NotImplementedError("UserStorage.announcement")
+
+    @announcement.setter
+    def announcement(self, text):
+        raise NotImplementedError("UserStorage.announcement_setter")
+
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         """Gets the user data if they exist in the storage."""
         raise NotImplementedError("UserStorage.get")
@@ -134,11 +144,23 @@ class LocalUserStorage(UserStorage):
     """Implements a non-persistent in-memory user storage."""
 
     def __init__(self):
+        self._announcement = ""
         self._storage: dict[XUID, dict] = dict()
         self._locks: dict[XUID, _threading_Lock] = dict()
 
     def active(self) -> bool:
         return True
+
+    @property
+    def announcement(self) -> str:
+        return self._announcement
+
+    @announcement.setter
+    def announcement(self, text):
+        if text:
+            self._announcement = str(text)
+        else:
+            self._announcement = ""
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         data = self._storage.get(xuid)
@@ -187,6 +209,20 @@ class RedisUserStorage(UserStorage):
 
     def active(self) -> bool:
         return self._client is not None
+
+    @property
+    def announcement(self) -> str:
+        data = self._client.get(":announcement")
+        if data:
+            return data.decode()
+        return ""
+
+    @announcement.setter
+    def announcement(self, text):
+        if text:
+            self._client.set(":announcement", str(text))
+        else:
+            self._client.delete(":announcement")
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         data = self._client.get(repr(xuid))
@@ -237,6 +273,8 @@ class UserSettings:
             self._data["timestamp_first_seen"] = int(_unix_time())
 
         self._data["version"] = 1
+
+        self.valid = True
 
     @property
     def exists(self):

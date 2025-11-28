@@ -15,6 +15,7 @@ from ._globals import (
     PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
+    RENDER_API_KEY,
     REDIS_URL,
     XUID_SECRET,
 )
@@ -45,6 +46,7 @@ from flask_cors import CORS
 from google import genai
 from secrets import token_bytes
 from traceback import print_exception
+from .bandwidth import bandwidth_usage
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
 from .logging import hijack_loggers, xlog, xlogtime
@@ -107,7 +109,11 @@ def index():
     xlog(None, "Handling index")
 
     return render_template(
-        "index.html", admin=PROXY_ADMIN, title=PROXY_NAME, version=PROXY_VERSION
+        "index.html",
+        admin=PROXY_ADMIN,
+        announcement=storage.announcement,
+        title=PROXY_NAME,
+        version=PROXY_VERSION,
     )
 
 
@@ -212,13 +218,19 @@ def proxy():
 
     if 200 <= response.status <= 299:
         xlogtime(user, "Processing succeeded", ref_time)
+
+        if announcement := storage.announcement:
+            response.add_proxy_message(f"***\n{announcement}\n***")
     else:
         messages = response.message.split("\n")
         xlogtime(user, f"Processing failed: {messages[0]}", ref_time)
         for message in messages[1:]:
             xlog(user, f"> {message}")
 
-    user.save()
+    if user.valid:
+        user.save()
+    else:
+        xlog(user, "Invalid user not saved")
 
     storage.unlock(xuid)
 
@@ -228,15 +240,79 @@ def proxy():
 ################################################################################
 
 
-@app.route("/admin/dump-all", methods=["GET"])
-def admin():
-    if request.args.get("secret") != XUID_SECRET:
-        return {
-            "error": "secret required.",
-        }, 403
+def secret_required(f):
+    from functools import wraps
 
+    @wraps(f)
+    def secret_required_wrapper():
+        if request.args.get("secret") != XUID_SECRET:
+            return {
+                "success": False,
+                "error": "secret required.",
+            }, 403
+
+        return f()
+
+    return secret_required_wrapper
+
+
+@app.route("/admin/announcement", methods=["POST"])
+@secret_required
+def admin_announcement():
+    payload = request.get_json(silent=True)
+    if not payload:
+        return {
+            "success": False,
+            "error": "payload missing.",
+        }, 400
+
+    if not isinstance((message := payload.get("message")), str):
+        return {
+            "success": False,
+            "error": "payload message missing.",
+        }, 400
+
+    message = message.strip()
+
+    storage.announcement = message
+
+    xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
+
+    return {
+        "success": True,
+    }
+
+
+@app.route("/admin/bandwidth-usage", methods=["GET"])
+@secret_required
+def admin_bandwidth_usage():
+    if not RENDER_API_KEY:
+        return {
+            "success": False,
+            "error": "no render api key.",
+        }, 400
+
+    total, unit = bandwidth_usage()
+
+    if total == -1:
+        return {
+            "success": False,
+            "error": "unknown error.",
+        }, 502
+
+    return {
+        "success": True,
+        "total": total,
+        "unit": unit,
+    }
+
+
+@app.route("/admin/dump-all", methods=["GET"])
+@secret_required
+def admin_dump_all():
     if not isinstance(storage, RedisUserStorage):
         return {
+            "success": False,
             "error": "storage is not redis.",
         }, 403
 
@@ -258,6 +334,7 @@ def admin():
             dump[key] = value
 
     return {
+        "success": True,
         "locks": locks,
         "dump": dump,
     }
