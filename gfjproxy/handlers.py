@@ -361,12 +361,17 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     # proxy test is set too low and guarantees the model to fail. Unbound the
     # token limit so that if everything is good then we can get a good response.
 
+    empty_user = UserSettings(LocalUserStorage(), user.xuid)
+
     result, status = _gen_content(
         client,
-        UserSettings(LocalUserStorage(), user.xuid),
+        empty_user,
         jai_req,
         {"max_output_tokens": None},
     )
+
+    # The caller (app.proxy) would like to know if the user had an invalid API key
+    user.valid = empty_user.valid
 
     if status != 200:
         return response.add_error(result, status)
