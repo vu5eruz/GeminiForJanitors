@@ -240,14 +240,25 @@ def proxy():
 ################################################################################
 
 
-@app.route("/admin/announcement", methods=["POST"])
-def admin_announcement():
-    if request.args.get("secret") != XUID_SECRET:
-        return {
-            "success": False,
-            "error": "secret required.",
-        }, 403
+def secret_required(f):
+    from functools import wraps
 
+    @wraps(f)
+    def secret_required_wrapper():
+        if request.args.get("secret") != XUID_SECRET:
+            return {
+                "success": False,
+                "error": "secret required.",
+            }, 403
+
+        return f()
+
+    return secret_required_wrapper
+
+
+@app.route("/admin/announcement", methods=["POST"])
+@secret_required
+def admin_announcement():
     payload = request.get_json(silent=True)
     if not payload:
         return {
@@ -273,13 +284,8 @@ def admin_announcement():
 
 
 @app.route("/admin/bandwidth-usage", methods=["GET"])
+@secret_required
 def admin_bandwidth_usage():
-    if request.args.get("secret") != XUID_SECRET:
-        return {
-            "success": False,
-            "error": "secret required.",
-        }, 403
-
     if not RENDER_API_KEY:
         return {
             "success": False,
@@ -302,13 +308,8 @@ def admin_bandwidth_usage():
 
 
 @app.route("/admin/dump-all", methods=["GET"])
+@secret_required
 def admin_dump_all():
-    if request.args.get("secret") != XUID_SECRET:
-        return {
-            "success": False,
-            "error": "secret required.",
-        }, 403
-
     if not isinstance(storage, RedisUserStorage):
         return {
             "success": False,
