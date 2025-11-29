@@ -16,7 +16,6 @@ from ._globals import (
     PROXY_NAME,
     PROXY_VERSION,
     RENDER_API_KEY,
-    REDIS_URL,
     XUID_SECRET,
 )
 
@@ -48,12 +47,13 @@ from secrets import token_bytes
 from time import perf_counter
 from traceback import print_exception
 from .start_time import START_TIME
+from .storage import storage
 from .bandwidth import bandwidth_usage
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
 from .logging import hijack_loggers, xlog, xlogtime
 from .utils import ResponseHelper, is_proxy_test, run_cloudflared
-from .xuiduser import LocalUserStorage, RedisUserStorage, UserSettings, XUID
+from .xuiduser import RedisUserStorage, UserSettings, XUID
 
 just_fix_windows_console()
 hijack_loggers()
@@ -64,16 +64,6 @@ hijack_loggers()
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
-
-if REDIS_URL is not None:
-    storage = RedisUserStorage(REDIS_URL)
-    print(" * Using Redis user storage")
-elif DEVELOPMENT:
-    storage = LocalUserStorage()
-    print(" * WARNING: Using local user storage")
-else:
-    print(" * ERROR: No user storage")
-    exit(1)
 
 if XUID_SECRET is not None:
     print(" * Using provided XUID secret")
