@@ -81,7 +81,7 @@ PROXY_ADMIN = _env.get("GFJPROXY_ADMIN", "Anonymous")
 if PROXY_COOLDOWN := _env.get("GFJPROXY_COOLDOWN"):
     PROXY_COOLDOWN = int(PROXY_COOLDOWN, base=10)
 elif PRODUCTION:
-    PROXY_COOLDOWN = 60  # Same value in render.yaml
+    PROXY_COOLDOWN = 60
 else:
     PROXY_COOLDOWN = 0
 
