@@ -95,7 +95,11 @@ if not PROXY_URL:
     if not PROXY_URL:
         PROXY_URL = "https://geminiforjanitors.onrender.com"
 
-RENDER_API_KEY = _env.get("GFJPROXY_RENDER_API_KEY")
+if (_RENDER_API_KEY := _env.get("GFJPROXY_RENDER_API_KEY", "")).startswith("rnd_"):
+    RENDER_API_KEY = _RENDER_API_KEY
+else:
+    RENDER_API_KEY = None
+
 RENDER_SERVICE_ID = _env.get("RENDER_SERVICE_ID")
 
 REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
