@@ -80,7 +80,7 @@ def update_bandwidth_usage(lock: redis.lock.Lock) -> None:
     if result := query_bandwidth_usage():
         # Only update the cache if the query is successful, i.e result is positive
         storage._client.set(":bandwidth-cache", str(result.total))
-        storage._client.set(":bandwidth-cache-fresh", "<3", ex=10)
+        storage._client.set(":bandwidth-cache-fresh", "<3", ex=60)
 
     try:
         lock.release()
