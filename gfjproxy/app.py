@@ -133,6 +133,7 @@ def health():
 
     return {
         "admin": PROXY_ADMIN,
+        "bandwidth": 12345.67,
         "cooldown": PROXY_COOLDOWN,
         "keyspace": keyspace,
         "uptime": int(perf_counter() - START_TIME),
