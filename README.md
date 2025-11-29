@@ -34,7 +34,13 @@ Once you are in the New Blueprint page, copy-paste https://github.com/vu5eruz/Ge
 
 <img src="images/render-3.png" />
 
-Put "gfjproxy" (without quotes) into **Blueprint Name**. Put your contacts into the value of **GFJPROXY_ADMIN**, such as your Discord or JanitorAI handles or just your name, otherwise your proxy will say it is hosted by Anonymous. If you see **GFJPROXY_RENDER_API_KEY**, you can optionally give your proxy the API key of your Render account, allowing it to tell its own bandwidth usage. Both values can be left empty.
+Put "gfjproxy" (without quotes) into **Blueprint Name**.
+
+Put your contacts into the value of **GFJPROXY_ADMIN**, such as your Discord or JanitorAI handles or just your name, otherwise your proxy will say it is hosted by Anonymous.
+
+Put how long the cooldown time will be *in seconds* into the value of **GFJPROXY_COOLDOWN**. This will help reduce the load on you proxy if you have a large number of users and you are bound to the 100 GB bandwidth quota.
+
+If you have a Render API key for your account (you can get one in https://dashboard.render.com/u/settings?add-api-key), you can put it into the value of **GFJPROXY_RENDER_API_KEY** to make your proxy track its own bandwidth usage, enabling *adaptive cooldown* (WIP).
 
 <img src="images/render-4.png" />
 
@@ -42,6 +48,8 @@ With this, your proxy should be up and running shortly. If you go back to your d
 
 <img src="images/render-5.png" />
 
-Use the Logs tab to see how people use your proxy. Use the Metrics tab to see how much bandwidth has been used. Optionally, you may want to change the default cooldown value from 60 seconds to something else or set it zero to disable it; for that, go to the Environment tab and change the value of GFJPROXY_COOLDOWN.
-
 <img src="images/render-6.png" />
+
+Use the **Logs** tab to see how people use your proxy and diagnose any errors. Use the **Metrics** tab to see how much bandwidth has been used.
+
+You can change the cooldown time anytime by going into the **Environment** tab and changing the value of GFJPROXY_COOLDOWN.

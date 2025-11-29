@@ -212,7 +212,7 @@ def proxy():
     if 200 <= response.status <= 299:
         xlogtime(user, "Processing succeeded", ref_time)
 
-        if announcement := storage.announcement:
+        if not proxy_test and (announcement := storage.announcement):
             response.add_proxy_message(f"***\n{announcement}\n***")
     else:
         messages = response.message.split("\n")
