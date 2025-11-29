@@ -14,6 +14,7 @@ services:
         sync: false
       - key: GFJPROXY_COOLDOWN
         value: 60
+        sync: false
       - key: GFJPROXY_REDIS_URL
         fromService:
           name: GeminiForJanitors-redis
