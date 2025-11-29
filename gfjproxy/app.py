@@ -45,7 +45,9 @@ from flask import Flask, abort, request, redirect, render_template, send_from_di
 from flask_cors import CORS
 from google import genai
 from secrets import token_bytes
+from time import perf_counter
 from traceback import print_exception
+from .start_time import START_TIME
 from .bandwidth import bandwidth_usage
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
@@ -133,6 +135,7 @@ def health():
         "admin": PROXY_ADMIN,
         "cooldown": PROXY_COOLDOWN,
         "keyspace": keyspace,
+        "uptime": int((perf_counter() - START_TIME) * 100) / 100,
         "version": PROXY_VERSION,
     }, 200
 
