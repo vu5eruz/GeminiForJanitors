@@ -20,7 +20,7 @@ services:
           type: keyvalue
           property: connectionString
       - key: GFJPROXY_RENDER_API_KEY
-        value: ~
+        sync: false
       - key: GFJPROXY_XUID_SECRET
         generateValue: true
       - key: PORT

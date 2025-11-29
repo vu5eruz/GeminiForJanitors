@@ -15,8 +15,6 @@ from ._globals import (
     PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
-    RENDER_API_KEY,
-    REDIS_URL,
     XUID_SECRET,
 )
 
@@ -45,13 +43,16 @@ from flask import Flask, abort, request, redirect, render_template, send_from_di
 from flask_cors import CORS
 from google import genai
 from secrets import token_bytes
+from time import perf_counter
 from traceback import print_exception
+from .start_time import START_TIME
+from .storage import storage
 from .bandwidth import bandwidth_usage
 from .handlers import handle_chat_message, handle_proxy_test
 from .models import JaiRequest
 from .logging import hijack_loggers, xlog, xlogtime
 from .utils import ResponseHelper, is_proxy_test, run_cloudflared
-from .xuiduser import LocalUserStorage, RedisUserStorage, UserSettings, XUID
+from .xuiduser import RedisUserStorage, UserSettings, XUID
 
 just_fix_windows_console()
 hijack_loggers()
@@ -62,16 +63,6 @@ hijack_loggers()
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
-
-if REDIS_URL is not None:
-    storage = RedisUserStorage(REDIS_URL)
-    print(" * Using Redis user storage")
-elif DEVELOPMENT:
-    storage = LocalUserStorage()
-    print(" * WARNING: Using local user storage")
-else:
-    print(" * ERROR: No user storage")
-    exit(1)
 
 if XUID_SECRET is not None:
     print(" * Using provided XUID secret")
@@ -131,8 +122,10 @@ def health():
 
     return {
         "admin": PROXY_ADMIN,
+        "bandwidth": bandwidth_usage().total,
         "cooldown": PROXY_COOLDOWN,
         "keyspace": keyspace,
+        "uptime": int(perf_counter() - START_TIME),
         "version": PROXY_VERSION,
     }, 200
 
@@ -280,30 +273,6 @@ def admin_announcement():
 
     return {
         "success": True,
-    }
-
-
-@app.route("/admin/bandwidth-usage", methods=["GET"])
-@secret_required
-def admin_bandwidth_usage():
-    if not RENDER_API_KEY:
-        return {
-            "success": False,
-            "error": "no render api key.",
-        }, 400
-
-    total, unit = bandwidth_usage()
-
-    if total == -1:
-        return {
-            "success": False,
-            "error": "unknown error.",
-        }, 502
-
-    return {
-        "success": True,
-        "total": total,
-        "unit": unit,
     }
 
 
