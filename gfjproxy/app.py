@@ -15,7 +15,6 @@ from ._globals import (
     PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
-    RENDER_API_KEY,
     XUID_SECRET,
 )
 
@@ -123,7 +122,7 @@ def health():
 
     return {
         "admin": PROXY_ADMIN,
-        "bandwidth": 12345.67,
+        "bandwidth": bandwidth_usage().total,
         "cooldown": PROXY_COOLDOWN,
         "keyspace": keyspace,
         "uptime": int(perf_counter() - START_TIME),
@@ -274,30 +273,6 @@ def admin_announcement():
 
     return {
         "success": True,
-    }
-
-
-@app.route("/admin/bandwidth-usage", methods=["GET"])
-@secret_required
-def admin_bandwidth_usage():
-    if not RENDER_API_KEY:
-        return {
-            "success": False,
-            "error": "no render api key.",
-        }, 400
-
-    total, unit = bandwidth_usage()
-
-    if total == -1:
-        return {
-            "success": False,
-            "error": "unknown error.",
-        }, 502
-
-    return {
-        "success": True,
-        "total": total,
-        "unit": unit,
     }
 
 
