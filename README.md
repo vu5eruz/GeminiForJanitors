@@ -34,7 +34,7 @@ Once you are in the New Blueprint page, copy-paste https://github.com/vu5eruz/Ge
 
 <img src="images/render-3.png" />
 
-Put "gfjproxy" (without quotes) into **Blueprint Name**. Put your contacts into the value of **GFJPROXY_ADMIN**, such as your Discord or JanitorAI handles or just your name, otherwise your proxy will say it is hosted by `@undefinedundefined` from JanitorAI.
+Put "gfjproxy" (without quotes) into **Blueprint Name**. Put your contacts into the value of **GFJPROXY_ADMIN**, such as your Discord or JanitorAI handles or just your name, otherwise your proxy will say it is hosted by Anonymous. If you see **GFJPROXY_RENDER_API_KEY**, you can optionally give your proxy the API key of your Render account, allowing it to tell its own bandwidth usage. Both values can be left empty.
 
 <img src="images/render-4.png" />
 
