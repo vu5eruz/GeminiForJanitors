@@ -135,7 +135,7 @@ def health():
         "admin": PROXY_ADMIN,
         "cooldown": PROXY_COOLDOWN,
         "keyspace": keyspace,
-        "uptime": int((perf_counter() - START_TIME) * 100) / 100,
+        "uptime": int(perf_counter() - START_TIME),
         "version": PROXY_VERSION,
     }, 200
 
