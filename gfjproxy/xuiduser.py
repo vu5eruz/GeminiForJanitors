@@ -6,13 +6,16 @@ Hashing an API key with a secret salt gives an unique user ID for program use.
 """
 
 import json
-import redis
 from base64 import urlsafe_b64encode as _base64
-from colorama.ansi import Fore as _colorama_ansi_fore
 from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
 from hmac import digest as _hmac_digest
 from threading import Lock as _threading_Lock
 from time import time as _unix_time
+
+import redis
+import redis.exceptions
+import redis.lock
+from colorama.ansi import Fore as _colorama_ansi_fore
 
 _color_palette = [
     # no black, it'd be unreadable on dark theme
@@ -146,7 +149,7 @@ class LocalUserStorage(UserStorage):
     def __init__(self):
         self._announcement = ""
         self._storage: dict[XUID, dict] = dict()
-        self._locks: dict[XUID, _threading_Lock] = dict()
+        self._locks: dict[str, _threading_Lock] = dict()
 
     def active(self) -> bool:
         return True
@@ -198,22 +201,19 @@ class RedisUserStorage(UserStorage):
     EXPIRY_TIME_IN_SECONDS = 30 * 24 * 60 * 60  # Arbitrary
 
     def __init__(self, url: str = DEFAULT_URL, timeout: float = 30):
-        self._locks: dict[XUID, redis.lock.Lock] = dict()
-        try:
-            self._client = redis.from_url(
-                url, socket_timeout=timeout, socket_connect_timeout=timeout
-            )
-            self._client.ping()
-        except redis.exceptions.RedisError:
-            self._client = None
+        self._locks: dict[str, redis.lock.Lock] = dict()
+        self._client = redis.from_url(
+            url, socket_timeout=timeout, socket_connect_timeout=timeout
+        )
+        self._client.ping()
 
     def active(self) -> bool:
-        return self._client is not None
+        return True  # An exception will be thrown in __init__ if redis is not active
 
     @property
     def announcement(self) -> str:
         data = self._client.get(":announcement")
-        if data:
+        if isinstance(data, bytes):
             return data.decode()
         return ""
 
@@ -226,14 +226,14 @@ class RedisUserStorage(UserStorage):
 
     def get(self, xuid: XUID) -> tuple[dict, bool]:
         data = self._client.get(repr(xuid))
-        if data:
+        if isinstance(data, bytes):
             return json.loads(data), True
         return {}, False
 
     def put(self, xuid: XUID, data: dict) -> bool:
         xuid_in_storage = self._client.exists(repr(xuid))
         self._client.set(repr(xuid), json.dumps(data))
-        return xuid_in_storage
+        return bool(xuid_in_storage)
 
     def rem(self, xuid: XUID):
         if self._client.delete(repr(xuid)) == 0:
