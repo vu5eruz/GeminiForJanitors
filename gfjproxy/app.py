@@ -5,6 +5,7 @@
 # Early initialization
 
 from ._globals import (
+    BANDWIDTH_WARNING,
     CLOUDFLARED,
     COOLDOWN,
     DEVELOPMENT,
@@ -66,6 +67,12 @@ hijack_loggers()
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
+
+
+if BANDWIDTH_WARNING:
+    print(f" * Bandwidth warning set at {BANDWIDTH_WARNING / 1024:.1f} GiB")
+else:
+    print(" * Bandwidth warning disabled")
 
 
 if COOLDOWN:

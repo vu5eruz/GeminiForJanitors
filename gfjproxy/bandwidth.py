@@ -17,11 +17,6 @@ from .start_time import START_TIME
 from .storage import storage
 from .xuiduser import RedisUserStorage
 
-if BANDWIDTH_WARNING:
-    print(f" * Bandwidth warning set at {BANDWIDTH_WARNING / 1024:.1f} GiB")
-else:
-    print(" * Bandwidth warning disabled")
-
 
 @dataclass(frozen=True, kw_only=True)
 class BandwidthUsage:
