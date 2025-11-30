@@ -6,13 +6,13 @@
 
 from ._globals import (
     CLOUDFLARED,
+    COOLDOWN,
     DEVELOPMENT,
     MODELS,
     PREFILL,
     PRESETS,
     PRODUCTION,
     PROXY_ADMIN,
-    PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
     XUID_SECRET,
@@ -48,6 +48,7 @@ from flask_cors import CORS
 from google import genai
 
 from .bandwidth import bandwidth_usage
+from .cooldown import get_cooldown
 from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
@@ -65,6 +66,12 @@ hijack_loggers()
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
+
+
+if COOLDOWN:
+    print(" * Using cooldown policy:", COOLDOWN)
+else:
+    print(" * No cooldown policy")
 
 
 if isinstance(storage, RedisUserStorage):
@@ -132,10 +139,12 @@ def health():
     if isinstance(storage, RedisUserStorage):
         keyspace = storage._client.info("keyspace").get("db0", {}).get("keys", -1)
 
+    usage = bandwidth_usage()
+
     return {
         "admin": PROXY_ADMIN,
-        "bandwidth": bandwidth_usage().total,
-        "cooldown": PROXY_COOLDOWN,
+        "bandwidth": usage.total,
+        "cooldown": get_cooldown(usage),
         "keyspace": keyspace,
         "uptime": int(perf_counter() - START_TIME),
         "version": PROXY_VERSION,
@@ -180,9 +189,8 @@ def proxy():
 
     # Cheap and easy rate limiting
 
-    if seconds := user.last_seen():
-        if seconds < PROXY_COOLDOWN:
-            delay = PROXY_COOLDOWN - seconds
+    if (seconds := user.last_seen()) and (cooldown := get_cooldown()):
+        if (delay := cooldown - seconds) > 0:
             xlog(user, f"User told to wait {delay} seconds")
             storage.unlock(xuid)
             return response.build_error(f"Please wait {delay} seconds.", 429)
