@@ -38,21 +38,23 @@ else:
 ################################################################################
 
 # ruff: noqa: E402
-from colorama import just_fix_windows_console
-from flask import Flask, abort, request, redirect, render_template, send_from_directory
-from flask_cors import CORS
-from google import genai
 from secrets import token_bytes
 from time import perf_counter
 from traceback import print_exception
-from .start_time import START_TIME
-from .storage import storage
+
+from colorama import just_fix_windows_console
+from flask import Flask, abort, redirect, render_template, request, send_from_directory
+from flask_cors import CORS
+from google import genai
+
 from .bandwidth import bandwidth_usage
 from .handlers import handle_chat_message, handle_proxy_test
-from .models import JaiRequest
 from .logging import hijack_loggers, xlog, xlogtime
+from .models import JaiRequest
+from .start_time import START_TIME
+from .storage import storage
 from .utils import ResponseHelper, is_proxy_test, run_cloudflared
-from .xuiduser import RedisUserStorage, UserSettings, XUID
+from .xuiduser import XUID, RedisUserStorage, UserSettings
 
 just_fix_windows_console()
 hijack_loggers()
