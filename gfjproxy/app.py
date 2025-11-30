@@ -54,7 +54,7 @@ from .models import JaiRequest
 from .start_time import START_TIME
 from .storage import storage
 from .utils import ResponseHelper, is_proxy_test, run_cloudflared
-from .xuiduser import XUID, RedisUserStorage, UserSettings
+from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
 
 just_fix_windows_console()
 hijack_loggers()
@@ -65,6 +65,16 @@ hijack_loggers()
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
+
+
+if isinstance(storage, RedisUserStorage):
+    print(" * Using Redis user storage")
+elif isinstance(storage, LocalUserStorage) and DEVELOPMENT:
+    print(" * Using local user storage")
+else:
+    print(" * ERROR: No user storage")
+    exit(1)
+
 
 if XUID_SECRET is not None:
     print(" * Using provided XUID secret")

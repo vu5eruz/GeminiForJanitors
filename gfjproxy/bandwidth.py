@@ -25,7 +25,8 @@ else:
 
 @dataclass(frozen=True, kw_only=True)
 class BandwidthUsage:
-    total: int = -1  # MiB
+    total: int = -1
+    "Total bandwidth usage in MiB."
 
     def __bool__(self):
         return self.total >= 0
@@ -92,7 +93,7 @@ def _update_bandwidth_usage(lock: redis.lock.Lock) -> None:
 
         # Only update the cache if the query is successful, i.e result is positive
         s._client.set(":bandwidth-cache", result.total)
-        s._client.set(":bandwidth-cache-fresh", "<3", ex=60)
+        s._client.set(":bandwidth-cache-fresh", "<3", ex=300)  # 5 minutes
 
         if 0 < BANDWIDTH_WARNING <= result.total:
             xlog(None, "Bandwidth: announcement set")
