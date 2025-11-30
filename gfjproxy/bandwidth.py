@@ -1,12 +1,17 @@
 """Bandwidth management."""
 
 import datetime
-import httpx
-import redis
 import threading
 from dataclasses import dataclass
 from time import perf_counter
-from ._globals import PRODUCTION, RENDER_API_KEY, RENDER_SERVICE_ID
+from typing import cast
+
+import httpx
+import redis
+import redis.exceptions
+import redis.lock
+
+from ._globals import BANDWIDTH_WARNING, PRODUCTION, RENDER_API_KEY, RENDER_SERVICE_ID
 from .logging import xlog
 from .start_time import START_TIME
 from .storage import storage
@@ -15,13 +20,14 @@ from .xuiduser import RedisUserStorage
 
 @dataclass(frozen=True, kw_only=True)
 class BandwidthUsage:
-    total: int = -1  # MiB
+    total: int = -1
+    "Total bandwidth usage in MiB."
 
     def __bool__(self):
         return self.total >= 0
 
 
-def query_bandwidth_usage() -> BandwidthUsage:
+def _query_bandwidth_usage() -> BandwidthUsage:
     if not PRODUCTION:
         total = perf_counter() - START_TIME
         xlog(None, f"Bandwidth: using mock total {total:.2f} MiB")
@@ -76,11 +82,25 @@ def query_bandwidth_usage() -> BandwidthUsage:
     return BandwidthUsage()
 
 
-def update_bandwidth_usage(lock: redis.lock.Lock) -> None:
-    if result := query_bandwidth_usage():
+def _update_bandwidth_usage(lock: redis.lock.Lock) -> None:
+    if result := _query_bandwidth_usage():
+        s = cast(RedisUserStorage, storage)  # Make type hinting happy
+
         # Only update the cache if the query is successful, i.e result is positive
-        storage._client.set(":bandwidth-cache", str(result.total))
-        storage._client.set(":bandwidth-cache-fresh", "<3", ex=60)
+        s._client.set(":bandwidth-cache", result.total)
+        s._client.set(":bandwidth-cache-fresh", "<3", ex=300)  # 5 minutes
+
+        if 0 < BANDWIDTH_WARNING <= result.total:
+            xlog(None, "Bandwidth: announcement set")
+            s.announcement = "\n".join(
+                (
+                    f"Bandwidth quota is above {BANDWIDTH_WARNING / 1024:.1f} GiB.",
+                    "Please consider using another URL.",
+                )
+            )
+        else:
+            xlog(None, "Bandwidth: announcement clear")
+            s.announcement = ""
 
     try:
         lock.release()
@@ -101,11 +121,11 @@ def bandwidth_usage() -> BandwidthUsage:
         )
         if lock.acquire(blocking=False):
             threading.Thread(
-                target=update_bandwidth_usage,
+                target=_update_bandwidth_usage,
                 args=(lock,),
                 daemon=True,
             ).start()
 
-    if cache := storage._client.get(":bandwidth-cache"):
+    if isinstance((cache := storage._client.get(":bandwidth-cache")), bytes):
         return BandwidthUsage(total=int(cache))
     return BandwidthUsage()

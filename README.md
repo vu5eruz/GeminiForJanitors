@@ -40,7 +40,7 @@ Put your contacts into the value of **GFJPROXY_ADMIN**, such as your Discord or 
 
 Put how long the cooldown time will be *in seconds* into the value of **GFJPROXY_COOLDOWN**. This will help reduce the load on you proxy if you have a large number of users and you are bound to the 100 GB bandwidth quota.
 
-If you have a Render API key for your account (you can get one in https://dashboard.render.com/u/settings?add-api-key), you can put it into the value of **GFJPROXY_RENDER_API_KEY** to make your proxy track its own bandwidth usage, enabling *adaptive cooldown* (WIP).
+If you have a Render API key for your account (you can get one in https://dashboard.render.com/u/settings?add-api-key), you can put it into the value of **GFJPROXY_RENDER_API_KEY** to make your proxy track its own bandwidth usage, enabling *adaptive cooldown*.
 
 <img src="images/render-4.png" />
 
@@ -53,3 +53,17 @@ With this, your proxy should be up and running shortly. If you go back to your d
 Use the **Logs** tab to see how people use your proxy and diagnose any errors. Use the **Metrics** tab to see how much bandwidth has been used.
 
 You can change the cooldown time anytime by going into the **Environment** tab and changing the value of GFJPROXY_COOLDOWN.
+
+#### Adaptive Cooldown
+
+It is possible to make the proxy apply a cooldown only if the bandwidth usage is above a given value, by configuring the GFJPROXY_COOLDOWN value. For example, consider the following *cooldown policy*:
+
+- Apply a 30 seconds cooldown by default.
+- Apply a 60 seconds cooldown is bandwidth usage is above 70 GB.
+- Apply a 90 seconds cooldown is bandwidth usage is above 80 GB.
+
+To set up such a policy, set GFJPROXY_COOLDOWN to:
+
+```
+30, 60:70, 90:80
+```

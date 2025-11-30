@@ -5,14 +5,15 @@
 # Early initialization
 
 from ._globals import (
+    BANDWIDTH_WARNING,
     CLOUDFLARED,
+    COOLDOWN,
     DEVELOPMENT,
     MODELS,
     PREFILL,
     PRESETS,
     PRODUCTION,
     PROXY_ADMIN,
-    PROXY_COOLDOWN,
     PROXY_NAME,
     PROXY_VERSION,
     XUID_SECRET,
@@ -38,21 +39,24 @@ else:
 ################################################################################
 
 # ruff: noqa: E402
-from colorama import just_fix_windows_console
-from flask import Flask, abort, request, redirect, render_template, send_from_directory
-from flask_cors import CORS
-from google import genai
 from secrets import token_bytes
 from time import perf_counter
 from traceback import print_exception
+
+from colorama import just_fix_windows_console
+from flask import Flask, abort, redirect, render_template, request, send_from_directory
+from flask_cors import CORS
+from google import genai
+
+from .bandwidth import bandwidth_usage
+from .cooldown import get_cooldown
+from .handlers import handle_chat_message, handle_proxy_test
+from .logging import hijack_loggers, xlog, xlogtime
+from .models import JaiRequest
 from .start_time import START_TIME
 from .storage import storage
-from .bandwidth import bandwidth_usage
-from .handlers import handle_chat_message, handle_proxy_test
-from .models import JaiRequest
-from .logging import hijack_loggers, xlog, xlogtime
 from .utils import ResponseHelper, is_proxy_test, run_cloudflared
-from .xuiduser import RedisUserStorage, UserSettings, XUID
+from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
 
 just_fix_windows_console()
 hijack_loggers()
@@ -63,6 +67,28 @@ hijack_loggers()
 
 if CLOUDFLARED is not None:
     run_cloudflared(CLOUDFLARED)
+
+
+if BANDWIDTH_WARNING:
+    print(f" * Bandwidth warning set at {BANDWIDTH_WARNING / 1024:.1f} GiB")
+else:
+    print(" * Bandwidth warning disabled")
+
+
+if COOLDOWN:
+    print(" * Using cooldown policy:", COOLDOWN)
+else:
+    print(" * No cooldown policy")
+
+
+if isinstance(storage, RedisUserStorage):
+    print(" * Using Redis user storage")
+elif isinstance(storage, LocalUserStorage) and DEVELOPMENT:
+    print(" * Using local user storage")
+else:
+    print(" * ERROR: No user storage")
+    exit(1)
+
 
 if XUID_SECRET is not None:
     print(" * Using provided XUID secret")
@@ -120,10 +146,12 @@ def health():
     if isinstance(storage, RedisUserStorage):
         keyspace = storage._client.info("keyspace").get("db0", {}).get("keys", -1)
 
+    usage = bandwidth_usage()
+
     return {
         "admin": PROXY_ADMIN,
-        "bandwidth": bandwidth_usage().total,
-        "cooldown": PROXY_COOLDOWN,
+        "bandwidth": usage.total,
+        "cooldown": get_cooldown(usage),
         "keyspace": keyspace,
         "uptime": int(perf_counter() - START_TIME),
         "version": PROXY_VERSION,
@@ -168,9 +196,8 @@ def proxy():
 
     # Cheap and easy rate limiting
 
-    if seconds := user.last_seen():
-        if seconds < PROXY_COOLDOWN:
-            delay = PROXY_COOLDOWN - seconds
+    if (seconds := user.last_seen()) and (cooldown := get_cooldown()):
+        if (delay := cooldown - seconds) > 0:
             xlog(user, f"User told to wait {delay} seconds")
             storage.unlock(xuid)
             return response.build_error(f"Please wait {delay} seconds.", 429)

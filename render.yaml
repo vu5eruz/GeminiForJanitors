@@ -12,6 +12,8 @@ services:
     envVars:
       - key: GFJPROXY_ADMIN
         sync: false
+      - key: GFJPROXY_BANDWIDTH_WARNING
+        value: 76800 # 75 GiB in MiB
       - key: GFJPROXY_COOLDOWN
         sync: false
       - key: GFJPROXY_REDIS_URL
