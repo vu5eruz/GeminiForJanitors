@@ -95,6 +95,8 @@ if not PROXY_URL:
     if not PROXY_URL:
         PROXY_URL = "https://geminiforjanitors.onrender.com"
 
+BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 0))  # MiB
+
 if (_RENDER_API_KEY := _env.get("GFJPROXY_RENDER_API_KEY", "")).startswith("rnd_"):
     RENDER_API_KEY = _RENDER_API_KEY
 else:
