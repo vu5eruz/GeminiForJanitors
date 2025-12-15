@@ -121,14 +121,17 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 17
+BANNER_VERSION = 18
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
+You can now use **gemini-robotics-er-1.5-preview** as model, even on free accounts! Let's hope Google won't kill this one too...
+
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 
+- `https://geminiforjanitors-g24s.onrender.com` by **EgoAlter**
 - `https://geminiforjanitors-k4v3.onrender.com` by **undefinedundefined**
 - `https://geminiforjanitors-r7wu.onrender.com` by **NixGG**
 - `https://geminiforjanitors-rhuc.onrender.com` by **.shiro.**
