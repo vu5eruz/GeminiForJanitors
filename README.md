@@ -56,14 +56,16 @@ You can change the cooldown time anytime by going into the **Environment** tab a
 
 #### Adaptive Cooldown
 
-It is possible to make the proxy apply a cooldown only if the bandwidth usage is above a given value, by configuring the GFJPROXY_COOLDOWN value. For example, consider the following *cooldown policy*:
+It is possible to make the proxy apply a cooldown only if the bandwidth usage is above a given value by configuring the GFJPROXY_COOLDOWN value. For example, consider the following *cooldown policy*:
 
 - Apply a 30 seconds cooldown by default.
-- Apply a 60 seconds cooldown is bandwidth usage is above 70 GB.
-- Apply a 90 seconds cooldown is bandwidth usage is above 80 GB.
+- Apply a 60 seconds cooldown if bandwidth usage is above 70 GB.
+- Apply a 90 seconds cooldown if bandwidth usage is above 80 GB.
 
 To set up such a policy, set GFJPROXY_COOLDOWN to:
 
 ```
 30, 60:70, 90:80
 ```
+
+Then deploy your instance. You can read the logs for `Using cooldown policy` to see if your changes have been applied.
