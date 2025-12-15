@@ -16,7 +16,7 @@ jobs:
       with:
         enable-cache: true
         version: "0.9.13"
-    - uses: supercharge/redis-github-action@1.8.1
+    - uses: supercharge/redis-github-action@v2
       with:
         redis-version: 7
     - run: |
