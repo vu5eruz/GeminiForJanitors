@@ -87,13 +87,15 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 18
+BANNER_VERSION = 19
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-You can now use **gemini-robotics-er-1.5-preview** as model, even on free accounts! Let's hope Google won't kill this one too...
+You can now use **gemini-3-flash-preview**!
+
+If Google releases more models in the future, you should be able to test them without waiting for the proxy to update.
 
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 
