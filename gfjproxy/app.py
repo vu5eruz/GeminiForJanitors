@@ -9,7 +9,6 @@ from ._globals import (
     CLOUDFLARED,
     COOLDOWN,
     DEVELOPMENT,
-    MODELS,
     PREFILL,
     PRESETS,
     PRODUCTION,
@@ -226,8 +225,6 @@ def proxy():
     try:
         if not jai_req.model:
             response.add_error("Please specify a model.", 400)
-        elif jai_req.model not in MODELS:
-            response.add_error(f"Invalid/unsupported model: {jai_req.model}", 400)
         elif proxy_test:
             response = handle_proxy_test(client, user, jai_req, response)
         else:
