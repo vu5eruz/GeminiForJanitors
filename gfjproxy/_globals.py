@@ -41,40 +41,6 @@ else:
 
 CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 
-# XXX: Manually keep this up to date
-MODELS = [
-    "deep-research-pro-preview-12-2025",
-    "gemini-2.5-computer-use-preview-10-2025",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-image",
-    "gemini-2.5-flash-image-preview",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash-lite-preview-06-17",
-    "gemini-2.5-flash-lite-preview-09-2025",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-flash-preview-09-2025",
-    "gemini-2.5-flash-preview-tts",
-    "gemini-2.5-pro",
-    "gemini-2.5-pro-preview-03-25",
-    "gemini-2.5-pro-preview-05-06",
-    "gemini-2.5-pro-preview-06-05",
-    "gemini-2.5-pro-preview-tts",
-    "gemini-3-pro-image-preview",
-    "gemini-3-pro-preview",
-    "gemini-exp-1206",
-    "gemini-flash-latest",
-    "gemini-flash-lite-latest",
-    "gemini-pro-latest",
-    "gemini-robotics-er-1.5-preview",
-    "gemma-3-12b-it",
-    "gemma-3-1b-it",
-    "gemma-3-27b-it",
-    "gemma-3-4b-it",
-    "gemma-3n-e2b-it",
-    "gemma-3n-e4b-it",
-    "nano-banana-pro-preview",
-]
-
 # XXX: FileNotFoundError
 with open("prefill.txt", encoding="utf-8") as prefill:
     PREFILL = prefill.read()
@@ -121,13 +87,15 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 18
+BANNER_VERSION = 19
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-You can now use **gemini-robotics-er-1.5-preview** as model, even on free accounts! Let's hope Google won't kill this one too...
+You can now use **gemini-3-flash-preview**!
+
+If Google releases more models in the future, you should be able to test them without waiting for the proxy to update.
 
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 

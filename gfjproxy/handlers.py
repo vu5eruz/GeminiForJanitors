@@ -216,6 +216,14 @@ def _gen_content(
     except ReadTimeout:
         return "Gateway Timeout", 504
     except genai.errors.ClientError as e:
+        if e.status == "NOT_FOUND":
+            # 404 NOT_FOUND "models/* is not found for API version v1beta"
+            if e.message.startswith("models/"):
+                return f"Invalid/unsupported model '{jai_req.model}'", 400
+
+            xlog(user, repr(e))  # Anomalous
+            return e.message, e.code
+
         if e.status == "INVALID_ARGUMENT":
             if "API key not valid" in e.message:
                 user.valid = False
@@ -260,8 +268,6 @@ def _gen_content(
 
                     if feedback := _get_quota_violation_feedback(qid):
                         return feedback, 429
-
-            xlog(user, repr(e))
 
             # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
             return e.message, e.code
