@@ -1,20 +1,20 @@
 """Handlers."""
 
-from httpx import ReadTimeout
 from google import genai
-from google.genai import types
+from google.genai import errors, types
+from httpx import ReadTimeout
+
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError
-from .models import JaiRequest
 from .logging import xlog
+from .models import JaiRequest
 from .xuiduser import LocalUserStorage, UserSettings
-
 
 # Changing this has an impact on whether the runner (specifically gunicorn) will
 # forcefully reset a worker after taking too long to answer a request. When
 # deploying using gunicorn, make sure to provide a -t value larger than the one
 # in here, to prevent issues from arising at run-time.
-REQUEST_TIMEOUT_IN_SECONDS: float = 60
+REQUEST_TIMEOUT_IN_SECONDS: int = 60
 
 
 ################################################################################
@@ -147,30 +147,30 @@ def _gen_content(
         )
         contents.append(types.ModelContent({"text": "<think>\n➛ Okay! Understood."}))
 
-    config = {
-        "http_options": types.HttpOptions(
-            timeout=REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
-        ),
+    config: types.GenerateContentConfigDict = {
+        "http_options": {
+            "timeout": REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
+        },
         "temperature": jai_req.temperature,
         "top_k": 50,
         "top_p": 0.95,
         "safety_settings": [
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            ),
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            },
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            },
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+            },
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            },
         ],
     }
 
@@ -215,7 +215,10 @@ def _gen_content(
         )
     except ReadTimeout:
         return "Gateway Timeout", 504
-    except genai.errors.ClientError as e:
+    except errors.ClientError as e:
+        if e.message is None:  # Make type checkers happy
+            e.message = "Unknown error"
+
         if e.status == "NOT_FOUND":
             # 404 NOT_FOUND "models/* is not found for API version v1beta"
             if e.message.startswith("models/"):
@@ -274,7 +277,7 @@ def _gen_content(
 
         xlog(user, repr(e))  # Log these fellas for they are anomalous
         return e.message, e.code
-    except genai.errors.ServerError as e:
+    except errors.ServerError as e:
         if e.status == "UNAVAILABLE":
             # 503 UNAVAILABLE "The model is overloaded. Please try again later."
             return "The model is overloaded. Try again later.", e.code
