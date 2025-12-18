@@ -1,17 +1,18 @@
 """Utilities."""
 
 import atexit
-import click
 import json
 import re
-import httpx
 import subprocess
 import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
-from flask import Response
 from itertools import groupby
+
+import click
+import httpx
+from flask import Response
 
 ################################################################################
 
@@ -180,7 +181,7 @@ class ResponseHelper:
         return self.build().status_code
 
     @property
-    def response(self) -> int:
+    def response(self):
         click.echo("!!! Don't use .response on a ResponseHelper!!!")
         return self.build().response
 
