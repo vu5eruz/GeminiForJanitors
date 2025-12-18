@@ -321,14 +321,17 @@ def _gen_content(
 
         t_open = text.find("<think>")  # len = 7
         t_close = text.find("</think>")  # len = 8
+        thinking = None
 
         if -1 == t_open == t_close:
             xlog(user, "No thinking tags found")
         elif -1 < t_open < t_close:
             xlog(user, f"Removing thinking {t_open} to {t_close + 8}")
+            thinking = text[t_open + 7 : t_close]
             text = text[:t_open] + text[t_close + 8 :]
         elif -1 < t_close:
             xlog(user, f"Removing thinking up until {t_close + 8}")
+            thinking = text[:t_close]
             text = text[t_close + 8 :]
         else:
             xlog(user, "Removing thinking failure")
@@ -347,7 +350,11 @@ def _gen_content(
         else:
             xlog(user, "Parsing response failure")
 
-        xlog(user, f"Result text is {len(text)} characters, {len(text.split())} words")
+        if user.think_text == "keep" and isinstance(thinking, str):
+            xlog(user, "Thinking text kept")
+            text = f"<think>\n{thinking}\n</think>\n{text}"
+
+    xlog(user, f"Result text is {len(text)} characters, {len(text.split())} words")
 
     return (result, text), 200
 

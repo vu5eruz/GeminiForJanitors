@@ -338,6 +338,16 @@ class UserSettings:
 
     #########################
 
+    @property
+    def think_text(self) -> str:
+        return str(self._data.get("think_text", "remove"))
+
+    @think_text.setter
+    def think_text(self, value):
+        self._data["think_text"] = str(value)
+
+    #########################
+
     def last_seen(self) -> int | None:
         if seconds := self._data.get("timestamp_last_seen"):
             return int(_unix_time() - seconds)

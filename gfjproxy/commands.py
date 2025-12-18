@@ -4,7 +4,8 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
-from ._globals import PRESETS, BANNER, BANNER_VERSION
+
+from ._globals import BANNER, BANNER_VERSION, PRESETS
 from .utils import ResponseHelper
 
 ################################################################################
@@ -51,7 +52,7 @@ class Command:
     args: str = ""
 
     # Pointer to command function
-    func: Callable = field(default=None, repr=False, compare=False, kw_only=True)
+    func: Callable | None = field(default=None, repr=False, compare=False, kw_only=True)
 
     # Prefer to this method instead of directly calling func
     def __call__(self, user, jai_req, response):
@@ -204,6 +205,19 @@ def think(args, user, jai_req, response):
     return response.add_proxy_message(
         f"Thinking {'enabled' if jai_req.use_think else 'disabled'}"
         + (" (for this message only)." if args == "this" else ".")
+    )
+
+
+################################################################################
+
+
+@command(argspec=r"keep|remove")
+def think_text(args, user, jai_req, response):
+    user.think_text = args
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Thinking text will be {'kept' if args == 'keep' else 'removed'}."
     )
 
 
