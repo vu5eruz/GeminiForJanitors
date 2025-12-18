@@ -2,13 +2,19 @@
 
 from google import genai
 from google.genai import errors, types
-from httpx import ReadTimeout
+from httpx import Client, HTTPError, ReadTimeout
 
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError
 from .logging import xlog
 from .models import JaiRequest
 from .xuiduser import LocalUserStorage, UserSettings
+
+CLIENT = Client(
+    headers={"User-Agent": "gfjproxy"},
+    timeout=5,
+    max_redirects=0,
+)
 
 # Changing this has an impact on whether the runner (specifically gunicorn) will
 # forcefully reset a worker after taking too long to answer a request. When
@@ -18,6 +24,29 @@ REQUEST_TIMEOUT_IN_SECONDS: int = 60
 
 
 ################################################################################
+
+
+def _resolve_link(user: UserSettings | None, link: str) -> str:
+    result = link
+
+    try:
+        if link.startswith(
+            "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
+        ):
+            response = CLIENT.get(link)
+            if response.status_code != 302:  # Found
+                response.raise_for_status()
+            if location := response.headers.get("Location"):
+                result = location
+    except HTTPError as e:
+        xlog(user, f"Could not resolve link:\n{e!r}")
+
+    if result != link:
+        xlog(user, "Link resolved")
+    else:
+        xlog(user, "Link not resolved")
+
+    return result
 
 
 def _get_feedback(response: types.GenerateContentResponse) -> str | None:
@@ -200,8 +229,21 @@ def _gen_content(
         xlog(
             user,
             f"Adding settings {', '.join(advsettings_used)} to chat"
-            + (" (for this message only)." if not user.use_prefill else "."),
+            + (" (for this message only)." if not user.use_advsettings else "."),
         )
+
+    if jai_req.use_search or user.use_search:
+        config["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+
+        xlog(
+            user,
+            "Adding Google Search tool to model"
+            + (" (for this message only)." if not user.use_search else "."),
+        )
+
+        used_search = True
+    else:
+        used_search = False
 
     for key, value in overrides.items():
         if value is None and key in config:
@@ -298,7 +340,44 @@ def _gen_content(
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         return "Unhanded exception from Google AI.", 502
 
-    if not (text := result.text):
+    text: str | None = None
+    extras = ""
+
+    if candidates := result.candidates:
+        if len(candidates) > 1:
+            xlog(user, "Warning: more than one candidate found in response")
+        candidate: types.Candidate = candidates[0]
+
+        if candidate.content and (parts := candidate.content.parts):
+            text = ""
+            for part in parts:
+                if isinstance(part.text, str):
+                    if isinstance(part.thought, bool) and part.thought:
+                        continue
+                    text += part.text
+
+        if gm := candidate.grounding_metadata:
+            # U+3164 HANGUL FILLER
+
+            if isinstance((wsqs := gm.web_search_queries), list):
+                xlog(user, f"Made {len(wsqs)} web searches")
+                extras += (
+                    "Searches:\n" + "\n".join(f"\u3164- {wsq}" for wsq in wsqs) + "\n"
+                )
+
+            if isinstance((gcs := gm.grounding_chunks), list):
+                links: list[str] = []
+                for gc in gcs:
+                    if (web := gc.web) and (uri := web.uri):
+                        links.append(_resolve_link(user, uri))
+                xlog(user, f"Found {len(gcs)} grounding chunks {len(links)} links")
+                extras += (
+                    "Links:\n" + "\n".join(f"\u3164- {link}" for link in links) + "\n"
+                )
+        elif used_search:
+            xlog(user, "Web search was not used")
+
+    if not text:
         # Rejection
 
         reason = _get_feedback(result)
@@ -356,7 +435,7 @@ def _gen_content(
 
     xlog(user, f"Result text is {len(text)} characters, {len(text.split())} words")
 
-    return (result, text), 200
+    return (result, text, extras), 200
 
 
 ################################################################################
@@ -392,7 +471,7 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    result, text = result
+    result, text, _ = result
 
     return response.add_message(text)
 
@@ -432,9 +511,12 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    result, text = result
+    result, text, extras = result
 
     response.add_message(text)
+
+    if extras:
+        response.add_proxy_message(extras)
 
     if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
         xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")

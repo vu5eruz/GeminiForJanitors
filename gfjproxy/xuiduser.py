@@ -329,6 +329,14 @@ class UserSettings:
         self._data["use_prefill"] = bool(value)
 
     @property
+    def use_search(self) -> bool:
+        return bool(self._data.get("use_search", False))
+
+    @use_search.setter
+    def use_search(self, value):
+        self._data["use_search"] = bool(value)
+
+    @property
     def use_think(self) -> bool:
         return bool(self._data.get("use_think", False))
 

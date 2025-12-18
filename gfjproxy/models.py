@@ -4,6 +4,7 @@ The name of some fields in here may not match with the source they are from."""
 
 from dataclasses import dataclass, field
 from json import loads
+
 from .commands import Command, parse_message, strip_message
 
 ################################################################################
@@ -54,10 +55,11 @@ class JaiRequest:
     top_k: int = 0
     top_p: float = 0.0
     use_advsettings: bool = False  # Set by //advsettings command
-    use_prefill: bool = False  # Set by //prefill command
-    use_ooctrick: bool = False  # Set by //ooctrick command
-    use_preset: str = None  # Set by //preset command
     use_nobot: bool = False  # Set by //nobot command
+    use_ooctrick: bool = False  # Set by //ooctrick command
+    use_prefill: bool = False  # Set by //prefill command
+    use_preset: str | None = None  # Set by //preset command
+    use_search: bool = False  # Set by //search command
     use_think: bool = False  # Set by //think command
 
     @staticmethod

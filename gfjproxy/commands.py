@@ -198,6 +198,16 @@ def prefill(args, user, jai_req, response):
     )
 
 
+@command(argspec=r"off|on|this", setting="search")
+def search(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Google Search {'enabled' if jai_req.use_search else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
+
+
 @command(argspec=r"off|on|this", setting="think")
 def think(args, user, jai_req, response):
     if jai_req.quiet_commands:
