@@ -87,15 +87,17 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 19
+BANNER_VERSION = 20
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-You can now use **gemini-3-flash-preview**!
+Two new commands are available: `//think_text` and `//search`!
 
-If Google releases more models in the future, you should be able to test them without waiting for the proxy to update.
+Use `//think_text keep` to see the model's thoughts. Make sure to have `//think on` as well!
+
+Use `//search on` to enable the model to use Google Search. This may not work with gemini-3-flash-preview. This is feature is a bit experimental, so please submit your feedback to the Gemini Proxy Guide!
 
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 
@@ -127,8 +129,14 @@ You can include one or more commands in your messages, separated by spaces. You 
 - `//prefill on|off|this`
   Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
 
+- `//search on|off|this`
+  Enables the use of Google Search, allowing the model to look up any information relevant to the chat.
+
 - `//think on|off|this`
   Tricks Gemini into doing its thinking inside the response to bypass content filters. *Note:* this might cause ᐸthinkᐳ/ᐸresponseᐳ to leak into the bot's messages.
+
+- `//think_text keep|remove`
+  Configures the proxy to either include the model's thinking in the response or remove it entirely.
 
 - `//nobot on|off|this`
   Removes the bot's description from the chat, in case it contains ToS-breaking content. *Note:* use this only as a last resort. This will negatively impact your chat.
