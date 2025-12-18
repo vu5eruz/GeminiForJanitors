@@ -119,6 +119,8 @@ CORS(app)
 @app.route("/index", methods=["GET"])
 @app.route("/index.html", methods=["GET"])
 def index():
+    assert storage is not None  # Make type checkers happy
+
     if request.path != "/":
         return redirect("/", code=301)
 
@@ -162,9 +164,12 @@ def health():
 @app.route("/quiet/", methods=["POST"])
 @app.route("/quiet/chat/completions", methods=["POST"])
 def proxy():
+    assert storage is not None  # Make type checkers happy
+
     request_json = request.get_json(silent=True)
     if not request_json:  # This should never happen.
         abort(400, "Bad Request. Missing or invalid JSON.")
+        return  # Some type checkers don't realize abort exits the function
 
     request_path = request.path
 
@@ -271,33 +276,6 @@ def secret_required(f):
         return f()
 
     return secret_required_wrapper
-
-
-@app.route("/admin/announcement", methods=["POST"])
-@secret_required
-def admin_announcement():
-    payload = request.get_json(silent=True)
-    if not payload:
-        return {
-            "success": False,
-            "error": "payload missing.",
-        }, 400
-
-    if not isinstance((message := payload.get("message")), str):
-        return {
-            "success": False,
-            "error": "payload message missing.",
-        }, 400
-
-    message = message.strip()
-
-    storage.announcement = message
-
-    xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
-
-    return {
-        "success": True,
-    }
 
 
 @app.route("/admin/dump-all", methods=["GET"])
