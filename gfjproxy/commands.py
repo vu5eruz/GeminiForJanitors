@@ -228,6 +228,11 @@ def think_text(args, user, jai_req, response):
         return response
     return response.add_proxy_message(
         f"Thinking text will be {'kept' if args == 'keep' else 'removed'}."
+        + (
+            " Make sure to have `//think on` otherwise no thinking will show up."
+            if args == "keep"
+            else ""
+        )
     )
 
 
