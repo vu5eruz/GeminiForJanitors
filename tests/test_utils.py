@@ -1,4 +1,4 @@
-from gfjproxy.utils import ResponseHelper, is_proxy_test
+from gfjproxy.utils import ResponseHelper, comma_split, is_proxy_test
 
 ################################################################################
 
@@ -32,6 +32,28 @@ def test_is_proxy_test():
     assert is_proxy_test(SAMPLE_PROXY_TEST_JSON)
 
     assert not is_proxy_test(SAMPLE_NORMAL_CHAT_JSON)
+
+
+################################################################################
+
+
+def test_comma_split():
+    """Basic comma split algorithm tests."""
+
+    assert comma_split("A") == ["A"]
+    assert comma_split("A, B, C") == ["A", "B", "C"]
+
+    # Drop trailing comma(s)
+    assert comma_split("A, B, C,") == ["A", "B", "C"]
+    assert comma_split("A, B, C,,") == ["A", "B", "C"]
+
+    # Drop leading comma(s)
+    assert comma_split(", A, B, C") == ["A", "B", "C"]
+    assert comma_split(",, A, B, C") == ["A", "B", "C"]
+
+    # Drop extraneous comma(s)
+    assert comma_split("A,, B, C") == ["A", "B", "C"]
+    assert comma_split("A,, B,, C") == ["A", "B", "C"]
 
 
 ################################################################################

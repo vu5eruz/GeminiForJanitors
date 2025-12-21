@@ -55,7 +55,7 @@ from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
 from .storage import storage
-from .utils import ResponseHelper, is_proxy_test, run_cloudflared
+from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
 
 just_fix_windows_console()
@@ -200,7 +200,7 @@ def proxy():
     if len(request_auth) != 2 or request_auth[0].lower() != "bearer":
         return response.build_error("Unauthorized. API key required.", 401)
 
-    api_keys = [k.strip() for k in request_auth[1].split(",")]
+    api_keys = comma_split(request_auth[1])
     xuid = XUID(api_keys[0], xuid_secret)
 
     if not storage.lock(xuid):

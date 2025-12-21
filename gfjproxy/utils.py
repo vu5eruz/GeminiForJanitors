@@ -31,7 +31,7 @@ class ResponseMessage:
 
     text: str
 
-    status_code: int = None
+    status_code: int | None = None
 
 
 class ResponseHelper:
@@ -221,6 +221,13 @@ def is_proxy_test(request_json: dict) -> bool:
 ################################################################################
 
 
+def comma_split(s: str) -> list[str]:
+    return [t for t in map(str.strip, s.split(",")) if t]
+
+
+################################################################################
+
+
 def _runner(cloudflared: str):
     click.echo(" * Running cloudflared ...")
 
@@ -239,14 +246,17 @@ def _runner(cloudflared: str):
 
     atexit.register(process.terminate)
 
+    pattern = re.compile(r"(?P<url>https?:\/\/[^\s]+.trycloudflare.com)")
+
     for _ in range(10):
         try:
             metrics = httpx.get("http://127.0.0.1:5001/metrics").text
-            url = re.search(
-                r"(?P<url>https?:\/\/[^\s]+.trycloudflare.com)", metrics
-            ).group("url")
-            click.echo(f" * Tunnel on {url}")
-            return
+            if match := pattern.search(metrics):
+                url = match.group("url")
+                click.echo(f" * Tunnel on {url}")
+                return
+            else:
+                click.echo(" * Pattern search returned no match")
         except httpx.HTTPError:
             time.sleep(1)
     else:
