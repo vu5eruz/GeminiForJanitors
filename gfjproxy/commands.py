@@ -117,15 +117,20 @@ def command(*, argspec: str = "", **kwargs):
 
 @command()
 def aboutme(args, user, jai_req, response):
+    # U+200B ZERO WIDTH SPACE
     return response.add_proxy_message(
-        f"Your user ID on this proxy is `{user.xuid!r}`."
-        + f" You were {user.last_seen_msg()}. Your request counter is {user.get_rcounter()}."
-        + " Your settings are:",
-        f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
-        f"- //ooctrick is {'enabled' if user.use_ooctrick else 'disabled'}",
-        f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
-        f"- //think is {'enabled' if user.use_think else 'disabled'}",
-        f"- //advsettings is {'enabled' if user.use_nobot else 'disabled'}",
+        f"Your user ID on this proxy is `{user.xuid!r}`.",
+        f"You have used this proxy {user.get_rcounter()} time(s).",
+        f"You were {user.last_seen_msg()}.",
+        "Your commands are:",
+        f"\u200b- //advsettings {'on' if user.use_nobot else 'off'}",
+        f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
+        f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
+        f"\u200b- //prefill {'on' if user.use_prefill else 'off'}",
+        f"\u200b- //search {'on' if user.use_search else 'off'}",
+        f"\u200b- //think {'on' if user.use_think else 'off'}",
+        f"\u200b- //think_text {user.think_text}",
+        f"This message is using API key {jai_req.key_index + 1} out of {jai_req.key_count}.",
     )
 
 

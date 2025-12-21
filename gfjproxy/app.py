@@ -221,9 +221,12 @@ def proxy():
 
     # Handle user's request
 
-    api_key_index = user.get_rcounter() % len(api_keys)
-
+    rcounter = user.get_rcounter()
+    api_key_index = rcounter % len(api_keys)
     user.inc_rcounter()
+
+    jai_req.key_index = api_key_index
+    jai_req.key_count = len(api_keys)
 
     client = genai.Client(api_key=api_keys[api_key_index])
 

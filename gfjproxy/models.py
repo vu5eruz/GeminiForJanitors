@@ -61,6 +61,8 @@ class JaiRequest:
     use_preset: str | None = None  # Set by //preset command
     use_search: bool = False  # Set by //search command
     use_think: bool = False  # Set by //think command
+    key_index: int = 1
+    key_count: int = 1
 
     @staticmethod
     def parse(data: dict | str):
