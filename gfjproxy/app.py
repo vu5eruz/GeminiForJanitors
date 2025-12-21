@@ -14,6 +14,7 @@ from ._globals import (
     PRODUCTION,
     PROXY_ADMIN,
     PROXY_NAME,
+    PROXY_URL,
     PROXY_VERSION,
     XUID_SECRET,
 )
@@ -48,7 +49,7 @@ from flask_cors import CORS
 from google import genai
 
 from .bandwidth import bandwidth_usage
-from .cooldown import get_cooldown
+from .cooldown import cooldown_policy, get_cooldown
 from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
@@ -149,14 +150,26 @@ def health():
 
     usage = bandwidth_usage()
 
-    return {
+    health = {
         "admin": PROXY_ADMIN,
         "bandwidth": usage.total,
         "cooldown": get_cooldown(usage),
+        "cpolicy": str(cooldown_policy),
         "keyspace": keyspace,
         "uptime": int(perf_counter() - START_TIME),
         "version": PROXY_VERSION,
-    }, 200
+    }
+
+    if request.headers.get("accept", "").split(",")[0] == "text/html":
+        return render_template(
+            "health.html",
+            health=health,
+            title=PROXY_NAME,
+            url=PROXY_URL,
+        )
+
+    # Return health data as JSON
+    return health, 200
 
 
 @app.route("/", methods=["POST"])

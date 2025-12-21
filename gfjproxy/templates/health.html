@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="apple-mobile-web-app-title" content="{{ title }}" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/static/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/static/favicon-96x96.png"
+      sizes="96x96"
+    />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <link rel="stylesheet" href="/static/index.css" />
+    <title>{{ title }}</title>
+    <style>
+      td.label {
+        color: deepskyblue;
+        text-align: right;
+      }
+      td.value {
+        color: lightblue;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="{{ url }}">{{ url }}</a>
+    <table>
+      {% for k, v in health.items() %}
+      <tr>
+        <td class="label">{{ k }}</td>
+        {% if v is string %}
+        <td class="value">{{ v }}</td>
+        {% elif k == "bandwidth" %} {% if v > 9999 %}
+        <td class="value">{{ "{:,.0f} GB".format(v / 1024) }}</td>
+        {% else %}
+        <td class="value">{{ "{:,.0f} MB".format(v) }}</td>
+        {% endif %} {% elif k == "cooldown" or k == "uptime" %}
+        <td class="value">{{ "{:,} s".format(v) }}</td>
+        {% else %}
+        <td class="value">{{ "{:,}".format(v) }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </table>
+  </body>
+</html>
