@@ -13,6 +13,13 @@ class Cooldown:
     bandwidth: int = 0
     "Bandwidth threshold in GiB"
 
+    def __str__(self) -> str:
+        return (
+            f"{self.duration}:{self.bandwidth}"
+            if self.bandwidth != 0
+            else f"{self.duration}"
+        )
+
     @staticmethod
     def parse(text: str) -> "Cooldown":
         if 0 < (index := text.find(":")):
@@ -28,6 +35,9 @@ class Cooldown:
 @dataclass(frozen=True, kw_only=True)
 class CooldownPolicy:
     cooldowns: list[Cooldown]
+
+    def __str__(self) -> str:
+        return ", ".join(map(str, self.cooldowns))
 
     def apply(self, usage: BandwidthUsage) -> int:
         bandwidth = usage.total // 1024

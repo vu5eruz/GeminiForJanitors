@@ -14,6 +14,7 @@ from ._globals import (
     PRODUCTION,
     PROXY_ADMIN,
     PROXY_NAME,
+    PROXY_URL,
     PROXY_VERSION,
     XUID_SECRET,
 )
@@ -48,13 +49,13 @@ from flask_cors import CORS
 from google import genai
 
 from .bandwidth import bandwidth_usage
-from .cooldown import get_cooldown
+from .cooldown import cooldown_policy, get_cooldown
 from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
 from .storage import storage
-from .utils import ResponseHelper, is_proxy_test, run_cloudflared
+from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
 
 just_fix_windows_console()
@@ -119,6 +120,8 @@ CORS(app)
 @app.route("/index", methods=["GET"])
 @app.route("/index.html", methods=["GET"])
 def index():
+    assert storage is not None  # Make type checkers happy
+
     if request.path != "/":
         return redirect("/", code=301)
 
@@ -147,14 +150,26 @@ def health():
 
     usage = bandwidth_usage()
 
-    return {
+    health = {
         "admin": PROXY_ADMIN,
         "bandwidth": usage.total,
         "cooldown": get_cooldown(usage),
+        "cpolicy": str(cooldown_policy),
         "keyspace": keyspace,
         "uptime": int(perf_counter() - START_TIME),
         "version": PROXY_VERSION,
-    }, 200
+    }
+
+    if request.headers.get("accept", "").split(",")[0] == "text/html":
+        return render_template(
+            "health.html",
+            health=health,
+            title=PROXY_NAME,
+            url=PROXY_URL,
+        )
+
+    # Return health data as JSON
+    return health, 200
 
 
 @app.route("/", methods=["POST"])
@@ -162,9 +177,12 @@ def health():
 @app.route("/quiet/", methods=["POST"])
 @app.route("/quiet/chat/completions", methods=["POST"])
 def proxy():
+    assert storage is not None  # Make type checkers happy
+
     request_json = request.get_json(silent=True)
     if not request_json:  # This should never happen.
         abort(400, "Bad Request. Missing or invalid JSON.")
+        return  # Some type checkers don't realize abort exits the function
 
     request_path = request.path
 
@@ -182,7 +200,7 @@ def proxy():
     if len(request_auth) != 2 or request_auth[0].lower() != "bearer":
         return response.build_error("Unauthorized. API key required.", 401)
 
-    api_keys = [k.strip() for k in request_auth[1].split(",")]
+    api_keys = comma_split(request_auth[1])
     xuid = XUID(api_keys[0], xuid_secret)
 
     if not storage.lock(xuid):
@@ -203,9 +221,12 @@ def proxy():
 
     # Handle user's request
 
-    api_key_index = user.get_rcounter() % len(api_keys)
-
+    rcounter = user.get_rcounter()
+    api_key_index = rcounter % len(api_keys)
     user.inc_rcounter()
+
+    jai_req.key_index = api_key_index
+    jai_req.key_count = len(api_keys)
 
     client = genai.Client(api_key=api_keys[api_key_index])
 
@@ -271,33 +292,6 @@ def secret_required(f):
         return f()
 
     return secret_required_wrapper
-
-
-@app.route("/admin/announcement", methods=["POST"])
-@secret_required
-def admin_announcement():
-    payload = request.get_json(silent=True)
-    if not payload:
-        return {
-            "success": False,
-            "error": "payload missing.",
-        }, 400
-
-    if not isinstance((message := payload.get("message")), str):
-        return {
-            "success": False,
-            "error": "payload message missing.",
-        }, 400
-
-    message = message.strip()
-
-    storage.announcement = message
-
-    xlog(None, "Admin announcement " + ("updated" if message else "cleared"))
-
-    return {
-        "success": True,
-    }
 
 
 @app.route("/admin/dump-all", methods=["GET"])

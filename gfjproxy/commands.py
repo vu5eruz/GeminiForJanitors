@@ -4,7 +4,8 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
-from ._globals import PRESETS, BANNER, BANNER_VERSION
+
+from ._globals import BANNER, BANNER_VERSION, PRESETS
 from .utils import ResponseHelper
 
 ################################################################################
@@ -51,7 +52,7 @@ class Command:
     args: str = ""
 
     # Pointer to command function
-    func: Callable = field(default=None, repr=False, compare=False, kw_only=True)
+    func: Callable | None = field(default=None, repr=False, compare=False, kw_only=True)
 
     # Prefer to this method instead of directly calling func
     def __call__(self, user, jai_req, response):
@@ -116,15 +117,20 @@ def command(*, argspec: str = "", **kwargs):
 
 @command()
 def aboutme(args, user, jai_req, response):
+    # U+200B ZERO WIDTH SPACE
     return response.add_proxy_message(
-        f"Your user ID on this proxy is `{user.xuid!r}`."
-        + f" You were {user.last_seen_msg()}. Your request counter is {user.get_rcounter()}."
-        + " Your settings are:",
-        f"- //nobot is {'enabled' if user.use_nobot else 'disabled'}",
-        f"- //ooctrick is {'enabled' if user.use_ooctrick else 'disabled'}",
-        f"- //prefill is {'enabled' if user.use_prefill else 'disabled'}",
-        f"- //think is {'enabled' if user.use_think else 'disabled'}",
-        f"- //advsettings is {'enabled' if user.use_nobot else 'disabled'}",
+        f"Your user ID on this proxy is `{user.xuid!r}`.",
+        f"You have used this proxy {user.get_rcounter()} time(s).",
+        f"You were {user.last_seen_msg()}.",
+        "Your commands are:",
+        f"\u200b- //advsettings {'on' if user.use_nobot else 'off'}",
+        f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
+        f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
+        f"\u200b- //prefill {'on' if user.use_prefill else 'off'}",
+        f"\u200b- //search {'on' if user.use_search else 'off'}",
+        f"\u200b- //think {'on' if user.use_think else 'off'}",
+        f"\u200b- //think_text {user.think_text}",
+        f"This message is using API key {jai_req.key_index + 1} out of {jai_req.key_count}.",
     )
 
 
@@ -197,6 +203,16 @@ def prefill(args, user, jai_req, response):
     )
 
 
+@command(argspec=r"off|on|this", setting="search")
+def search(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Google Search {'enabled' if jai_req.use_search else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
+
+
 @command(argspec=r"off|on|this", setting="think")
 def think(args, user, jai_req, response):
     if jai_req.quiet_commands:
@@ -204,6 +220,24 @@ def think(args, user, jai_req, response):
     return response.add_proxy_message(
         f"Thinking {'enabled' if jai_req.use_think else 'disabled'}"
         + (" (for this message only)." if args == "this" else ".")
+    )
+
+
+################################################################################
+
+
+@command(argspec=r"keep|remove")
+def think_text(args, user, jai_req, response):
+    user.think_text = args
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Thinking text will be {'kept' if args == 'keep' else 'removed'}."
+        + (
+            " Make sure to have `//think on` otherwise no thinking will show up."
+            if args == "keep"
+            else ""
+        )
     )
 
 

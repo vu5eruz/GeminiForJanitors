@@ -1,23 +1,52 @@
 """Handlers."""
 
-from httpx import ReadTimeout
 from google import genai
-from google.genai import types
+from google.genai import errors, types
+from httpx import Client, HTTPError, ReadTimeout
+
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError
-from .models import JaiRequest
 from .logging import xlog
+from .models import JaiRequest
 from .xuiduser import LocalUserStorage, UserSettings
 
+CLIENT = Client(
+    headers={"User-Agent": "gfjproxy"},
+    timeout=5,
+    max_redirects=0,
+)
 
 # Changing this has an impact on whether the runner (specifically gunicorn) will
 # forcefully reset a worker after taking too long to answer a request. When
 # deploying using gunicorn, make sure to provide a -t value larger than the one
 # in here, to prevent issues from arising at run-time.
-REQUEST_TIMEOUT_IN_SECONDS: float = 60
+REQUEST_TIMEOUT_IN_SECONDS: int = 60
 
 
 ################################################################################
+
+
+def _resolve_link(user: UserSettings | None, link: str) -> str:
+    result = link
+
+    try:
+        if link.startswith(
+            "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
+        ):
+            response = CLIENT.get(link)
+            if response.status_code != 302:  # Found
+                response.raise_for_status()
+            if location := response.headers.get("Location"):
+                result = location
+    except HTTPError as e:
+        xlog(user, f"Could not resolve link:\n{e!r}")
+
+    if result != link:
+        xlog(user, "Link resolved")
+    else:
+        xlog(user, "Link not resolved")
+
+    return result
 
 
 def _get_feedback(response: types.GenerateContentResponse) -> str | None:
@@ -147,30 +176,30 @@ def _gen_content(
         )
         contents.append(types.ModelContent({"text": "<think>\n➛ Okay! Understood."}))
 
-    config = {
-        "http_options": types.HttpOptions(
-            timeout=REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
-        ),
+    config: types.GenerateContentConfigDict = {
+        "http_options": {
+            "timeout": REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
+        },
         "temperature": jai_req.temperature,
         "top_k": 50,
         "top_p": 0.95,
         "safety_settings": [
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            ),
-            types.SafetySetting(
-                threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            ),
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            },
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            },
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+            },
+            {
+                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
+                "category": types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            },
         ],
     }
 
@@ -200,8 +229,21 @@ def _gen_content(
         xlog(
             user,
             f"Adding settings {', '.join(advsettings_used)} to chat"
-            + (" (for this message only)." if not user.use_prefill else "."),
+            + (" (for this message only)." if not user.use_advsettings else "."),
         )
+
+    if jai_req.use_search or user.use_search:
+        config["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+
+        xlog(
+            user,
+            "Adding Google Search tool to model"
+            + (" (for this message only)." if not user.use_search else "."),
+        )
+
+        used_search = True
+    else:
+        used_search = False
 
     for key, value in overrides.items():
         if value is None and key in config:
@@ -215,7 +257,10 @@ def _gen_content(
         )
     except ReadTimeout:
         return "Gateway Timeout", 504
-    except genai.errors.ClientError as e:
+    except errors.ClientError as e:
+        if e.message is None:  # Make type checkers happy
+            e.message = "Unknown error"
+
         if e.status == "NOT_FOUND":
             # 404 NOT_FOUND "models/* is not found for API version v1beta"
             if e.message.startswith("models/"):
@@ -274,7 +319,7 @@ def _gen_content(
 
         xlog(user, repr(e))  # Log these fellas for they are anomalous
         return e.message, e.code
-    except genai.errors.ServerError as e:
+    except errors.ServerError as e:
         if e.status == "UNAVAILABLE":
             # 503 UNAVAILABLE "The model is overloaded. Please try again later."
             return "The model is overloaded. Try again later.", e.code
@@ -295,7 +340,44 @@ def _gen_content(
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         return "Unhanded exception from Google AI.", 502
 
-    if not (text := result.text):
+    text: str | None = None
+    extras = ""
+
+    if candidates := result.candidates:
+        if len(candidates) > 1:
+            xlog(user, "Warning: more than one candidate found in response")
+        candidate: types.Candidate = candidates[0]
+
+        if candidate.content and (parts := candidate.content.parts):
+            text = ""
+            for part in parts:
+                if isinstance(part.text, str):
+                    if isinstance(part.thought, bool) and part.thought:
+                        continue
+                    text += part.text
+
+        if gm := candidate.grounding_metadata:
+            # U+3164 HANGUL FILLER
+
+            if isinstance((wsqs := gm.web_search_queries), list):
+                xlog(user, f"Made {len(wsqs)} web searches")
+                extras += (
+                    "Searches:\n" + "\n".join(f"\u3164- {wsq}" for wsq in wsqs) + "\n"
+                )
+
+            if isinstance((gcs := gm.grounding_chunks), list):
+                links: list[str] = []
+                for gc in gcs:
+                    if (web := gc.web) and (uri := web.uri):
+                        links.append(_resolve_link(user, uri))
+                xlog(user, f"Found {len(gcs)} grounding chunks {len(links)} links")
+                extras += (
+                    "Links:\n" + "\n".join(f"\u3164- {link}" for link in links) + "\n"
+                )
+        elif used_search:
+            xlog(user, "Web search was not used")
+
+    if not text:
         # Rejection
 
         reason = _get_feedback(result)
@@ -318,14 +400,17 @@ def _gen_content(
 
         t_open = text.find("<think>")  # len = 7
         t_close = text.find("</think>")  # len = 8
+        thinking = None
 
         if -1 == t_open == t_close:
             xlog(user, "No thinking tags found")
         elif -1 < t_open < t_close:
             xlog(user, f"Removing thinking {t_open} to {t_close + 8}")
+            thinking = text[t_open + 7 : t_close]
             text = text[:t_open] + text[t_close + 8 :]
         elif -1 < t_close:
             xlog(user, f"Removing thinking up until {t_close + 8}")
+            thinking = text[:t_close]
             text = text[t_close + 8 :]
         else:
             xlog(user, "Removing thinking failure")
@@ -344,9 +429,13 @@ def _gen_content(
         else:
             xlog(user, "Parsing response failure")
 
-        xlog(user, f"Result text is {len(text)} characters, {len(text.split())} words")
+        if user.think_text == "keep" and isinstance(thinking, str):
+            xlog(user, "Thinking text kept")
+            text = f"<think>\n{thinking}\n</think>\n{text}"
 
-    return (result, text), 200
+    xlog(user, f"Result text is {len(text)} characters, {len(text.split())} words")
+
+    return (result, text, extras), 200
 
 
 ################################################################################
@@ -382,7 +471,7 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    result, text = result
+    result, text, _ = result
 
     return response.add_message(text)
 
@@ -422,9 +511,12 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    result, text = result
+    result, text, extras = result
 
     response.add_message(text)
+
+    if extras:
+        response.add_proxy_message(extras)
 
     if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
         xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
