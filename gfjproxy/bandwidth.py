@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import cast
 
-import httpx
 import redis
 import redis.exceptions
 import redis.lock
 
 from ._globals import BANDWIDTH_WARNING, PRODUCTION, RENDER_API_KEY, RENDER_SERVICE_ID
+from .http_client import http_client
 from .logging import xlog
 from .start_time import START_TIME
 from .storage import storage
@@ -45,7 +45,7 @@ def _query_bandwidth_usage() -> BandwidthUsage:
         microsecond=0,
     )
 
-    response = httpx.get(
+    response = http_client.get(
         "https://api.render.com/v1/metrics/bandwidth",
         params={
             "resource": RENDER_SERVICE_ID,

@@ -2,19 +2,14 @@
 
 from google import genai
 from google.genai import errors, types
-from httpx import Client, HTTPError, ReadTimeout
+from httpx import HTTPError, ReadTimeout
 
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError
+from .http_client import http_client
 from .logging import xlog
 from .models import JaiRequest
 from .xuiduser import LocalUserStorage, UserSettings
-
-CLIENT = Client(
-    headers={"User-Agent": "gfjproxy"},
-    timeout=5,
-    max_redirects=0,
-)
 
 # Changing this has an impact on whether the runner (specifically gunicorn) will
 # forcefully reset a worker after taking too long to answer a request. When
@@ -33,7 +28,7 @@ def _resolve_link(user: UserSettings | None, link: str) -> str:
         if link.startswith(
             "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
         ):
-            response = CLIENT.get(link)
+            response = http_client.get(link)
             if response.status_code != 302:  # Found
                 response.raise_for_status()
             if location := response.headers.get("Location"):
