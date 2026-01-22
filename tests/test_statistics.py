@@ -29,22 +29,22 @@ def test_statistics_basic():
     t3 = t0 + 3 * BUCKET_INTERVAL
     t4 = t0 + 4 * BUCKET_INTERVAL
 
-    track_stats("r.msg.succeed", timestamp=t0)
+    track_stats("test.msg.succeed", timestamp=t0)
 
-    track_stats("r.msg.succeed", timestamp=t1)
-    track_stats("r.msg.succeed", timestamp=t1)
-    track_stats("r.msg.failed", timestamp=t1)
+    track_stats("test.msg.succeed", timestamp=t1)
+    track_stats("test.msg.succeed", timestamp=t1)
+    track_stats("test.msg.failed", timestamp=t1)
 
-    track_stats("r.msg.succeed", timestamp=t2)
-    track_stats("r.msg.failed", timestamp=t2)
-    track_stats("r.msg.succeed", timestamp=t2)
-    track_stats("r.msg.failed", timestamp=t2)
+    track_stats("test.msg.succeed", timestamp=t2)
+    track_stats("test.msg.failed", timestamp=t2)
+    track_stats("test.msg.succeed", timestamp=t2)
+    track_stats("test.msg.failed", timestamp=t2)
 
-    track_stats("r.msg.succeed", timestamp=t3)
-    track_stats("r.msg.failed", timestamp=t3)
-    track_stats("r.msg.failed", timestamp=t3)
+    track_stats("test.msg.succeed", timestamp=t3)
+    track_stats("test.msg.failed", timestamp=t3)
+    track_stats("test.msg.failed", timestamp=t3)
 
-    track_stats("r.msg.failed", timestamp=t4)
+    track_stats("test.msg.failed", timestamp=t4)
 
     stats = query_stats(t4)
 
@@ -52,44 +52,44 @@ def test_statistics_basic():
         (
             make_stats_bucket(t0),
             {
-                "r": 1,
-                "r.msg": 1,
-                "r.msg.succeed": 1,
+                "test": 1,
+                "test.msg": 1,
+                "test.msg.succeed": 1,
             },
         ),
         (
             make_stats_bucket(t1),
             {
-                "r": 3,
-                "r.msg": 3,
-                "r.msg.succeed": 2,
-                "r.msg.failed": 1,
+                "test": 3,
+                "test.msg": 3,
+                "test.msg.succeed": 2,
+                "test.msg.failed": 1,
             },
         ),
         (
             make_stats_bucket(t2),
             {
-                "r": 4,
-                "r.msg": 4,
-                "r.msg.succeed": 2,
-                "r.msg.failed": 2,
+                "test": 4,
+                "test.msg": 4,
+                "test.msg.succeed": 2,
+                "test.msg.failed": 2,
             },
         ),
         (
             make_stats_bucket(t3),
             {
-                "r": 3,
-                "r.msg": 3,
-                "r.msg.succeed": 1,
-                "r.msg.failed": 2,
+                "test": 3,
+                "test.msg": 3,
+                "test.msg.succeed": 1,
+                "test.msg.failed": 2,
             },
         ),
         (
             make_stats_bucket(t4),
             {
-                "r": 1,
-                "r.msg": 1,
-                "r.msg.failed": 1,
+                "test": 1,
+                "test.msg": 1,
+                "test.msg.failed": 1,
             },
         ),
     ]
