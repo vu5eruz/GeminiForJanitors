@@ -55,7 +55,7 @@ from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
 from .statistics import query_stats
-from .storage import storage
+from .storage import get_redis_client, storage
 from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
 
@@ -146,14 +146,17 @@ def favicon():
 @app.route("/healthz")
 def health():
     keyspace = -1
-    if isinstance(storage, RedisUserStorage):
-        keyspace = storage._client.info("keyspace").get("db0", {}).get("keys", -1)
+    if client := get_redis_client():
+        if keyspace_info := client.info("keyspace"):
+            assert isinstance(keyspace_info, dict)
+            keyspace = int(keyspace_info.get("db0", {}).get("keys", -1))
 
     usage = bandwidth_usage()
 
     health = {
         "admin": PROXY_ADMIN,
         "bandwidth": usage.total,
+        "bwarning": BANDWIDTH_WARNING,
         "cooldown": get_cooldown(usage),
         "cpolicy": str(cooldown_policy),
         "keyspace": keyspace,
@@ -312,27 +315,30 @@ def secret_required(f):
 @app.route("/admin/dump-all", methods=["GET"])
 @secret_required
 def admin_dump_all():
-    if not isinstance(storage, RedisUserStorage):
+    client = get_redis_client()
+    if not client:
         return {
             "success": False,
             "error": "storage is not redis.",
         }, 403
 
-    r = storage._client
-
     locks = list()
     dump = dict()
-    for key in map(bytes.decode, r.scan_iter(match="*", count=100)):
-        if key.endswith(":lock"):
-            locks.append(key)
-        else:
-            dump[key] = ...
+    for key in map(bytes.decode, client.scan_iter(match="*", count=100)):
+        if key[0] != ":":
+            if key.endswith(":lock"):
+                locks.append(key)
+            else:
+                dump[key] = ...
 
     from itertools import batched
     from json import loads
 
     for batch in batched(dump.keys(), 100):
-        for key, value in zip(batch, map(loads, r.mget(batch))):
+        values = client.mget(batch)
+        if not isinstance(values, list):
+            continue
+        for key, value in zip(batch, map(loads, values)):
             dump[key] = value
 
     return {
