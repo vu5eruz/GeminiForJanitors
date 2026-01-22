@@ -54,6 +54,7 @@ from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
+from .statistics import query_stats
 from .storage import storage
 from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
@@ -170,6 +171,20 @@ def health():
 
     # Return health data as JSON
     return health, 200
+
+
+@app.route("/stats")
+def stats():
+    statistics = query_stats()
+
+    request_accept = request.headers.get("accept", "application/json").strip().lower()
+    if request_accept == "application/json":
+        json = {}
+        for bucket, stats in statistics:
+            json[bucket] = dict(stats)
+        return json, 200
+
+    return "Hello, world!", 200
 
 
 @app.route("/", methods=["POST"])
