@@ -490,6 +490,8 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
 
     if last_user_message.content.startswith("Rewrite/Enhance this message: "):
         xlog(user, f"Handling enhance message ({jai_req.model}) ...")
+    elif last_user_message.content.startswith("Create a brief, focused summary"):
+        xlog(user, f"Handling auto summary ({jai_req.model}) ...")
     else:
         xlog(user, f"Handling chat message ({jai_req.model}) ...")
 
