@@ -4,7 +4,6 @@ import datetime
 import threading
 from dataclasses import dataclass
 from time import perf_counter
-from typing import cast
 
 import redis
 import redis.exceptions
@@ -14,8 +13,7 @@ from ._globals import BANDWIDTH_WARNING, PRODUCTION, RENDER_API_KEY, RENDER_SERV
 from .http_client import http_client
 from .logging import xlog
 from .start_time import START_TIME
-from .storage import storage
-from .xuiduser import RedisUserStorage
+from .storage import get_redis_client, storage
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -28,7 +26,7 @@ class BandwidthUsage:
 
 
 def _query_bandwidth_usage() -> BandwidthUsage:
-    if not PRODUCTION:
+    if not RENDER_API_KEY or not RENDER_SERVICE_ID:
         total = perf_counter() - START_TIME
         xlog(None, f"Bandwidth: using mock total {total:.2f} MiB")
         return BandwidthUsage(total=int(total))
@@ -82,17 +80,15 @@ def _query_bandwidth_usage() -> BandwidthUsage:
     return BandwidthUsage()
 
 
-def _update_bandwidth_usage(lock: redis.lock.Lock) -> None:
+def _update_bandwidth_usage(client: redis.Redis, lock: redis.lock.Lock) -> None:
     if result := _query_bandwidth_usage():
-        s = cast(RedisUserStorage, storage)  # Make type hinting happy
-
         # Only update the cache if the query is successful, i.e result is positive
-        s._client.set(":bandwidth-cache", result.total)
-        s._client.set(":bandwidth-cache-fresh", "<3", ex=300)  # 5 minutes
+        client.set(":bandwidth-cache", result.total)
+        client.set(":bandwidth-cache-fresh", "<3", ex=300)  # 5 minutes
 
         if 0 < BANDWIDTH_WARNING <= result.total:
             xlog(None, "Bandwidth: announcement set")
-            s.announcement = "\n".join(
+            storage.announcement = "\n".join(
                 (
                     f"Bandwidth quota is above {BANDWIDTH_WARNING / 1024:.1f} GiB.",
                     "Please consider using another URL.",
@@ -100,7 +96,7 @@ def _update_bandwidth_usage(lock: redis.lock.Lock) -> None:
             )
         else:
             xlog(None, "Bandwidth: announcement clear")
-            s.announcement = ""
+            storage.announcement = ""
 
     try:
         lock.release()
@@ -109,12 +105,14 @@ def _update_bandwidth_usage(lock: redis.lock.Lock) -> None:
 
 
 def bandwidth_usage() -> BandwidthUsage:
+    client = get_redis_client()
+
     # Redis storage is always required while an Render API is only required on production
-    if not isinstance(storage, RedisUserStorage) or (PRODUCTION and not RENDER_API_KEY):
+    if client is None or (PRODUCTION and not RENDER_API_KEY):
         return BandwidthUsage()
 
-    if not storage._client.get(":bandwidth-cache-fresh"):
-        lock = storage._client.lock(
+    if not client.get(":bandwidth-cache-fresh"):
+        lock = client.lock(
             name=":bandwidth-cache-lock",
             timeout=30,
             thread_local=False,
@@ -122,10 +120,10 @@ def bandwidth_usage() -> BandwidthUsage:
         if lock.acquire(blocking=False):
             threading.Thread(
                 target=_update_bandwidth_usage,
-                args=(lock,),
+                args=(client, lock),
                 daemon=True,
             ).start()
 
-    if isinstance((cache := storage._client.get(":bandwidth-cache")), bytes):
+    if isinstance((cache := client.get(":bandwidth-cache")), bytes):
         return BandwidthUsage(total=int(cache))
     return BandwidthUsage()
