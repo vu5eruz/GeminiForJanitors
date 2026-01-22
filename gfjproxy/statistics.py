@@ -17,7 +17,7 @@ def make_stats_bucket(timestamp: float) -> str:
     return strftime(":stats:%Y-%m-%dT%H:%M", gmtime(timestamp))
 
 
-def make_timestap() -> float:
+def make_timestamp() -> float:
     return float(int(time() // BUCKET_INTERVAL) * BUCKET_INTERVAL)
 
 
@@ -27,7 +27,7 @@ def track_stats(full_key: str, timestamp: float | None = None):
         return
 
     if timestamp is None:
-        timestamp = make_timestap()
+        timestamp = make_timestamp()
 
     bucket = make_stats_bucket(timestamp)
     sub_keys = full_key.split(".")
@@ -46,7 +46,7 @@ def query_stats(timestamp: float | None = None) -> Statistics:
         return []
 
     if timestamp is None:
-        timestamp = make_timestap()
+        timestamp = make_timestamp()
 
     buckets = [
         make_stats_bucket(timestamp - delta * BUCKET_INTERVAL)

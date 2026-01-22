@@ -54,7 +54,7 @@ from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
-from .statistics import make_timestap, query_stats
+from .statistics import make_timestamp, query_stats
 from .storage import get_redis_client, storage
 from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
@@ -178,7 +178,7 @@ def health():
 
 @app.route("/stats")
 def stats():
-    timestamp = make_timestap()
+    timestamp = make_timestamp()
 
     statistics = query_stats(timestamp)
 

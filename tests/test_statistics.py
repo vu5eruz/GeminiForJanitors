@@ -4,7 +4,7 @@ from gfjproxy.statistics import (
     BUCKET_INTERVAL,
     clear_stats,
     make_stats_bucket,
-    make_timestap,
+    make_timestamp,
     query_stats,
     track_stats,
 )
@@ -23,7 +23,7 @@ def test_statistics_basic():
 
     clear_stats(query_stats())
 
-    t0 = make_timestap()
+    t0 = make_timestamp()
     t1 = t0 + 1 * BUCKET_INTERVAL
     t2 = t0 + 2 * BUCKET_INTERVAL
     t3 = t0 + 3 * BUCKET_INTERVAL
