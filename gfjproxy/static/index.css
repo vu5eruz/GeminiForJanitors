@@ -137,6 +137,26 @@ summary {
     display: list-item;
 }
 
+table.health {
+    margin: 0;
+}
+
+table.health th,
+table.health td {
+    padding: 0.25em 0.5em;
+}
+
+table.health th {
+    color: deepskyblue;
+    text-align: right;
+}
+
+table.health td {
+    border-left: none;
+    color: lightblue;
+    text-align: left;
+}
+
 .stats-hierarchy {
     max-width: 500px;
     margin: auto;
