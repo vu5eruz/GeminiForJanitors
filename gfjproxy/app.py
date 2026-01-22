@@ -40,7 +40,7 @@ else:
 
 # ruff: noqa: E402
 from secrets import token_bytes
-from time import perf_counter
+from time import gmtime, perf_counter, strftime
 from traceback import print_exception
 
 from colorama import just_fix_windows_console
@@ -54,7 +54,7 @@ from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
-from .statistics import query_stats
+from .statistics import make_timestap, query_stats
 from .storage import get_redis_client, storage
 from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
@@ -168,7 +168,7 @@ def health():
         return render_template(
             "health.html",
             health=health,
-            title=PROXY_NAME,
+            title=f"Health - {PROXY_NAME}",
             url=PROXY_URL,
         )
 
@@ -178,16 +178,26 @@ def health():
 
 @app.route("/stats")
 def stats():
-    statistics = query_stats()
+    timestamp = make_timestap()
 
-    request_accept = request.headers.get("accept", "application/json").strip().lower()
-    if request_accept == "application/json":
-        json = {}
-        for bucket, stats in statistics:
-            json[bucket] = dict(stats)
-        return json, 200
+    statistics = query_stats(timestamp)
 
-    return "Hello, world!", 200
+    if request.headers.get("accept", "").split(",")[0] == "text/html":
+        return render_template(
+            "stats.html",
+            title=f"Statistics - {PROXY_NAME}",
+            url=PROXY_URL,
+            timestamp=strftime("%Y-%m-%d %H:%M:%S Z", gmtime(timestamp)),
+            statistics=statistics,
+            latest_stats=statistics[-1][1],
+        )
+
+    statistics_json = {}
+    for bucket, stats in statistics:
+        statistics_json[bucket] = dict(stats)
+
+    # Return statistics data as JSON
+    return statistics_json, 200
 
 
 @app.route("/", methods=["POST"])

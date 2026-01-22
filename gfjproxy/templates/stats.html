@@ -1,0 +1,105 @@
+{% macro latest_stat(key) %} {{ "{:,}".format(latest_stats[key]) }} {% endmacro %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="apple-mobile-web-app-title" content="{{ title }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <link rel="stylesheet" href="/static/index.css" />
+    <title>{{ title }}</title>
+  </head>
+  <body>
+    <h1>Statistics</h1>
+    <a href="{{ url }}">{{ url }}</a>
+    <pre>{{ timestamp }}</pre>
+    <hr />
+    <h2>Requests</h2>
+    <h3>Last 30 Minutes</h3>
+    <table>
+      <thead>
+        <th scope="col"></th>
+        <th scope="col">Generate<br />Reply</th>
+        <th scope="col">Enhance<br />Message</th>
+        <th scope="col">Auto<br />Summary</th>
+        <th scope="col">Proxy<br />Test</th>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Total</th>
+          <td>{{ latest_stat("r.message") }}</td>
+          <td>{{ latest_stat("r.enhance") }}</td>
+          <td>{{ latest_stat("r.summary") }}</td>
+          <td>{{ latest_stat("r.test") }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Succeeded</th>
+          <td>{{ latest_stat("r.message.succeeded") }}</td>
+          <td>{{ latest_stat("r.enhance.succeeded") }}</td>
+          <td>{{ latest_stat("r.summary.succeeded") }}</td>
+          <td>{{ latest_stat("r.test.succeeded") }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Failed</th>
+          <td>{{ latest_stat("r.message.failed") }}</td>
+          <td>{{ latest_stat("r.enhance.failed") }}</td>
+          <td>{{ latest_stat("r.summary.failed") }}</td>
+          <td>{{ latest_stat("r.test.failed") }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <h2>Responses</h2>
+    <h3>Last 30 Minutes</h3>
+    <div class="stats-hierarchy">
+      {% macro stat_row(name, key) %}
+      <div class="stats-row" title="{{ key }}">
+        <dt>{{ name }}</dt>
+        <dd>{{ latest_stat(key) }}</dd>
+      </div>
+      {% endmacro %}
+      <dl>
+        {{ stat_row("Total", "g") }} {{ stat_row("Succeeded", "g.succeeded") }} {{
+        stat_row("Failed", "g.failed") }}
+        <dl>
+          {{ stat_row("4xx - Client", "g.failed.client") }}
+          <dl>
+            {{ stat_row("Invalid", "g.failed.client.invalid") }} {{ stat_row("Denied",
+            "g.failed.client.denied") }} {{ stat_row("Quota", "g.failed.client.quota") }}
+            <dl>
+              {{ stat_row("Quota exceeded", "g.failed.client.quota.violation") }} {{
+              stat_row("Resource exhausted", "g.failed.client.quota.unknown") }}
+            </dl>
+            {{ stat_row("Unknown", "g.failed.client.unknown") }}
+          </dl>
+          {{ stat_row("5xx - Server", "g.failed.server") }}
+          <dl>
+            {{ stat_row("Overloaded", "g.failed.server.overloaded") }} {{ stat_row("Timed out",
+            "g.failed.server.time_out") }} {{ stat_row("Internal error", "g.failed.server.internal")
+            }}
+          </dl>
+          {{ stat_row("Blocked/Empty", "g.failed.rejected") }}
+          <dl>
+            {{ stat_row("STOP", "g.failed.rejected.STOP") }} {{ stat_row("PROHIBITED_CONTENT",
+            "g.failed.rejected.PROHIBITED_CONTENT") }} {{ stat_row("OTHER",
+            "g.failed.rejected.OTHER") }} {{ stat_row("UNKNOWN", "g.failed.rejected.UNKNOWN") }}
+          </dl>
+          {{ stat_row("Unknown", "g.failed.unknown") }}
+        </dl>
+      </dl>
+    </div>
+    <hr />
+    <h2>Debug</h2>
+    <pre>
+      {%- for key, value in latest_stats|items|sort -%}
+        {% if value > 0 %}
+{{ "{:8,}".format(value) }} {{ key }}
+        {%- endif %}
+      {%- endfor -%}
+    </pre>
+  </body>
+</html>
