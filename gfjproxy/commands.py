@@ -79,7 +79,7 @@ def command(*, argspec: str = "", **kwargs):
 
         @wraps(func)
         def inner_wrapper(args, user, jai_req, response):
-            if argspec and not regex.fullmatch(args):
+            if argspec and not regex.fullmatch(args):  # pyright: ignore[reportPossiblyUnboundVariable]
                 if not args:
                     raise CommandError(
                         f'`//{cmd_name}` requires an argument "`{argspec}`".'
@@ -285,10 +285,10 @@ def parse_message(message: str) -> tuple[list[Command], str]:
 ################################################################################
 
 
-def strip_message(message: str) -> str:
+def strip_message(raw_message: str) -> str:
     """Clean up the text of a message, meant for model's output."""
 
-    message = _stripproxytext(message.strip("\n")).split("\n")
+    message = _stripproxytext(raw_message.strip("\n")).split("\n")
 
     if not message:
         return ""

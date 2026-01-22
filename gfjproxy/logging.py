@@ -1,8 +1,9 @@
 """Proxy Logging System."""
 
 import logging
-from time import monotonic, gmtime
 from threading import Timer
+from time import gmtime, monotonic
+
 from .xuiduser import XUID, UserSettings
 
 ################################################################################
@@ -64,7 +65,7 @@ def _custom_handler(filler: str | None = None) -> logging.StreamHandler:
     return handler
 
 
-def hijack_loggers() -> list[str]:
+def hijack_loggers() -> None:
     """Hijack other people's loggers and make them use our custom handler.
 
     This is very hacky and very illegal, lol."""

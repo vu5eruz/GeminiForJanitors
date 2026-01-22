@@ -272,6 +272,8 @@ def _gen_content(
             # 400 INVALID_ARGUMENT "Penalty is not enabled for models/*"
             return e.message, e.code
 
+        assert isinstance(e.details, dict)
+
         details = e.details.get(
             "details", e.details.get("error", {}).get("details", [])
         )
@@ -506,18 +508,20 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     if status != 200:
         return response.add_error(result, status)
 
-    result, text, extras = result
+    gcr, text, extras = result
 
     response.add_message(text)
 
     if extras:
         response.add_proxy_message(extras)
 
-    if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
-        xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
-        xlog(user, f" - Response tokens {result.usage_metadata.candidates_token_count}")
-        xlog(user, f" - Thinking tokens {result.usage_metadata.thoughts_token_count}")
-        xlog(user, f" - Total    tokens {result.usage_metadata.total_token_count}")
+    assert isinstance(gcr, types.GenerateContentResponse)
+
+    if isinstance(gcr.usage_metadata, types.GenerateContentResponseUsageMetadata):
+        xlog(user, f" - Prompt   tokens {gcr.usage_metadata.prompt_token_count}")
+        xlog(user, f" - Response tokens {gcr.usage_metadata.candidates_token_count}")
+        xlog(user, f" - Thinking tokens {gcr.usage_metadata.thoughts_token_count}")
+        xlog(user, f" - Total    tokens {gcr.usage_metadata.total_token_count}")
     else:
         xlog(user, " - No usage metadata")
 
