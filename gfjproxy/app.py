@@ -178,6 +178,8 @@ def health():
 
 @app.route("/stats")
 def stats():
+    xlog(None, "Handling stats")
+
     timestamp = make_timestamp()
     statistics = query_stats(timestamp)
 
@@ -192,16 +194,16 @@ def stats():
 
         if statistics:
             latest_stats = statistics[-1][1]
-            stats_begin = statistics[0][0]
-            stats_end = statistics[-1][0]
+            stats_begin = statistics[0][0].removeprefix(":stats:")
+            stats_end = statistics[-1][0].removeprefix(":stats:")
 
         return render_template(
             "stats.html",
             title=f"Statistics - {PROXY_NAME}",
             url=PROXY_URL,
             statistics=statistics_json,
-            stats_begin=stats_begin.removeprefix(":stats:"),
-            stats_end=stats_end.removeprefix(":stats:"),
+            stats_begin=stats_begin.replace("T", " "),
+            stats_end=stats_end.replace("T", " "),
             latest_stats=latest_stats,
         )
 

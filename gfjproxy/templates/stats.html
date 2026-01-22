@@ -95,7 +95,8 @@ endmacro %}
       </dl>
     </div>
     <hr />
-    <h2>Debug</h2>
+    <h2>Raw Data</h2>
+    <h3>Last 30 Minutes</h3>
     <pre>
       {%- for key, value in latest_stats|items|sort -%}
         {% if value > 0 %}
@@ -108,10 +109,13 @@ endmacro %}
       integrity="sha256-SERKgtTty1vsDxll+qzd4Y2cF9swY9BCq62i9wXJ9Uo="
       crossorigin="anonymous"
     ></script>
+    <script type="application/json" id="statistics">
+      {{ statistics | tojson | safe }}
+    </script>
     <script>
-      const rawData = {{ statistics | tojson | safe }};
+      const rawData = JSON.parse(document.getElementById("statistics").innerHTML);
 
-      const timestamps = Object.keys(rawData).sort();
+      const timestamps = Object.keys(rawData).slice(0, -1).sort();
       const labels = timestamps.map((ts) => ts.slice(18));
 
       const getData = (key) => timestamps.map((ts) => rawData[ts][key] || 0);
