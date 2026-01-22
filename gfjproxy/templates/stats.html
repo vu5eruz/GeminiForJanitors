@@ -1,4 +1,5 @@
-{% macro latest_stat(key) %} {{ "{:,}".format(latest_stats[key]) }} {% endmacro %}
+{% macro latest_stat(key) %} {{ "{:,}".format(latest_stats.get(key, 0)) if latest_stats else 0 }} {%
+endmacro %}
 
 <!doctype html>
 <html lang="en">
@@ -82,13 +83,13 @@
             "g.failed.server.time_out") }} {{ stat_row("Internal error", "g.failed.server.internal")
             }}
           </dl>
-          {{ stat_row("Blocked/Empty", "g.failed.rejected") }}
-          <dl>
-            {{ stat_row("STOP", "g.failed.rejected.STOP") }} {{ stat_row("PROHIBITED_CONTENT",
-            "g.failed.rejected.PROHIBITED_CONTENT") }} {{ stat_row("OTHER",
-            "g.failed.rejected.OTHER") }} {{ stat_row("UNKNOWN", "g.failed.rejected.UNKNOWN") }}
-          </dl>
           {{ stat_row("Unknown", "g.failed.unknown") }}
+        </dl>
+        {{ stat_row("Blocked/Empty", "g.rejected") }}
+        <dl>
+          {{ stat_row("STOP", "g.rejected.STOP") }} {{ stat_row("PROHIBITED_CONTENT",
+          "g.rejected.PROHIBITED_CONTENT") }} {{ stat_row("OTHER", "g.failed.rejected.OTHER") }} {{
+          stat_row("UNKNOWN", "g.rejected.UNKNOWN") }}
         </dl>
       </dl>
     </div>

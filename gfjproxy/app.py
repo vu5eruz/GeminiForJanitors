@@ -183,13 +183,17 @@ def stats():
     statistics = query_stats(timestamp)
 
     if request.headers.get("accept", "").split(",")[0] == "text/html":
+        latest_stats = {}
+        if statistics:
+            latest_stats = statistics[-1][1]
+
         return render_template(
             "stats.html",
             title=f"Statistics - {PROXY_NAME}",
             url=PROXY_URL,
             timestamp=strftime("%Y-%m-%d %H:%M:%S Z", gmtime(timestamp)),
             statistics=statistics,
-            latest_stats=statistics[-1][1],
+            latest_stats=latest_stats,
         )
 
     statistics_json = {}
