@@ -40,7 +40,7 @@ else:
 
 # ruff: noqa: E402
 from secrets import token_bytes
-from time import gmtime, perf_counter, strftime
+from time import perf_counter
 from traceback import print_exception
 
 from colorama import just_fix_windows_console
@@ -54,7 +54,7 @@ from .handlers import handle_chat_message, handle_proxy_test
 from .logging import hijack_loggers, xlog, xlogtime
 from .models import JaiRequest
 from .start_time import START_TIME
-from .statistics import BUCKET_INTERVAL, make_timestamp, query_stats
+from .statistics import make_timestamp, query_stats
 from .storage import get_redis_client, storage
 from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
@@ -178,29 +178,32 @@ def health():
 
 @app.route("/stats")
 def stats():
-    bucket_begin = make_timestamp()
-    bucket_end = bucket_begin + BUCKET_INTERVAL
+    timestamp = make_timestamp()
+    statistics = query_stats(timestamp)
 
-    statistics = query_stats(bucket_begin)
+    statistics_json = {}
+    for bucket, stats in statistics:
+        statistics_json[bucket] = dict(stats)
 
     if request.headers.get("accept", "").split(",")[0] == "text/html":
         latest_stats = {}
+        stats_begin = "N/A"
+        stats_end = "N/A"
+
         if statistics:
             latest_stats = statistics[-1][1]
+            stats_begin = statistics[0][0]
+            stats_end = statistics[-1][0]
 
         return render_template(
             "stats.html",
             title=f"Statistics - {PROXY_NAME}",
             url=PROXY_URL,
-            bucket_begin=strftime("%Y-%m-%d %H:%M:%S Z", gmtime(bucket_begin)),
-            bucket_end=strftime("%Y-%m-%d %H:%M:%S Z", gmtime(bucket_end)),
-            statistics=statistics,
+            statistics=statistics_json,
+            stats_begin=stats_begin.removeprefix(":stats:"),
+            stats_end=stats_end.removeprefix(":stats:"),
             latest_stats=latest_stats,
         )
-
-    statistics_json = {}
-    for bucket, stats in statistics:
-        statistics_json[bucket] = dict(stats)
 
     # Return statistics data as JSON
     return statistics_json, 200

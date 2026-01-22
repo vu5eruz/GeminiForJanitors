@@ -18,7 +18,7 @@ endmacro %}
   <body>
     <h1>Statistics</h1>
     <a href="{{ url }}">{{ url }}</a>
-    <pre>{{ bucket_begin }} -- {{ bucket_end }}</pre>
+    <pre>{{ stats_begin }} -- {{ stats_end }}</pre>
     <hr />
     <h2>Requests</h2>
     <h3>Last 30 Minutes</h3>
@@ -55,6 +55,7 @@ endmacro %}
       </tbody>
     </table>
     <h2>Responses</h2>
+    <div id="chartG" class="chart-container"></div>
     <h3>Last 30 Minutes</h3>
     <div class="stats-hierarchy">
       {% macro stat_row(name, key) %}
@@ -102,5 +103,77 @@ endmacro %}
         {%- endif %}
       {%- endfor -%}
     </pre>
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+      integrity="sha256-SERKgtTty1vsDxll+qzd4Y2cF9swY9BCq62i9wXJ9Uo="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const rawData = {{ statistics | tojson | safe }};
+
+      const timestamps = Object.keys(rawData).sort();
+      const labels = timestamps.map((ts) => ts.slice(18));
+
+      const getData = (key) => timestamps.map((ts) => rawData[ts][key] || 0);
+
+      const canvas = document.createElement("canvas");
+
+      document.getElementById("chartG").appendChild(canvas);
+
+      const chart = new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Failed",
+              data: getData("g.failed"),
+              backgroundColor: "rgba(255, 99, 132)",
+              fill: true,
+            },
+            {
+              label: "Rejected",
+              data: getData("g.rejected"),
+              backgroundColor: "rgba(255, 205, 86)",
+              fill: true,
+            },
+            {
+              label: "Succeeded",
+              data: getData("g.succeeded"),
+              backgroundColor: "rgba(75, 192, 192)",
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              grid: {
+                color: "#606060",
+              },
+            },
+            y: {
+              stacked: true,
+              grid: {
+                color: "#606060",
+              },
+            },
+          },
+          pointStyle: false,
+          interaction: {
+            intersect: false,
+            mode: "index",
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#c7bfbf",
+              },
+            },
+          },
+        },
+      });
+    </script>
   </body>
 </html>
