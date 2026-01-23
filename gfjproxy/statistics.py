@@ -5,9 +5,9 @@ from time import gmtime, strftime, time
 
 from .storage import get_redis_client
 
-BUCKET_COUNT = 25  # Number of buckets to keep in storage
+BUCKET_COUNT = 48  # Number of buckets to keep in storage
 BUCKET_INTERVAL = 30 * 60  # Half an hour in seconds
-BUCKET_LIFESPAN = BUCKET_INTERVAL * 2 * BUCKET_COUNT  # Bucket expiry in seconds
+BUCKET_LIFESPAN = 25 * 60 * 60  # Bucket expiry in seconds (25 hours)
 
 
 type Statistics = list[tuple[str, dict[str, int]]]
