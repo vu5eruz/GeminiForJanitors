@@ -87,17 +87,17 @@ XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
 ################################################################################
 
-BANNER_VERSION = 20
+BANNER_VERSION = 21
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-Two new commands are available: `//think_text` and `//search`!
+The proxy now has statistics! You can now go to `{PROXY_URL}/stats` to see how the proxy is handling requests from users and responses from Google AI.
 
-Use `//think_text keep` to see the model's thoughts. Make sure to have `//think on` as well!
+A graph of responses in the last 24 hours is available, as well as a detailed breakdown of the last 30 minutes.
 
-Use `//search on` to enable the model to use Google Search. This may not work with gemini-3-flash-preview. This is feature is a bit experimental, so please submit your feedback to the Gemini Proxy Guide!
+Newly-updated proxies won't show a graph until they had enough time to collect stats.
 
 This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
 

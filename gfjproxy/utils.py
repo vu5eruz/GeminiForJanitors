@@ -11,8 +11,10 @@ from enum import Enum
 from itertools import groupby
 
 import click
-import httpx
 from flask import Response
+from httpx import HTTPError
+
+from .http_client import http_client
 
 ################################################################################
 
@@ -250,14 +252,14 @@ def _runner(cloudflared: str):
 
     for _ in range(10):
         try:
-            metrics = httpx.get("http://127.0.0.1:5001/metrics").text
+            metrics = http_client.get("http://127.0.0.1:5001/metrics").text
             if match := pattern.search(metrics):
                 url = match.group("url")
                 click.echo(f" * Tunnel on {url}")
                 return
             else:
                 click.echo(" * Pattern search returned no match")
-        except httpx.HTTPError:
+        except HTTPError:
             time.sleep(1)
     else:
         click.echo(" * Couldn't get cloudflared link")

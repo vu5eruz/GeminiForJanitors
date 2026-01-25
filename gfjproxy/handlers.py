@@ -2,19 +2,15 @@
 
 from google import genai
 from google.genai import errors, types
-from httpx import Client, HTTPError, ReadTimeout
+from httpx import HTTPError, ReadTimeout
 
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError
+from .http_client import http_client
 from .logging import xlog
 from .models import JaiRequest
+from .statistics import track_stats
 from .xuiduser import LocalUserStorage, UserSettings
-
-CLIENT = Client(
-    headers={"User-Agent": "gfjproxy"},
-    timeout=5,
-    max_redirects=0,
-)
 
 # Changing this has an impact on whether the runner (specifically gunicorn) will
 # forcefully reset a worker after taking too long to answer a request. When
@@ -33,7 +29,7 @@ def _resolve_link(user: UserSettings | None, link: str) -> str:
         if link.startswith(
             "https://vertexaisearch.cloud.google.com/grounding-api-redirect/"
         ):
-            response = CLIENT.get(link)
+            response = http_client.get(link)
             if response.status_code != 302:  # Found
                 response.raise_for_status()
             if location := response.headers.get("Location"):
@@ -256,6 +252,7 @@ def _gen_content(
             model=jai_req.model, contents=contents, config=config
         )
     except ReadTimeout:
+        track_stats("g.time_out")
         return "Gateway Timeout", 504
     except errors.ClientError as e:
         if e.message is None:  # Make type checkers happy
@@ -264,9 +261,11 @@ def _gen_content(
         if e.status == "NOT_FOUND":
             # 404 NOT_FOUND "models/* is not found for API version v1beta"
             if e.message.startswith("models/"):
+                track_stats("g.failed.client.not_found.model")
                 return f"Invalid/unsupported model '{jai_req.model}'", 400
 
             xlog(user, repr(e))  # Anomalous
+            track_stats("g.failed.client.not_found.unknown")
             return e.message, e.code
 
         if e.status == "INVALID_ARGUMENT":
@@ -275,7 +274,10 @@ def _gen_content(
 
             # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
             # 400 INVALID_ARGUMENT "Penalty is not enabled for models/*"
+            track_stats("g.failed.client.invalid")
             return e.message, e.code
+
+        assert isinstance(e.details, dict)
 
         details = e.details.get(
             "details", e.details.get("error", {}).get("details", [])
@@ -292,13 +294,16 @@ def _gen_content(
                     if reason == "SERVICE_DISABLED":
                         # This error could either refer to an misconfigured API
                         # key or an banned user.
+                        track_stats("g.failed.client.denied.disabled")
                         return "Generative Language API needs to be enabled", 403
 
                     if reason == "CONSUMER_SUSPENDED":
                         # This error is most likely a banned user.
+                        track_stats("g.failed.client.denied.suspended")
                         return "Customer suspended. You might be banned.", 403
 
             # 403 PERMISSION_DENIED "Consumer 'api_key:*' has been suspended."
+            track_stats("g.failed.client.denied.unknown")
             return e.message, e.code
 
         if e.status == "RESOURCE_EXHAUSTED":
@@ -312,32 +317,40 @@ def _gen_content(
                     qid = violation.get("quotaId")
 
                     if feedback := _get_quota_violation_feedback(qid):
+                        track_stats(f"g.failed.client.quota.violation.{qid}")
                         return feedback, 429
 
             # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
+            track_stats("g.failed.client.quota.unknown")
             return e.message, e.code
 
         xlog(user, repr(e))  # Log these fellas for they are anomalous
+        track_stats("g.failed.client.unknown")
         return e.message, e.code
     except errors.ServerError as e:
         if e.status == "UNAVAILABLE":
             # 503 UNAVAILABLE "The model is overloaded. Please try again later."
+            track_stats("g.failed.server.overloaded")
             return "The model is overloaded. Try again later.", e.code
 
         if e.status == "DEADLINE_EXCEEDED":
             # 504 DEADLINE_EXCEEDED "The request timed out. Please try again."
+            track_stats("g.failed.server.time_out")
             return "Google AI timed out. Try again later.", e.code
 
         if e.status == "INTERNAL":
             # 500 INTERNAL "An internal error has occurred."
             # The actual message is longer and not really relevant to the users.
             # Skip logging these errors and return our own message instead.
+            track_stats("g.failed.server.internal")
             return "Google AI had an internal error. Try again later.", 503
 
         xlog(user, repr(e))  # Log these fellas for they are anomalous
+        track_stats("g.failed.server.unknown")
         return "Google AI had an internal error. Try again later.", 502
     except Exception as e:
         xlog(user, repr(e))  # These are R E A L L Y anomalous
+        track_stats("g.failed.unknown")
         return "Unhanded exception from Google AI.", 502
 
     text: str | None = None
@@ -383,7 +396,7 @@ def _gen_content(
         reason = _get_feedback(result)
         if not reason:
             xlog(user, f"No result text: {result}")
-            reason = "unknown reason"
+            reason = "UNKNOWN"
 
         message = f"Response blocked/empty due to {reason}."
 
@@ -392,6 +405,7 @@ def _gen_content(
         elif not used_ooctrick and not used_prefill and not used_think:
             message += "\nTry using: `//ooctrick on`, `//prefill on`, `//think on`"
 
+        track_stats(f"g.rejected.{reason}")
         return message, 502
 
     if used_think:
@@ -435,6 +449,7 @@ def _gen_content(
 
     xlog(user, f"Result text is {len(text)} characters, {len(text.split())} words")
 
+    track_stats("g.succeeded")
     return (result, text, extras), 200
 
 
@@ -469,10 +484,12 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     user.valid = empty_user.valid
 
     if status != 200:
+        track_stats("r.test.failed")
         return response.add_error(result, status)
 
     result, text, _ = result
 
+    track_stats("r.test.succeeded")
     return response.add_message(text)
 
 
@@ -493,8 +510,13 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
 
     if last_user_message.content.startswith("Rewrite/Enhance this message: "):
         xlog(user, f"Handling enhance message ({jai_req.model}) ...")
+        rtype = "enhance"
+    elif last_user_message.content.startswith("Create a brief, focused summary"):
+        xlog(user, f"Handling auto summary ({jai_req.model}) ...")
+        rtype = "summary"
     else:
         xlog(user, f"Handling chat message ({jai_req.model}) ...")
+        rtype = "message"
 
     for command in last_user_message.commands:
         xlog(user, f"//{command.name} {command.args}")
@@ -509,20 +531,23 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
     result, status = _gen_content(client, user, jai_req)
 
     if status != 200:
+        track_stats(f"r.{rtype}.failed")
         return response.add_error(result, status)
 
-    result, text, extras = result
+    gcr, text, extras = result
 
     response.add_message(text)
 
     if extras:
         response.add_proxy_message(extras)
 
-    if isinstance(result.usage_metadata, types.GenerateContentResponseUsageMetadata):
-        xlog(user, f" - Prompt   tokens {result.usage_metadata.prompt_token_count}")
-        xlog(user, f" - Response tokens {result.usage_metadata.candidates_token_count}")
-        xlog(user, f" - Thinking tokens {result.usage_metadata.thoughts_token_count}")
-        xlog(user, f" - Total    tokens {result.usage_metadata.total_token_count}")
+    assert isinstance(gcr, types.GenerateContentResponse)
+
+    if isinstance(gcr.usage_metadata, types.GenerateContentResponseUsageMetadata):
+        xlog(user, f" - Prompt   tokens {gcr.usage_metadata.prompt_token_count}")
+        xlog(user, f" - Response tokens {gcr.usage_metadata.candidates_token_count}")
+        xlog(user, f" - Thinking tokens {gcr.usage_metadata.thoughts_token_count}")
+        xlog(user, f" - Total    tokens {gcr.usage_metadata.total_token_count}")
     else:
         xlog(user, " - No usage metadata")
 
@@ -532,6 +557,7 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
         )
         response.add_message(BANNER)
 
+    track_stats(f"r.{rtype}.succeeded")
     return response
 
 
