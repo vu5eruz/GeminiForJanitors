@@ -85,6 +85,8 @@ REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
 XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
+STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
+
 ################################################################################
 
 BANNER_VERSION = 21

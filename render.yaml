@@ -25,6 +25,8 @@ services:
         sync: false
       - key: GFJPROXY_XUID_SECRET
         generateValue: true
+      - key: GFJPROXY_STATS_DURATION
+        value: 24
       - key: PORT
         value: 5000
       - key: UV_VERSION
