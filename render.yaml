@@ -6,7 +6,7 @@ services:
     region: oregon
     plan: free
     buildCommand: uv sync --locked --all-extras --dev
-    startCommand: uv run gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t 90 gfjproxy.app
+    startCommand: uv run gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT} gfjproxy.app
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
@@ -27,6 +27,8 @@ services:
         generateValue: true
       - key: GFJPROXY_STATS_DURATION
         value: 24
+      - key: GFJPROXY_PROCESS_TIMEOUT
+        value: 90
       - key: PORT
         value: 5000
       - key: UV_VERSION

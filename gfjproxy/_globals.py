@@ -89,6 +89,17 @@ STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
 
 ################################################################################
 
+# Changing this has an impact on whether the runner (specifically gunicorn) will
+# forcefully reset a worker after taking too long to answer a request. When
+# deploying using gunicorn, make sure to provide a -t value larger than the one
+# in here, to prevent issues from arising at run-time.
+PROCESS_TIMEOUT: int = max(
+    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", 90)) - 15,
+    60,
+)
+
+################################################################################
+
 BANNER_VERSION = 21
 
 BANNER = rf"""***

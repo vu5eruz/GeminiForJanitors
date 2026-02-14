@@ -4,20 +4,13 @@ from google import genai
 from google.genai import errors, types
 from httpx import HTTPError, ReadTimeout
 
-from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
+from ._globals import BANNER, BANNER_VERSION, PREFILL, PROCESS_TIMEOUT, THINK
 from .commands import CommandError
 from .http_client import http_client
 from .logging import xlog
 from .models import JaiRequest
 from .statistics import track_stats
 from .xuiduser import LocalUserStorage, UserSettings
-
-# Changing this has an impact on whether the runner (specifically gunicorn) will
-# forcefully reset a worker after taking too long to answer a request. When
-# deploying using gunicorn, make sure to provide a -t value larger than the one
-# in here, to prevent issues from arising at run-time.
-REQUEST_TIMEOUT_IN_SECONDS: int = 60
-
 
 ################################################################################
 
@@ -174,7 +167,7 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
 
     config: types.GenerateContentConfigDict = {
         "http_options": {
-            "timeout": REQUEST_TIMEOUT_IN_SECONDS * 1_000  # milliseconds
+            "timeout": PROCESS_TIMEOUT * 1_000  # milliseconds
         },
         "temperature": jai_req.temperature,
         "top_k": 50,
