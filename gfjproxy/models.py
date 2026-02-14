@@ -10,7 +10,7 @@ from .commands import Command, parse_message, strip_message
 ################################################################################
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True)
 class JaiMessage:
     """JanitorAI Message."""
 
@@ -39,7 +39,7 @@ class JaiMessage:
         return jai_msg
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, slots=True)
 class JaiRequest:
     """JanitorAI Request."""
 
