@@ -46,7 +46,6 @@ from traceback import print_exception
 from colorama import just_fix_windows_console
 from flask import Flask, abort, redirect, render_template, request, send_from_directory
 from flask_cors import CORS
-from google import genai
 
 from .bandwidth import bandwidth_usage
 from .cooldown import cooldown_policy, get_cooldown
@@ -264,10 +263,9 @@ def proxy():
     api_key_index = rcounter % len(api_keys)
     user.inc_rcounter()
 
+    jai_req.api_key = api_keys[api_key_index]
     jai_req.key_index = api_key_index
     jai_req.key_count = len(api_keys)
-
-    client = genai.Client(api_key=api_keys[api_key_index])
 
     log_details = [
         f"User {user.last_seen_msg()}",
@@ -286,9 +284,9 @@ def proxy():
         if not jai_req.model:
             response.add_error("Please specify a model.", 400)
         elif proxy_test:
-            response = handle_proxy_test(client, user, jai_req, response)
+            response = handle_proxy_test(user, jai_req, response)
         else:
-            response = handle_chat_message(client, user, jai_req, response)
+            response = handle_chat_message(user, jai_req, response)
     except Exception as e:
         response.add_error("Internal Proxy Error", 500)
         print_exception(e)

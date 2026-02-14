@@ -90,13 +90,13 @@ def _get_quota_violation_feedback(qid: str) -> str | None:
     return None
 
 
-def _gen_content(
-    client: genai.Client, user: UserSettings, jai_req: JaiRequest, overrides=dict()
-):
+def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
     """Wrapper around client.models.generate_content.
 
     Returns (GenerateContentResponse, 200) on success.
     On any errors, returns a string and a code other than one."""
+
+    client = genai.Client(api_key=jai_req.api_key)
 
     contents = []
 
@@ -456,7 +456,7 @@ def _gen_content(
 ################################################################################
 
 
-def handle_proxy_test(client: genai.Client, user, jai_req, response):
+def handle_proxy_test(user, jai_req, response):
     """Proxy test handler.
 
     The sole purpose of this is to test out the user's API key and model."""
@@ -474,7 +474,6 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     empty_user = UserSettings(LocalUserStorage(), user.xuid)
 
     result, status = _gen_content(
-        client,
         empty_user,
         jai_req,
         {"max_output_tokens": None},
@@ -493,7 +492,7 @@ def handle_proxy_test(client: genai.Client, user, jai_req, response):
     return response.add_message(text)
 
 
-def handle_chat_message(client: genai.Client, user, jai_req, response):
+def handle_chat_message(user, jai_req, response):
     """Chat message handler.
 
     This handles when the user sends a simple chat message to the bot."""
@@ -528,7 +527,7 @@ def handle_chat_message(client: genai.Client, user, jai_req, response):
             response.add_proxy_message(message)
             xlog(user, message)
 
-    result, status = _gen_content(client, user, jai_req)
+    result, status = _gen_content(user, jai_req)
 
     if status != 200:
         track_stats(f"r.{rtype}.failed")

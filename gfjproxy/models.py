@@ -43,6 +43,7 @@ class JaiMessage:
 class JaiRequest:
     """JanitorAI Request."""
 
+    api_key: str = ""
     max_tokens: int = 0
     frequency_penalty: float = 0.0
     repetition_penalty: float = 0.0
