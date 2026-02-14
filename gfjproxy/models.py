@@ -65,6 +65,14 @@ class JaiRequest:
     key_index: int = 1
     key_count: int = 1
 
+    def append_message(self, role: str, content: str):
+        self.messages.append(
+            JaiMessage(
+                content=content,
+                role=role,
+            )
+        )
+
     @staticmethod
     def parse(data: dict | str):
         if isinstance(data, str):

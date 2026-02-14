@@ -89,26 +89,14 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
     Returns (GenerateContentResponse, 200) on success.
     On any errors, returns a string and a code other than one."""
 
-    client = genai.Client(api_key=jai_req.api_key)
+    if jai_req.use_nobot or user.use_nobot:
+        xlog(
+            user,
+            "Omitting bot description from system prompt"
+            + (" (for this message only)." if not user.use_nobot else "."),
+        )
 
-    contents = []
-
-    for msg in jai_req.messages:
-        if msg.role == "system":
-            if jai_req.use_nobot or user.use_nobot:
-                xlog(
-                    user,
-                    "Omitting bot description from system prompt"
-                    + (" (for this message only)." if not user.use_nobot else "."),
-                )
-            else:
-                contents.append(types.ModelContent({"text": msg.content}))
-            continue
-
-        if msg.role == "assistant":
-            contents.append(types.ModelContent({"text": msg.content}))
-        else:
-            contents.append(types.UserContent({"text": msg.content}))
+        jai_req.messages.pop(0)
 
     if jai_req.use_think or user.use_think:
         xlog(
@@ -117,7 +105,7 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
             + (" (for this message only)." if not user.use_think else "."),
         )
 
-        contents.append(types.ModelContent({"text": THINK}))
+        jai_req.append_message("assistant", THINK)
 
         used_think = True
     else:
@@ -126,7 +114,7 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
     if jai_req.use_preset:
         xlog(user, "Adding preset to chat")
 
-        contents.append(types.ModelContent({"text": jai_req.use_preset}))
+        jai_req.append_message("assistant", jai_req.use_preset)
 
     if jai_req.use_prefill or user.use_prefill:
         xlog(
@@ -135,7 +123,7 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
             + (" (for this message only)." if not user.use_prefill else "."),
         )
 
-        contents.append(types.ModelContent({"text": PREFILL}))
+        jai_req.append_message("assistant", PREFILL)
 
         used_prefill = True
     else:
@@ -148,22 +136,23 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
             + (" (for this message only)." if not user.use_ooctrick else "."),
         )
 
-        contents.append(types.ModelContent({"text": "(OOC: Continue?)"}))
-        contents.append(types.UserContent({"text": "(OOC: Yes)"}))
+        jai_req.append_message("assistant", "(OOC: Continue?)")
+        jai_req.append_message("user", "(OOC: Yes)")
 
         used_ooctrick = True
     else:
         used_ooctrick = False
 
     if used_think:
-        contents.append(
-            types.ModelContent(
-                {
-                    "text": "Remember to use <think>...</think> for your reasoning and <response>...</response> for your roleplay content."
-                }
-            )
+        jai_req.append_message(
+            "assistant",
+            "Remember to use <think>...</think> for your reasoning and <response>...</response> for your roleplay content.",
         )
-        contents.append(types.ModelContent({"text": "<think>\n➛ Okay! Understood."}))
+
+        jai_req.append_message(
+            "assistant",
+            "<think>\n➛ Okay! Understood.",
+        )
 
     config: types.GenerateContentConfigDict = {
         "http_options": {
@@ -240,8 +229,17 @@ def _gen_content(user: UserSettings, jai_req: JaiRequest, overrides=dict()):
         else:
             config[key] = value
 
+    contents = []
+    for msg in jai_req.messages:
+        if msg.role == "assistant" or msg.role == "system":
+            contents.append(types.ModelContent({"text": msg.content}))
+        else:
+            contents.append(types.UserContent({"text": msg.content}))
+
+    genai_client = genai.Client(api_key=jai_req.api_key)
+
     try:
-        result = client.models.generate_content(
+        result = genai_client.models.generate_content(
             model=jai_req.model, contents=contents, config=config
         )
     except ReadTimeout:
