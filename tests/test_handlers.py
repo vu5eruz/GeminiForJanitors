@@ -158,7 +158,7 @@ COMMON_ERRORS = [
                 "status": "INTERNAL",
             },
         ),
-        "expected_result": ("Google AI had an internal error. Try again later.", 503),
+        "expected_result": ("Google AI had an internal error. Try again later.", 500),
     },
     {
         "generate_content_mock": errors.ServerError(
@@ -168,7 +168,7 @@ COMMON_ERRORS = [
                 "status": "UNAVAILABLE",
             },
         ),
-        "expected_result": ("The model is overloaded. Try again later.", 503),
+        "expected_result": ("The model is overloaded. Please try again later.", 503),
     },
 ]
 
@@ -386,6 +386,46 @@ CHAT_MESSAGE_TESTS = [
             502,
         ),
     },
+    {  # Ensure user set temperature is honored
+        "generate_content_mock": make_mock_response("Bot response."),
+        "expected_result": ("Bot response.", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+            ("jai_req_temperature", 1.2345),
+        ],
+        "extra_after_tests": [("assert_temperature_value", 1.2345)],
+    },
+    {  # Ensure the //advsettings command has an actual effect on generation settings
+        "generate_content_mock": make_mock_response("Bot response."),
+        "expected_result": ("Bot response.", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse(
+                    {"role": "user", "content": "//advsettings this Message"}
+                ),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+            ("jai_req_max_tokens", 69),
+            ("jai_req_top_k", 50),
+            ("jai_req_top_p", 0.95),
+            ("jai_req_repetition_penalty", 0.99),
+            ("jai_req_frequency_penalty", 0.90),
+        ],
+        "extra_after_tests": [
+            ("assert_max_tokens_value", 69),
+            ("assert_top_k_value", 50),
+            ("assert_top_p_value", 0.95),
+            ("assert_repetition_penalty_value", 0.99),
+            ("assert_frequency_penalty_value", 0.90),
+        ],
+    },
 ]
 
 
@@ -420,8 +460,20 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
             jai_req.quiet = value
         elif key == "jai_req_quiet_commands":
             jai_req.quiet_commands = value
+        elif key == "jai_req_temperature":
+            jai_req.temperature = value
+        elif key == "jai_req_max_tokens":
+            jai_req.max_tokens = value
+        elif key == "jai_req_top_k":
+            jai_req.top_k = value
+        elif key == "jai_req_top_p":
+            jai_req.top_p = value
+        elif key == "jai_req_repetition_penalty":
+            jai_req.repetition_penalty = value
+        elif key == "jai_req_frequency_penalty":
+            jai_req.frequency_penalty = value
         else:
-            assert 0  # Invalid extra_settings key
+            assert 0, f"Invalid extra_settings key: {key}"
 
     response = handle_chat_message(user, jai_req, ResponseHelper(wrap_errors=False))
 
@@ -430,16 +482,30 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
         expected_status,
     )
 
+    _, kwargs = mock_instance.models.generate_content.call_args
+    gemini_config = kwargs.get("config", {})
+
     for key, value in extra_after_tests:
         if key == "look_for_prefill_in_contents":
-            _, kwargs = mock_instance.models.generate_content.call_args
             for content in kwargs.get("contents", []):
                 if "<interaction-config>" in content.parts[0].text:
                     break
             else:
                 assert 0, "No prefill found in contents"
+        elif key == "assert_temperature_value":
+            assert gemini_config.get("temperature") == pytest.approx(value)
+        elif key == "assert_max_tokens_value":
+            assert gemini_config.get("max_output_tokens") == value
+        elif key == "assert_top_k_value":
+            assert gemini_config.get("top_k") == value
+        elif key == "assert_top_p_value":
+            assert gemini_config.get("top_p") == pytest.approx(value)
+        elif key == "assert_repetition_penalty_value":
+            assert gemini_config.get("presence_penalty") == pytest.approx(value)
+        elif key == "assert_frequency_penalty_value":
+            assert gemini_config.get("frequency_penalty") == pytest.approx(value)
         else:
-            assert 0  # Invalid extra_after_tests key
+            assert 0, f"Invalid extra_after_tests key: {key}"
 
 
 ################################################################################

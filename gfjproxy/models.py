@@ -5,6 +5,8 @@ The name of some fields in here may not match with the source they are from."""
 from dataclasses import dataclass, field
 from json import loads
 
+from google.genai import types
+
 from .commands import Command, parse_message, strip_message
 
 ################################################################################
@@ -52,7 +54,7 @@ class JaiRequest:
     quiet: bool = False  # This isn't from the request JSON but from the URL
     quiet_commands: bool = False  # This is to make testing easier
     stream: bool = False
-    temperature: int = 0
+    temperature: float = 0
     top_k: int = 0
     top_p: float = 0.0
     use_advsettings: bool = False  # Set by //advsettings command
@@ -114,6 +116,52 @@ class JaiRequest:
             jai_req.repetition_penalty = repetition_penalty
 
         return jai_req
+
+
+################################################################################
+
+
+@dataclass(kw_only=True, slots=True)
+class JaiResultMetadata:
+    "JanitorAI Generate Content Result Metadata"
+
+    api_key_valid: bool = True
+    rejection_feedback: str = ""
+    token_usage: types.GenerateContentResponseUsageMetadata | None = None
+
+
+@dataclass(init=False, kw_only=True, slots=True)
+class JaiResult:
+    "JanitorAI Generate Content Result"
+
+    status: int
+    text: str
+    error: str
+    extras: str
+    metadata: JaiResultMetadata
+
+    def __init__(
+        self,
+        status: int,
+        message: str,
+        *,
+        extras: str = "",
+        metadata: JaiResultMetadata | None = None,
+    ):
+        self.status = status
+
+        if status == 200:
+            self.text = message
+            self.error = ""
+        else:
+            self.text = ""
+            self.error = message
+
+        self.extras = extras
+        self.metadata = metadata or JaiResultMetadata()
+
+    def __bool__(self) -> bool:
+        return self.status == 200
 
 
 ################################################################################
