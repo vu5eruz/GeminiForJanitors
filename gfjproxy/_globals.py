@@ -118,26 +118,13 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 21
+BANNER_VERSION = 22
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-The proxy now has statistics! You can now go to `{PROXY_URL}/stats` to see how the proxy is handling requests from users and responses from Google AI.
-
-A graph of responses in the last 24 hours is available, as well as a detailed breakdown of the last 30 minutes.
-
-Newly-updated proxies won't show a graph until they had enough time to collect stats.
-
-This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
-
-- `https://geminiforjanitors-g24s.onrender.com` by **EgoAlter**
-- `https://geminiforjanitors-k4v3.onrender.com` by **undefinedundefined**
-- `https://geminiforjanitors-r7wu.onrender.com` by **NixGG**
-- `https://geminiforjanitors-rhuc.onrender.com` by **.shiro.**
-- `https://geminiforjanitors-s34l.onrender.com` by **MajestyLotus221**
-- `https://geminiforjanitors-wq7l.onrender.com` by **NixGG**
+The proxy is being internally reworked and updated. Please report any anomalies or bugs to the Gemini Proxy Guide.
 
 ***
 
@@ -185,6 +172,12 @@ You can include one or more commands in your messages, separated by spaces. You 
 You can use more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
 
 You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `{PROXY_URL}/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
+
+***
+
+This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
+
+Check out `https://gfjproxies.vu5eruz.workers.dev/` for a list of alternative proxies you can use. Choose proxies with low `bandwidth` usage.
 
 Feel free to reroll or edit this message to remove this banner."""
 
