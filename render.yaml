@@ -5,8 +5,8 @@ services:
     runtime: python
     region: oregon
     plan: free
-    buildCommand: uv sync --locked --all-extras --dev
-    startCommand: uv run gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT} gfjproxy.app
+    buildCommand: uv sync --locked --no-dev
+    startCommand: uv run --no-sync gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT} "gfjproxy.app:create_app()"
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
