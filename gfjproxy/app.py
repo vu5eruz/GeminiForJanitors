@@ -39,7 +39,6 @@ else:
 ################################################################################
 
 # ruff: noqa: E402
-from secrets import token_bytes
 from time import perf_counter
 from traceback import print_exception
 
@@ -56,6 +55,7 @@ from .start_time import START_TIME
 from .statistics import make_timestamp, query_stats
 from .storage import get_redis_client, storage
 from .utils import ResponseHelper, comma_split, is_proxy_test, run_cloudflared
+from .xuid_secret import xuid_secret
 from .xuiduser import XUID, LocalUserStorage, RedisUserStorage, UserSettings
 
 just_fix_windows_console()
@@ -92,10 +92,8 @@ else:
 
 if XUID_SECRET is not None:
     print(" * Using provided XUID secret")
-    xuid_secret = XUID_SECRET.encode("utf-8")
 elif DEVELOPMENT:
     print(" * WARNING: Using development XUID secret")
-    xuid_secret = token_bytes(32)
 else:
     print(" * ERROR: Missing XUID secret")
     exit(1)
@@ -310,61 +308,6 @@ def proxy():
     storage.unlock(xuid)
 
     return response.build()
-
-
-################################################################################
-
-
-def secret_required(f):
-    from functools import wraps
-
-    @wraps(f)
-    def secret_required_wrapper():
-        if request.args.get("secret") != XUID_SECRET:
-            return {
-                "success": False,
-                "error": "secret required.",
-            }, 403
-
-        return f()
-
-    return secret_required_wrapper
-
-
-@app.route("/admin/dump-all", methods=["GET"])
-@secret_required
-def admin_dump_all():
-    client = get_redis_client()
-    if not client:
-        return {
-            "success": False,
-            "error": "storage is not redis.",
-        }, 403
-
-    locks = list()
-    dump = dict()
-    for key in map(bytes.decode, client.scan_iter(match="*", count=100)):
-        if key[0] != ":":
-            if key.endswith(":lock"):
-                locks.append(key)
-            else:
-                dump[key] = ...
-
-    from itertools import batched
-    from json import loads
-
-    for batch in batched(dump.keys(), 100):
-        values = client.mget(batch)
-        if not isinstance(values, list):
-            continue
-        for key, value in zip(batch, map(loads, values)):
-            dump[key] = value
-
-    return {
-        "success": True,
-        "locks": locks,
-        "dump": dump,
-    }
 
 
 ################################################################################
