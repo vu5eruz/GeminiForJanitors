@@ -14,7 +14,6 @@ dependencies = [
     "gunicorn>=23.0.0",
     "httpx[brotli,http2,zstd]>=0.28.1",
     "redis>=7.1.0",
-    "waitress>=3.0.2",
 ]
 
 [dependency-groups]
