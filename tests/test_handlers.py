@@ -190,7 +190,7 @@ def test_proxy_test(mocker: MockerFixture, params: dict[str, Any]):
     generate_content_mock = params["generate_content_mock"]
     expected_message, expected_status = params["expected_result"]
 
-    mock_client_class = mocker.patch("gfjproxy.handlers.genai.Client")
+    mock_client_class = mocker.patch("gfjproxy.providers.gemini.genai.Client")
     mock_instance = mock_client_class.return_value
     if isinstance(generate_content_mock, Exception):
         mock_instance.models.generate_content.side_effect = generate_content_mock
@@ -440,7 +440,7 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
     extra_settings = params.get("extra_settings", [])
     extra_after_tests = params.get("extra_after_tests", [])
 
-    mock_client_class = mocker.patch("gfjproxy.handlers.genai.Client")
+    mock_client_class = mocker.patch("gfjproxy.providers.gemini.genai.Client")
     mock_instance = mock_client_class.return_value
     if isinstance(generate_content_mock, Exception):
         mock_instance.models.generate_content.side_effect = generate_content_mock
