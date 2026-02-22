@@ -28,3 +28,6 @@ minversion = "9.0"
 addopts = ["--import-mode=importlib"]
 pythonpath = ["."]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:'_UnionGenericAlias' is deprecated"
+]
