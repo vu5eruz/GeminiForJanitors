@@ -118,13 +118,17 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 22
+BANNER_VERSION = 23
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-The proxy is being internally reworked and updated. Please report any anomalies or bugs to the Gemini Proxy Guide.
+The proxy has had an internal rework, the only notable change being that some errors coming from Google will be displayed as-is, which means the *Resource has been exhausted* error has been replaced by a *This model is currently experiencing high demand* error as reported by Google.
+
+The only regression was incorrect tracking in the proxy's statistics. This should be addressed now.
+
+The URL https://geminiforjanitors-i7zd.onrender.com/ is now listed on gfjproxies!
 
 ***
 
