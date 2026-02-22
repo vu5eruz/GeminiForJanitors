@@ -5,15 +5,13 @@ services:
     runtime: python
     region: oregon
     plan: free
-    buildCommand: uv sync --locked --all-extras --dev
-    startCommand: uv run gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t 90 gfjproxy.app
+    buildCommand: uv sync --locked --no-dev
+    startCommand: uv run --no-sync gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT} "gfjproxy.app:create_app()"
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
       - key: GFJPROXY_ADMIN
         sync: false
-      - key: GFJPROXY_BANDWIDTH_WARNING
-        value: 76800 # 75 GiB in MiB
       - key: GFJPROXY_COOLDOWN
         sync: false
       - key: GFJPROXY_REDIS_URL
@@ -25,10 +23,12 @@ services:
         sync: false
       - key: GFJPROXY_XUID_SECRET
         generateValue: true
+      - key: GFJPROXY_PROCESS_TIMEOUT
+        value: 90
       - key: PORT
         value: 5000
       - key: UV_VERSION
-        value: "0.9.13"
+        value: "0.10.4"
 
   # Key Value storage for gfjproxy user settings
   - type: keyvalue

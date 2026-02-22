@@ -1,46 +1,17 @@
+from typing import Any
+
 import pytest
+from google.genai import errors, types
 from httpx import ReadTimeout
+from pytest_mock import MockerFixture
+
 from gfjproxy._globals import BANNER, BANNER_VERSION
-from gfjproxy.models import JaiMessage, JaiRequest
 from gfjproxy.handlers import handle_chat_message, handle_proxy_test
+from gfjproxy.models import JaiMessage, JaiRequest
 from gfjproxy.utils import ResponseHelper
-from gfjproxy.xuiduser import LocalUserStorage, UserSettings, XUID
-from google import genai
-from google.genai import types
-from typing import Optional, Union
+from gfjproxy.xuiduser import XUID, LocalUserStorage, UserSettings
 
 ################################################################################
-
-
-class MockClientModels:
-    """Mock google.genai.Client.models class."""
-
-    def __init__(self, mock):
-        self.given_model = None
-        self.given_contents = None
-        self.given_config = None
-        self.mock = mock
-
-    def generate_content(
-        self,
-        *,
-        model: str,
-        contents: Union[types.ContentListUnion, types.ContentListUnionDict],
-        config: Optional[types.GenerateContentConfigOrDict] = None,
-    ) -> types.GenerateContentResponse:
-        self.given_model = model
-        self.given_contents = contents
-        self.given_config = config
-        if isinstance(self.mock, Exception):
-            raise self.mock
-        return self.mock
-
-
-class MockClient:
-    """Mock google.genai.Client class."""
-
-    def __init__(self, mock):
-        self.models = MockClientModels(mock)
 
 
 def make_mock_response(text):
@@ -62,7 +33,7 @@ COMMON_ERRORS = [
         "expected_result": ("Gateway Timeout", 504),
     },
     {
-        "generate_content_mock": genai.errors.APIError(
+        "generate_content_mock": errors.APIError(
             code=418,
             response_json={
                 "message": "I'm a teapot",
@@ -72,7 +43,7 @@ COMMON_ERRORS = [
         "expected_result": ("Unhanded exception from Google AI.", 502),
     },
     {
-        "generate_content_mock": genai.errors.ClientError(
+        "generate_content_mock": errors.ClientError(
             code=400,
             response_json={
                 "message": "API key not valid. Please pass a valid API key.",
@@ -82,7 +53,7 @@ COMMON_ERRORS = [
         "expected_result": ("API key not valid. Please pass a valid API key.", 400),
     },
     {
-        "generate_content_mock": genai.errors.ClientError(
+        "generate_content_mock": errors.ClientError(
             code=429,
             response_json={
                 "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
@@ -108,7 +79,7 @@ COMMON_ERRORS = [
         "expected_result": ("Requests per Minute quota exceeded.", 429),
     },
     {
-        "generate_content_mock": genai.errors.ClientError(
+        "generate_content_mock": errors.ClientError(
             code=429,
             response_json={
                 "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
@@ -134,7 +105,7 @@ COMMON_ERRORS = [
         "expected_result": ("Requests per Day quota exceeded.", 429),
     },
     {
-        "generate_content_mock": genai.errors.ClientError(
+        "generate_content_mock": errors.ClientError(
             code=403,
             response_json={
                 "message": "Generative Language API has not been used in project * before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",
@@ -158,7 +129,7 @@ COMMON_ERRORS = [
         "expected_result": ("Generative Language API needs to be enabled", 403),
     },
     {
-        "generate_content_mock": genai.errors.ClientError(
+        "generate_content_mock": errors.ClientError(
             code=403,
             response_json={
                 "message": "Permission denied: Consumer 'api_key:*' has been suspended.",
@@ -180,24 +151,24 @@ COMMON_ERRORS = [
         "expected_result": ("Customer suspended. You might be banned.", 403),
     },
     {
-        "generate_content_mock": genai.errors.ServerError(
+        "generate_content_mock": errors.ServerError(
             code=500,
             response_json={
                 "message": "Some internal error.",
                 "status": "INTERNAL",
             },
         ),
-        "expected_result": ("Google AI had an internal error. Try again later.", 503),
+        "expected_result": ("Google AI had an internal error. Try again later.", 500),
     },
     {
-        "generate_content_mock": genai.errors.ServerError(
+        "generate_content_mock": errors.ServerError(
             code=503,
             response_json={
                 "message": "The model is overloaded. Please try again later.",
                 "status": "UNAVAILABLE",
             },
         ),
-        "expected_result": ("The model is overloaded. Try again later.", 503),
+        "expected_result": ("The model is overloaded. Please try again later.", 503),
     },
 ]
 
@@ -215,11 +186,16 @@ PROXY_TESTS = [
     "params",
     COMMON_ERRORS + PROXY_TESTS,
 )
-def test_proxy_test(params):
+def test_proxy_test(mocker: MockerFixture, params: dict[str, Any]):
     generate_content_mock = params["generate_content_mock"]
     expected_message, expected_status = params["expected_result"]
 
-    client = MockClient(generate_content_mock)
+    mock_client_class = mocker.patch("gfjproxy.handlers.genai.Client")
+    mock_instance = mock_client_class.return_value
+    if isinstance(generate_content_mock, Exception):
+        mock_instance.models.generate_content.side_effect = generate_content_mock
+    else:
+        mock_instance.models.generate_content.return_value = generate_content_mock
 
     storage = LocalUserStorage()
     xuid = XUID("john", "smith")
@@ -227,9 +203,7 @@ def test_proxy_test(params):
 
     jai_req = JaiRequest()
 
-    response = handle_proxy_test(
-        client, user, jai_req, ResponseHelper(wrap_errors=True)
-    )
+    response = handle_proxy_test(user, jai_req, ResponseHelper(wrap_errors=True))
 
     if response.status != 200:
         assert (response.message, response.status) == (
@@ -412,6 +386,46 @@ CHAT_MESSAGE_TESTS = [
             502,
         ),
     },
+    {  # Ensure user set temperature is honored
+        "generate_content_mock": make_mock_response("Bot response."),
+        "expected_result": ("Bot response.", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse({"role": "user", "content": "Message"}),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+            ("jai_req_temperature", 1.2345),
+        ],
+        "extra_after_tests": [("assert_temperature_value", 1.2345)],
+    },
+    {  # Ensure the //advsettings command has an actual effect on generation settings
+        "generate_content_mock": make_mock_response("Bot response."),
+        "expected_result": ("Bot response.", 200),
+        "extra_settings": [
+            (
+                "jai_add_message",
+                JaiMessage.parse(
+                    {"role": "user", "content": "//advsettings this Message"}
+                ),
+            ),
+            ("jai_req_quiet", True),
+            ("jai_req_quiet_commands", True),
+            ("jai_req_max_tokens", 69),
+            ("jai_req_top_k", 50),
+            ("jai_req_top_p", 0.95),
+            ("jai_req_repetition_penalty", 0.99),
+            ("jai_req_frequency_penalty", 0.90),
+        ],
+        "extra_after_tests": [
+            ("assert_max_tokens_value", 69),
+            ("assert_top_k_value", 50),
+            ("assert_top_p_value", 0.95),
+            ("assert_repetition_penalty_value", 0.99),
+            ("assert_frequency_penalty_value", 0.90),
+        ],
+    },
 ]
 
 
@@ -419,14 +433,19 @@ CHAT_MESSAGE_TESTS = [
     "params",
     COMMON_ERRORS + CHAT_MESSAGE_TESTS,
 )
-def test_chat_message(params):
+def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
     generate_content_mock = params["generate_content_mock"]
     expected_message, expected_status = params["expected_result"]
     user_messages = params.get("user_messages", [JaiMessage()])
     extra_settings = params.get("extra_settings", [])
     extra_after_tests = params.get("extra_after_tests", [])
 
-    client = MockClient(generate_content_mock)
+    mock_client_class = mocker.patch("gfjproxy.handlers.genai.Client")
+    mock_instance = mock_client_class.return_value
+    if isinstance(generate_content_mock, Exception):
+        mock_instance.models.generate_content.side_effect = generate_content_mock
+    else:
+        mock_instance.models.generate_content.return_value = generate_content_mock
 
     user = UserSettings(LocalUserStorage(), XUID("john", "smith"))
 
@@ -441,28 +460,52 @@ def test_chat_message(params):
             jai_req.quiet = value
         elif key == "jai_req_quiet_commands":
             jai_req.quiet_commands = value
+        elif key == "jai_req_temperature":
+            jai_req.temperature = value
+        elif key == "jai_req_max_tokens":
+            jai_req.max_tokens = value
+        elif key == "jai_req_top_k":
+            jai_req.top_k = value
+        elif key == "jai_req_top_p":
+            jai_req.top_p = value
+        elif key == "jai_req_repetition_penalty":
+            jai_req.repetition_penalty = value
+        elif key == "jai_req_frequency_penalty":
+            jai_req.frequency_penalty = value
         else:
-            assert 0  # Invalid extra_settings key
+            assert 0, f"Invalid extra_settings key: {key}"
 
-    response = handle_chat_message(
-        client, user, jai_req, ResponseHelper(wrap_errors=False)
-    )
+    response = handle_chat_message(user, jai_req, ResponseHelper(wrap_errors=False))
 
     assert (response.message, response.status) == (
         expected_message,
         expected_status,
     )
 
+    _, kwargs = mock_instance.models.generate_content.call_args
+    gemini_config = kwargs.get("config", {})
+
     for key, value in extra_after_tests:
         if key == "look_for_prefill_in_contents":
-            for content in client.models.given_contents:
-                # XXX: This needs to be updated should the prefill text change
+            for content in kwargs.get("contents", []):
                 if "<interaction-config>" in content.parts[0].text:
                     break
             else:
-                assert 0  # No prefill found
+                assert 0, "No prefill found in contents"
+        elif key == "assert_temperature_value":
+            assert gemini_config.get("temperature") == pytest.approx(value)
+        elif key == "assert_max_tokens_value":
+            assert gemini_config.get("max_output_tokens") == value
+        elif key == "assert_top_k_value":
+            assert gemini_config.get("top_k") == value
+        elif key == "assert_top_p_value":
+            assert gemini_config.get("top_p") == pytest.approx(value)
+        elif key == "assert_repetition_penalty_value":
+            assert gemini_config.get("presence_penalty") == pytest.approx(value)
+        elif key == "assert_frequency_penalty_value":
+            assert gemini_config.get("frequency_penalty") == pytest.approx(value)
         else:
-            assert 0  # Invalid extra_after_tests key
+            assert 0, f"Invalid extra_after_tests key: {key}"
 
 
 ################################################################################

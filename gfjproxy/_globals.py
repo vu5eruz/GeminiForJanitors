@@ -1,5 +1,6 @@
 """Proxy global variables."""
 
+from datetime import datetime, timedelta, timezone
 from os import environ as _env
 from os import scandir as _scandir
 
@@ -12,7 +13,7 @@ def _make_git_version():
 
     try:
         p = subprocess.Popen(
-            ["git", "log", "-1", "--date=format:%Y.%m.%d", "--format=%ad-%h"],
+            ["git", "log", "-1", "--format=%ct-%h"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=os.path.dirname(__file__),
@@ -20,10 +21,27 @@ def _make_git_version():
     except Exception:
         pass
     else:
-        out, err = p.communicate()
+        out, _ = p.communicate()
 
-        if p.returncode == 0:
-            version = out.decode().strip()
+        if p.returncode == 0 and out:
+            timestamp_hash = out.decode().strip().split("-", maxsplit=2)
+            if len(timestamp_hash) == 2:
+                timestamp, hash = timestamp_hash
+
+                # The previous code used "--date=format:%Y.%m.%d --format=%ad-%h" to format
+                # the version string, leading to it being implicitly dependent on the timezone
+                # of the committer. Since up to the time of writting, the only author has been
+                # from the UTC-4 timezone, it is possible to maintain backwards compat with old
+                # deployments by making the versioning scheme officially based on UTC-4 and
+                # independent of the committer's timezone. This makes it possible to always
+                # reliably derive a version from a commit hash and its UTC timestamp alone, such
+                # as those provided from the GitHub APIs.
+
+                dt = datetime.fromtimestamp(
+                    int(timestamp), tz=timezone.utc
+                ) - timedelta(hours=4)
+
+                version = f"{dt:%Y.%m.%d}-{hash}"
 
     return version
 
@@ -72,7 +90,7 @@ if not PROXY_URL:
 
 COOLDOWN = _env.get("GFJPROXY_COOLDOWN", "0")
 
-BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 0))  # MiB
+BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 76800))  # 75 GiB in MiB
 
 if (_RENDER_API_KEY := _env.get("GFJPROXY_RENDER_API_KEY", "")).startswith("rnd_"):
     RENDER_API_KEY = _RENDER_API_KEY
@@ -85,28 +103,28 @@ REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
 XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
+STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
+
 ################################################################################
 
-BANNER_VERSION = 21
+# Changing this has an impact on whether the runner (specifically gunicorn) will
+# forcefully reset a worker after taking too long to answer a request. When
+# deploying using gunicorn, make sure to provide a -t value larger than the one
+# in here, to prevent issues from arising at run-time.
+PROCESS_TIMEOUT: int = max(
+    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", 90)) - 15,
+    60,
+)
+
+################################################################################
+
+BANNER_VERSION = 22
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-The proxy now has statistics! You can now go to `{PROXY_URL}/stats` to see how the proxy is handling requests from users and responses from Google AI.
-
-A graph of responses in the last 24 hours is available, as well as a detailed breakdown of the last 30 minutes.
-
-Newly-updated proxies won't show a graph until they had enough time to collect stats.
-
-This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
-
-- `https://geminiforjanitors-g24s.onrender.com` by **EgoAlter**
-- `https://geminiforjanitors-k4v3.onrender.com` by **undefinedundefined**
-- `https://geminiforjanitors-r7wu.onrender.com` by **NixGG**
-- `https://geminiforjanitors-rhuc.onrender.com` by **.shiro.**
-- `https://geminiforjanitors-s34l.onrender.com` by **MajestyLotus221**
-- `https://geminiforjanitors-wq7l.onrender.com` by **NixGG**
+The proxy is being internally reworked and updated. Please report any anomalies or bugs to the Gemini Proxy Guide.
 
 ***
 
@@ -154,6 +172,12 @@ You can include one or more commands in your messages, separated by spaces. You 
 You can use more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
 
 You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `{PROXY_URL}/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
+
+***
+
+This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
+
+Check out `https://gfjproxies.vu5eruz.workers.dev/` for a list of alternative proxies you can use. Choose proxies with low `bandwidth` usage.
 
 Feel free to reroll or edit this message to remove this banner."""
 
