@@ -3,7 +3,7 @@ name = "GeminiForJanitors"
 version = "0.1.0"
 description = "Google AI Studio Proxy for JanitorAI"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "click>=8.3.1",
     "colorama>=0.4.6",
