@@ -4,6 +4,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
+from random import randint
 
 from ._globals import BANNER, BANNER_VERSION, PRESETS
 from .utils import ResponseHelper
@@ -231,6 +232,79 @@ def think(args, user, jai_req, response):
 
 
 ################################################################################
+
+
+@command(argspec=r".+")
+def dice_roll(args, user, jai_req, response):
+    from .models import JaiMessage
+
+    dice = args.replace("p", "+").replace("m", "-")
+
+    match = re.fullmatch(r"(\d+)?d(\d+)([+-]\d+)?([a-z])?", dice, re.A | re.I)
+    if not match:
+        return response.add_proxy_message(
+            f"Invalid dice syntax `{args}`\nUse the `//dice_help` command for more info."
+        )
+
+    count = min(max(int(match.group(1) or "1", base=10), 1), 100)
+    faces = max(int(match.group(2), base=10), 2)
+    extra = int((match.group(3) or "0"), base=10)
+
+    rolls = [randint(1, faces) for _ in range(count)]
+    result = sum(rolls) + extra
+
+    extra_str = f" {'-' if extra < 0 else '+'} {abs(extra)}" if extra != 0 else ""
+
+    result_str = f"{dice} roll: {' + '.join(map(str, rolls))}{extra_str}"
+    if extra != 0 or len(rolls) > 1:
+        result_str += f" = {result}"
+    result_str += "."
+
+    jai_req.messages.append(
+        JaiMessage(content=f"<system>\n  User {result_str}.\n</system>")
+    )
+
+    return response.add_proxy_message(result_str)
+
+
+@command()
+def dice_help(args, user, jai_req, response):
+    response.add_proxy_message(
+        "# Dice Commands",
+        "",
+        "Language models can't produce random numbers without bias.",
+        "The proxy can provide the model with random numbers, allowing for a more authentic experience.",
+        "Use the `//dice_roll` command to roll any dice you specify, let the proxy generate the outcome and let the model interpret it for you.",
+        "",
+        "## Dice Specification",
+        "",
+        "To make a `//dice_roll` you first need to describe which kind of dice you want to roll.",
+        "Examples: use `//dice_roll d6` to roll one six-faced dice, use `//dice_roll 3d20` to roll three twenty-faced dice.",
+        "The syntax is `//dice_roll [count]d(faces)[(p|m)(extra)]`. Stuff inside (parens) is mandatory, stuff inside [brackets] is optional.",
+        "You must specify how many `faces` the dice you want to roll has. Any number greater than 1 works. Examples: `d6`, `d20`, `d100`.",
+        "You can add a `count` to roll the given dice multiple times. Any number greater than 1 works. Examples: `2d10`, `8d15`.",
+        'You can add or substract a fixed amount, the `extra`, to the end result. You must specify whether to add (`p` for "plus") or substract (`m` for "minus"). Any number works. Examples: `d20p5`, `d3m2`.',
+        'You can use all these features at the same time. Example: `//dice_roll 5d20p10` means "roll a twenty-faced dice five times and then add 10".',
+        "",
+        "## The `//dice_roll` and `//dice_char` commands",
+        "",
+        "When you use the `//dice_roll` command, you and the model get to see the result. This command is for your use.",
+        "When you enable the `//dice_char` command, the proxy will roll a dice on every message, hidden from you, in behalf of the character you are role-playing with.",
+        "The `//dice_char` command is for passively providing randomness to the environment and the character.",
+        "You can use the `//dice_roll` command multiple times in a single message for multiple separate dice rolls. The `//dice_char` command only rolls one dice per message.",
+        "",
+        "## Summary",
+        "",
+        "- `//dice_help`",
+        "  Shows you this message.",
+        "",
+        "- `//dice_roll [count]d(faces)[(p|m)(extra)]`",
+        "  Rolls a dice for your.",
+        "",
+        "- `//dice_roll on|off|this`",
+        "  Rolls a hidden dice for the character on every message (not yet implemented).",
+    )
+    raise CommandExit()
 
 
 @command(argspec=r"keep|remove")
