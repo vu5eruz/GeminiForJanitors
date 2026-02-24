@@ -67,6 +67,12 @@ class CommandError(Exception):
     pass
 
 
+class CommandExit(Exception):
+    """Exception to exit processing early raised by commands."""
+
+    pass
+
+
 COMMANDS = {}
 
 
@@ -118,7 +124,7 @@ def command(*, argspec: str = "", **kwargs):
 @command()
 def aboutme(args, user, jai_req, response):
     # U+200B ZERO WIDTH SPACE
-    return response.add_proxy_message(
+    response.add_proxy_message(
         f"Your user ID on this proxy is `{user.xuid!r}`.",
         f"You have used this proxy {user.get_rcounter()} time(s).",
         f"You were {user.last_seen_msg()}.",
@@ -132,6 +138,7 @@ def aboutme(args, user, jai_req, response):
         f"\u200b- //think_text {user.think_text}",
         f"This message is using API key {jai_req.key_index + 1} out of {jai_req.key_count}.",
     )
+    raise CommandExit()
 
 
 @command()

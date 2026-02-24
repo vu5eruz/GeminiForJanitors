@@ -1,5 +1,7 @@
+from typing import cast
+
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
-from .commands import CommandError
+from .commands import CommandError, CommandExit
 from .logging import xlog
 from .models import JaiRequest
 from .providers import gemini_generate_content
@@ -62,15 +64,29 @@ def handle_chat_message(
         xlog(user, f"Handling chat message ({jai_req.model}) ...")
         rtype = "message"
 
+    command_exit = False
+    command_exit_list: list[str] = []
+
     for command in last_user_message.commands:
         xlog(user, f"//{command.name} {command.args}")
 
         try:
-            response = command(user, jai_req, response)
+            response = cast(ResponseHelper, command(user, jai_req, response))
         except CommandError as e:
             message = f"Error: {e} (Command has been ignored.)"
             response.add_proxy_message(message)
             xlog(user, message)
+        except CommandExit:
+            xlog(user, "Command exit set")
+            command_exit = True
+            command_exit_list.append(command.name)
+
+    if command_exit:
+        command_exit_list_str = ", ".join(f"//{c}" for c in command_exit_list)
+        response.add_proxy_message(
+            f"\n***\n\nRemove the command(s) {command_exit_list_str} to continue.",
+        )
+        return response
 
     if jai_req.use_nobot or user.use_nobot:
         xlog(
