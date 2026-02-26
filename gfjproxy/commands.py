@@ -237,7 +237,7 @@ def dice_char(args, user, jai_req, response):
     if jai_req.quiet_commands:
         return response
     return response.add_proxy_message(
-        f"Character dice {'enabled' if jai_req.dice_char else 'disabled'}"
+        f"Character dice {'enabled' if jai_req.use_dice_char else 'disabled'}"
         + (" (for this message only)." if args == "this" else ".")
     )
 
