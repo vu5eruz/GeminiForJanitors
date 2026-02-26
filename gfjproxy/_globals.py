@@ -118,17 +118,15 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 23
+BANNER_VERSION = 24
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-The proxy has had an internal rework, the only notable change being that some errors coming from Google will be displayed as-is, which means the *Resource has been exhausted* error has been replaced by a *This model is currently experiencing high demand* error as reported by Google.
+Two new commands //dice_roll and //dice_char are available for testing!
 
-The only regression was incorrect tracking in the proxy's statistics. This should be addressed now.
-
-The URL https://geminiforjanitors-i7zd.onrender.com/ is now listed on gfjproxies!
+Read the //dice_help command for more info.
 
 ***
 
@@ -168,6 +166,11 @@ You can include one or more commands in your messages, separated by spaces. You 
 
 - `//preset minipopka`
   Adds a longer writing guideline to enhance narration and NSFW roleplay.
+
+- `//dice_roll [count]d(faces)[(p|m)(extra)]`
+- `//dice_char on|off|this`
+- `//dice_help`
+  Rolls dices using proxy-provided random numbers. See `//dice_help` for more info.
 
 ***
 
