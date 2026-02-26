@@ -24,6 +24,8 @@ if PRODUCTION:
 ################################################################################
 
 # ruff: noqa: E402
+import gc
+
 from colorama import just_fix_windows_console
 from flask import Flask
 from flask_cors import CORS
@@ -32,6 +34,10 @@ from .logging import hijack_loggers
 from .storage import storage
 from .utils import run_cloudflared
 from .xuiduser import LocalUserStorage, RedisUserStorage
+
+
+def _teardown(exception):
+    gc.collect()
 
 
 def create_app():
@@ -95,5 +101,7 @@ def create_app():
 
     app.register_blueprint(proxy)
     app.register_blueprint(system)
+
+    app.teardown_request(_teardown)
 
     return app

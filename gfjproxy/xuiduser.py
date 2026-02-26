@@ -305,6 +305,14 @@ class UserSettings:
         self._data["use_advsettings"] = bool(value)
 
     @property
+    def use_dice_char(self) -> bool:
+        return bool(self._data.get("use_dice_char", False))
+
+    @use_dice_char.setter
+    def use_dice_char(self, value):
+        self._data["use_dice_char"] = bool(value)
+
+    @property
     def use_nobot(self) -> bool:
         return bool(self._data.get("use_nobot", False))
 
