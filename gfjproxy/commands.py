@@ -131,6 +131,7 @@ def aboutme(args, user, jai_req, response):
         f"You were {user.last_seen_msg()}.",
         "Your commands are:",
         f"\u200b- //advsettings {'on' if user.use_nobot else 'off'}",
+        f"\u200b- //dice_char {'on' if user.use_dice_char else 'off'}",
         f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
         f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
         f"\u200b- //prefill {'on' if user.use_prefill else 'off'}",
@@ -231,13 +232,21 @@ def think(args, user, jai_req, response):
     )
 
 
+@command(argspec=r"off|on|this", setting="dice_char")
+def dice_char(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Character dice {'enabled' if jai_req.dice_char else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
+
+
 ################################################################################
 
 
 @command(argspec=r".+")
 def dice_roll(args, user, jai_req, response):
-    from .models import JaiMessage
-
     dice = args.replace("p", "+").replace("m", "-")
 
     match = re.fullmatch(r"(\d+)?d(\d+)([+-]\d+)?([a-z])?", dice, re.A | re.I)
@@ -260,8 +269,15 @@ def dice_roll(args, user, jai_req, response):
         result_str += f" = {result}"
     result_str += "."
 
-    jai_req.messages.append(
-        JaiMessage(content=f"<system>\n  User {result_str}.\n</system>")
+    jai_req.append_message(
+        "user",
+        "\n".join(
+            [
+                "<system>",
+                f"  User {result_str}.",
+                "</system>",
+            ]
+        ),
     )
 
     return response.add_proxy_message(result_str)
@@ -299,10 +315,10 @@ def dice_help(args, user, jai_req, response):
         "  Shows you this message.",
         "",
         "- `//dice_roll [count]d(faces)[(p|m)(extra)]`",
-        "  Rolls a dice for your.",
+        "  Rolls a dice for you.",
         "",
-        "- `//dice_roll on|off|this`",
-        "  Rolls a hidden dice for the character on every message (not yet implemented).",
+        "- `//dice_char on|off|this`",
+        "  Rolls a hidden dice for the character on every message.",
     )
     raise CommandExit()
 

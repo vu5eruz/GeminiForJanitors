@@ -58,6 +58,7 @@ class JaiRequest:
     top_k: int = 0
     top_p: float = 0.0
     use_advsettings: bool = False  # Set by //advsettings command
+    use_dice_char: bool = False  # Set by //dice_char command
     use_nobot: bool = False  # Set by //nobot command
     use_ooctrick: bool = False  # Set by //ooctrick command
     use_prefill: bool = False  # Set by //prefill command

@@ -1,3 +1,4 @@
+from random import randint
 from typing import cast
 
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
@@ -97,6 +98,26 @@ def handle_chat_message(
 
         if jai_req.messages and jai_req.messages[0].role == "system":
             jai_req.messages.pop(0)
+
+    if jai_req.use_dice_char or user.use_dice_char:
+        xlog(
+            user,
+            "Adding character dice to chat"
+            + (" (for this message only)." if not user.use_dice_char else "."),
+        )
+
+        jai_req.append_message(
+            "user",
+            "\n".join(
+                [
+                    "<system>",
+                    f"  Character d20 roll: {randint(1, 20)}.",
+                    "  A character roll is made on every message.",
+                    "  Use this only if it is relevant.",
+                    "</system>",
+                ]
+            ),
+        )
 
     if jai_req.use_think or user.use_think:
         xlog(
