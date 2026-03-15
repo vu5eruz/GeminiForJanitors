@@ -1,14 +1,66 @@
 from random import randint
-from typing import cast
+from typing import Any, cast
 
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError, CommandExit
 from .logging import xlog
-from .models import JaiRequest
-from .providers import gemini_generate_content
+from .models import JaiMessage, JaiRequest, JaiResult
+from .providers import cerebras_generate_content, gemini_generate_content
 from .statistics import track_stats
 from .utils import ResponseHelper
-from .xuiduser import UserSettings
+from .xuiduser import XUID, UserSettings
+
+################################################################################
+
+
+def _handle_request(
+    user: XUID,
+    api_key: str,
+    models: dict[str, str],
+    messages: list[JaiMessage],
+    settings: dict[str, Any] = {},
+) -> JaiResult:
+    api_key_patterns = [
+        (39, "AIza", "google"),
+        (52, "csk-", "cerebras"),
+    ]
+
+    for length, prefix, provider in api_key_patterns:
+        if len(api_key) == length and api_key.startswith(prefix):
+            if model := models.get(provider):
+                break
+            return JaiResult(
+                400,
+                f"Missing model for {provider}",
+                extras=(
+                    f"You have a `{provider}` API key but you didn't specify a model for it.\n"
+                    + "Make sure to use OpenRouter syntax `provider/model`.\n"
+                    + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
+                ),
+            )
+    else:
+        return JaiResult(
+            400,
+            "The proxy couldn't recognize an API key.",
+            extras=(
+                f"Your API key `{api_key}` didn't match any of the following:\n"
+                + "\n".join(
+                    f"- A `{provider}` API key starts with `{prefix}` and is `{length}` characters long."
+                    for length, prefix, provider in api_key_patterns
+                )
+            ),
+        )
+
+    xlog(user, f"Using {provider}/{model}")
+
+    match provider:
+        case "cerebras":
+            return cerebras_generate_content(user, api_key, model, messages, settings)
+        case "google":
+            return gemini_generate_content(user, api_key, model, messages, settings)
+        case _:
+            return JaiResult(500, f"This proxy does not support {provider}")
+
 
 ################################################################################
 
@@ -21,10 +73,10 @@ def handle_proxy_test(
     The sole purpose of this is to test out the user's API key and model."""
 
     # Pass no settings. Defaults should allow for a successfuly proxy test.
-    result = gemini_generate_content(
+    result = _handle_request(
         user.xuid,
         jai_req.api_key,
-        jai_req.model,
+        jai_req.models,
         jai_req.messages,
     )
 
@@ -32,7 +84,13 @@ def handle_proxy_test(
 
     if not result:
         track_stats("r.test.failed")
-        return response.add_error(result.error, result.status)
+        extra = ""
+        if result.extras:
+            extra = "\n(Send a chat message to get the full error)"
+        return response.add_error(
+            result.error + extra,
+            result.status,
+        )
 
     track_stats("r.test.succeeded")
     return response.add_message(result.text)
@@ -56,13 +114,13 @@ def handle_chat_message(
         xlog(user, "User set forbidden words/phrases detected")
 
     if last_user_message.content.startswith("Rewrite/Enhance this message: "):
-        xlog(user, f"Handling enhance message ({jai_req.model}) ...")
+        xlog(user, "Handling enhance message ...")
         rtype = "enhance"
     elif last_user_message.content.startswith("Create a brief, focused summary"):
-        xlog(user, f"Handling auto summary ({jai_req.model}) ...")
+        xlog(user, "Handling auto summary ...")
         rtype = "summary"
     else:
-        xlog(user, f"Handling chat message ({jai_req.model}) ...")
+        xlog(user, "Handling chat message ...")
         rtype = "message"
 
     command_exit = False
@@ -217,10 +275,10 @@ def handle_chat_message(
 
         settings["search"] = True
 
-    result = gemini_generate_content(
+    result = _handle_request(
         user.xuid,
         jai_req.api_key,
-        jai_req.model,
+        jai_req.models,
         jai_req.messages,
         settings,
     )
@@ -238,7 +296,12 @@ def handle_chat_message(
                     "\nTry using: `//ooctrick on`, `//prefill on`, `//think on`"
                 )
 
-        return response.add_error(result.error, result.status)
+        response.add_error(result.error, result.status)
+
+        if result.extras:
+            response.add_proxy_message(result.extras)
+
+        return response
 
     if used_think:
         text = result.text

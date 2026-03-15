@@ -85,8 +85,17 @@ def handle():
     )
 
     try:
-        if not jai_req.model:
+        if not jai_req.models:
             response.add_error("Please specify a model.", 400)
+        if unknown := jai_req.models.get("unknown"):
+            response.add_error(
+                (
+                    f"Unknown model(s): {unknown}\n"
+                    + "Make sure to use OpenRouter syntax `provider/model`.\n"
+                    + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
+                ),
+                400,
+            )
         elif proxy_test:
             response = handle_proxy_test(user, jai_req, response)
         else:

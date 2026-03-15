@@ -8,6 +8,7 @@ from json import loads
 from google.genai import types
 
 from .commands import Command, parse_message, strip_message
+from .utils import comma_split
 
 ################################################################################
 
@@ -53,7 +54,7 @@ class JaiRequest:
     # Request body
     max_tokens: int = 0
     messages: list[JaiMessage] = field(default_factory=list)
-    model: str = ""
+    models: dict[str, str] = field(default_factory=dict)
     stream: bool = False
     temperature: float = 0
     frequency_penalty: float = 0.0
@@ -99,11 +100,18 @@ class JaiRequest:
             jai_req.messages = [JaiMessage.parse(jai_msg) for jai_msg in messages]
 
         if model := data.get("model"):
-            model = str(model).strip().lower()
-            if model.startswith("google/gemini"):  # OpenRouter
-                jai_req.model = model.split("/")[1]
-            else:
-                jai_req.model = model
+            for model in comma_split(model.lower()):
+                if "/" in model:
+                    provider, model_name = model.split("/", maxsplit=1)
+                    jai_req.models[provider] = model_name
+                elif model.startswith("gemini-"):
+                    jai_req.models["google"] = model
+                else:
+                    # Build a comma-separated list of unknown models
+                    if unknown := jai_req.models.get("unknown"):
+                        jai_req.models["unknown"] = f"{unknown}, {model}"
+                    else:
+                        jai_req.models["unknown"] = model
 
         if stream := data.get("stream"):
             jai_req.stream = stream

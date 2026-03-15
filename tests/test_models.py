@@ -33,7 +33,7 @@ def test_jai_request(sample):
 
         assert jai_msg.role == msg["role"]
 
-    assert jai_req.model == sample["model"]
+    assert jai_req.models["google"] == sample["model"]
 
     # JanitorAI may or may not omit the "stream" key
     if "stream" in sample:
