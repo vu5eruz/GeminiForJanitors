@@ -5,8 +5,6 @@ The name of some fields in here may not match with the source they are from."""
 from dataclasses import dataclass, field
 from json import loads
 
-from google.genai import types
-
 from .commands import Command, parse_message, strip_message
 from .utils import comma_split
 
@@ -138,12 +136,20 @@ class JaiRequest:
 
 
 @dataclass(kw_only=True, slots=True)
+class JaiResultTokenUsage:
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+@dataclass(kw_only=True, slots=True)
 class JaiResultMetadata:
     "JanitorAI Generate Content Result Metadata"
 
     api_key_valid: bool = True
     rejection_feedback: str = ""
-    token_usage: types.GenerateContentResponseUsageMetadata | None = None
+    token_usage: JaiResultTokenUsage | None = None
 
 
 @dataclass(init=False, kw_only=True, slots=True)

@@ -7,7 +7,7 @@ from httpx import HTTPError, ReadTimeout
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
 from ..logging import xlog
-from ..models import JaiMessage, JaiResult, JaiResultMetadata
+from ..models import JaiMessage, JaiResult, JaiResultMetadata, JaiResultTokenUsage
 from ..statistics import track_stats
 from ..xuiduser import XUID
 
@@ -317,9 +317,15 @@ def gemini_generate_content(
         )
 
     if isinstance(
-        gemini_result.usage_metadata, types.GenerateContentResponseUsageMetadata
+        (usage := gemini_result.usage_metadata),
+        types.GenerateContentResponseUsageMetadata,
     ):
-        metadata.token_usage = gemini_result.usage_metadata
+        metadata.token_usage = JaiResultTokenUsage(
+            prompt_tokens=usage.prompt_token_count,
+            completion_tokens=usage.candidates_token_count,
+            reasoning_tokens=usage.thoughts_token_count,
+            total_tokens=usage.total_token_count,
+        )
 
     track_stats("g.succeeded")
     return JaiResult(200, text, extras=extras, metadata=metadata)

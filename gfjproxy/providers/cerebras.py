@@ -5,7 +5,7 @@ from httpx import ReadTimeout
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
 from ..logging import xlog
-from ..models import JaiMessage, JaiResult
+from ..models import JaiMessage, JaiResult, JaiResultMetadata, JaiResultTokenUsage
 from ..statistics import track_stats
 from ..xuiduser import XUID
 
@@ -77,16 +77,24 @@ def cerebras_generate_content(
 
     text = ""
     extras = ""
+    metadata = JaiResultMetadata()
 
     if choices := cerebras_result.get("choices"):
         if isinstance(choices[0], dict) and (message := choices[0].get("message")):
             text = message.get("content")
 
+    if usage := cerebras_result.get("usage"):
+        metadata.token_usage = JaiResultTokenUsage(
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
+        )
+
     if not text:
         # Rejection?
         xlog(user, f"No result text: {cerebras_result!r}")
         track_stats("cerebras.rejected")
-        return JaiResult(502, "Response blocked/empty.")
+        return JaiResult(502, "Response blocked/empty.", metadata=metadata)
 
     track_stats("cerebras.succeeded")
-    return JaiResult(200, text, extras=extras)
+    return JaiResult(200, text, extras=extras, metadata=metadata)

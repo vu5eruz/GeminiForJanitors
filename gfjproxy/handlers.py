@@ -353,11 +353,11 @@ def handle_chat_message(
     if result.extras:
         response.add_proxy_message(result.extras)
 
-    if tu := result.metadata.token_usage:
-        xlog(user, f" - Prompt   tokens {tu.prompt_token_count}")
-        xlog(user, f" - Response tokens {tu.candidates_token_count}")
-        xlog(user, f" - Thinking tokens {tu.thoughts_token_count}")
-        xlog(user, f" - Total    tokens {tu.total_token_count}")
+    if usage := result.metadata.token_usage:
+        xlog(user, f" - Prompt   tokens {usage.prompt_tokens}")
+        xlog(user, f" - Response tokens {usage.completion_tokens}")
+        xlog(user, f" - Thinking tokens {usage.reasoning_tokens}")
+        xlog(user, f" - Total    tokens {usage.total_tokens}")
     else:
         xlog(user, " - No usage metadata")
 
