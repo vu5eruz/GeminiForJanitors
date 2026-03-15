@@ -45,28 +45,35 @@ class JaiMessage:
 class JaiRequest:
     """JanitorAI Request."""
 
+    # Authorization header
     api_key: str = ""
+    api_key_index: int = 1
+    api_key_count: int = 1
+
+    # Request body
     max_tokens: int = 0
-    frequency_penalty: float = 0.0
-    repetition_penalty: float = 0.0
     messages: list[JaiMessage] = field(default_factory=list)
     model: str = ""
-    quiet: bool = False  # This isn't from the request JSON but from the URL
-    quiet_commands: bool = False  # This is to make testing easier
     stream: bool = False
     temperature: float = 0
+    frequency_penalty: float = 0.0
+    repetition_penalty: float = 0.0
     top_k: int = 0
     top_p: float = 0.0
-    use_advsettings: bool = False  # Set by //advsettings command
-    use_dice_char: bool = False  # Set by //dice_char command
-    use_nobot: bool = False  # Set by //nobot command
-    use_ooctrick: bool = False  # Set by //ooctrick command
-    use_prefill: bool = False  # Set by //prefill command
-    use_preset: str | None = None  # Set by //preset command
-    use_search: bool = False  # Set by //search command
-    use_think: bool = False  # Set by //think command
-    key_index: int = 1
-    key_count: int = 1
+
+    # Request URL
+    quiet: bool = False
+    quiet_commands: bool = False  # Only for testing
+
+    # Commands
+    use_advsettings: bool = False
+    use_dice_char: bool = False
+    use_nobot: bool = False
+    use_ooctrick: bool = False
+    use_prefill: bool = False
+    use_preset: str | None = None
+    use_search: bool = False
+    use_think: bool = False
 
     def append_message(self, role: str, content: str):
         self.messages.append(

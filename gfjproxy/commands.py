@@ -138,7 +138,7 @@ def aboutme(args, user, jai_req, response):
         f"\u200b- //search {'on' if user.use_search else 'off'}",
         f"\u200b- //think {'on' if user.use_think else 'off'}",
         f"\u200b- //think_text {user.think_text}",
-        f"This message is using API key {jai_req.key_index + 1} out of {jai_req.key_count}.",
+        f"This message is using API key {jai_req.api_key_index + 1} out of {jai_req.api_key_count}.",
     )
     raise CommandExit()
 

@@ -68,8 +68,8 @@ def handle():
     user.inc_rcounter()
 
     jai_req.api_key = api_keys[api_key_index]
-    jai_req.key_index = api_key_index
-    jai_req.key_count = len(api_keys)
+    jai_req.api_key_index = api_key_index
+    jai_req.api_key_count = len(api_keys)
 
     log_details = [
         f"User {user.last_seen_msg()}",
