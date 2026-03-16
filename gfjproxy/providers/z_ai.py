@@ -57,6 +57,8 @@ def z_ai_generate_content(
                 message += f" ({error_code})"
             if error_message := error.get("message"):
                 message += f": {error_message}"
+        else:
+            xlog(user, f"{message}: {e.response.text!r}")
 
         if e.response.is_client_error:
             track_stats("z_ai.failed.client")
