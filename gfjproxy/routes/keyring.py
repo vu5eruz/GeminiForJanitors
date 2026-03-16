@@ -20,6 +20,7 @@ keyring = Blueprint("keyring", __name__)
 
 
 @keyring.route("/keyring", methods=["GET"])
+@keyring.route("/keyring/", methods=["GET"])
 @keyring.route("/keyring/index", methods=["GET"])
 @keyring.route("/keyring/index.html", methods=["GET"])
 def index():

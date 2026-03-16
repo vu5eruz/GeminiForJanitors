@@ -17,7 +17,7 @@
     <a href="{{ url }}">{{ url }}</a>
     <form id="api-form" class="card gap-1-25">
       <fieldset class="form-group">
-        <legend>Input your service credentials</legend>
+        <legend>Input your Gemini CLI credentials</legend>
         <div class="input-wrapper">
           <label for="creds">Raw JSON data:</label>
           <textarea
@@ -30,47 +30,63 @@
           ></textarea>
         </div>
       </fieldset>
-      <fieldset class="form-group">
-        <legend>What service are these credentials for?</legend>
-        <div class="radio-inputs">
-          <label class="radio">
-            <input type="radio" name="api" checked="" />
-            <span class="radio-name">Alpha</span>
-          </label>
-          <label class="radio">
-            <input type="radio" name="api" />
-            <span class="radio-name">Beta</span>
-          </label>
-        </div>
-      </fieldset>
       <hr />
       <fieldset class="form-group">
         <button id="submit" type="submit" class="submit-btn">Create API Key</button>
       </fieldset>
     </form>
     <div id="api-result" class="card hidden!">
-      <p id="api-result-message">Your API key is:</p>
+      <p>Your API key is:</p>
       <pre id="api-result-data">undefined</pre>
-      <p id="api-result-extras">
+      <p>
         This API key is unique to this proxy (<a href="{{ url }}">{{ url }}</a>) and will not work
         on others. If you switch to another proxy, you will have to create a new API key for it.
       </p>
     </div>
+    <div id="api-error" class="card hidden!">
+      <p id="api-error-message" style="color: #f86a6a">Error.</p>
+    </div>
     <script>
       const formElement = document.getElementById("api-form");
+      const credsElement = document.getElementById("creds");
       const submitButtonElement = document.getElementById("submit");
       const resultElement = document.getElementById("api-result");
+      const resultDataElement = document.getElementById("api-result-data");
+      const errorElement = document.getElementById("api-error");
+      const errorMessageElement = document.getElementById("api-error-message");
 
-      formElement.onsubmit = (event) => {
+      formElement.onsubmit = async (event) => {
         event.preventDefault();
 
         submitButtonElement.disabled = true;
         resultElement.classList.add("hidden!");
+        errorElement.classList.add("hidden!");
 
-        setTimeout(() => {
-          submitButtonElement.disabled = false;
+        try {
+          const response = await fetch("/keyring/api", {
+            method: "POST",
+            body: JSON.stringify({
+              creds: JSON.parse(credsElement.value),
+              credsType: "gemini_cli",
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const result = await response.json();
+          if (result.error !== undefined) {
+            throw new Error(result.error);
+          }
+
           resultElement.classList.remove("hidden!");
-        }, 1500);
+          resultDataElement.textContent = result.value;
+        } catch (error) {
+          errorElement.classList.remove("hidden!");
+          errorMessageElement.textContent = error.message;
+        }
+
+        submitButtonElement.disabled = false;
       };
     </script>
   </body>
