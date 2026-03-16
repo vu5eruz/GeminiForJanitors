@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Self
 from uuid import uuid4
 
@@ -9,6 +9,7 @@ from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
 from ..logging import xlog, xlogtime
 from ..models import JaiMessage
+from ..utils import utcfromtimestamp, utcnow
 from ..xuiduser import XUID
 
 # https://github.com/google-gemini/gemini-cli/blob/17b37144a96da13bf7a0917411bc1d34142609d7/packages/core/src/code_assist/oauth2.ts#L72
@@ -17,29 +18,6 @@ CLIENT_SECRET = "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"
 
 # https://github.com/googleapis/google-cloud-python/blob/b9466f9c85c94331ffc39e1da3cf98fb5ff7d612/packages/google-auth/google/auth/_helpers.py#L42
 REFRESH_THRESHOLD = timedelta(minutes=3, seconds=45)
-
-
-# https://github.com/googleapis/google-cloud-python/blob/b9466f9c85c94331ffc39e1da3cf98fb5ff7d612/packages/google-auth/google/auth/_helpers.py#L111
-def _utcnow() -> datetime:
-    """Returns the current UTC datetime.
-
-    Returns:
-        datetime: The current time in UTC.
-    """
-    return datetime.now(UTC)
-
-
-# https://github.com/googleapis/google-cloud-python/blob/b9466f9c85c94331ffc39e1da3cf98fb5ff7d612/packages/google-auth/google/auth/_helpers.py#L127
-def _utcfromtimestamp(timestamp: float) -> datetime:
-    """Returns the UTC datetime from a timestamp.
-
-    Args:
-        timestamp (float): The timestamp to convert.
-
-    Returns:
-        datetime: The time in UTC.
-    """
-    return datetime.fromtimestamp(timestamp, tz=UTC)
 
 
 # https://github.com/badlogic/pi-mono/blob/83378aad7e74a0e2bb8f37c007a9685fb4609d8a/packages/ai/src/utils/oauth/google-gemini-cli.ts#L232
@@ -70,7 +48,7 @@ class Credentials:
         """
         # https://github.com/googleapis/google-cloud-python/blob/b9466f9c85c94331ffc39e1da3cf98fb5ff7d612/packages/google-auth/google/auth/credentials.py#L90
         skewed_expiry = self.expiry_date - REFRESH_THRESHOLD
-        return (_utcnow() - skewed_expiry).total_seconds()
+        return (utcnow() - skewed_expiry).total_seconds()
 
     @staticmethod
     def parse(data: dict) -> "Credentials":
@@ -100,7 +78,7 @@ class Credentials:
 
         return Credentials(
             access_token=access_token,
-            expiry_date=_utcfromtimestamp(expiry_date / 1000),
+            expiry_date=utcfromtimestamp(expiry_date / 1000),
             id_token=id_token,
             refresh_token=refresh_token,
             scope=scope,
@@ -166,7 +144,7 @@ def gemini_cli_refresh_credentials(
 
     ref_time = xlogtime(user, f"Refreshing credentials (expired {expired:.0f}s ago)")
 
-    timestamp = _utcnow()
+    timestamp = utcnow()
 
     try:
         # https://github.com/badlogic/pi-mono/blob/83378aad7e74a0e2bb8f37c007a9685fb4609d8a/packages/ai/src/utils/oauth/google-gemini-cli.ts#L380
