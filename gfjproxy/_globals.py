@@ -118,15 +118,27 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 24
+BANNER_VERSION = 25
 
 BANNER = rf"""***
 # {PROXY_NAME} ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-Two new commands //dice_roll and //dice_char are available for testing!
+The proxy is being updated with major new features! Please report any bugs or strange errors to the Gemini Proxy Guide.
 
-Read the //dice_help command for more info.
+Support for Gemini CLI API keys is being worked on, providing free gemini-3-pro-preview usage per Google Account. Contact `@undefined_anon` on Discord if you have a desktop PC and want to try out this beta feature.
+
+Support for Cerebras and Z.AI is now available, you can now use models from other companies!
+- Cerebras offers `llama3.1-8b` and `qwen-3-235b-a22b-instruct-2507` for free.
+- Z.AI offers `GLM-4.5-Flash` and `GLM-4.7-Flash` for free.
+
+To use these models, you need to use OpenRouter syntax and separate them with commas. For example, if you want to use Gemini and Cerebras models, put `gemini-3-flash-preview, cerebras/llama3.1-8b` into your proxy settings Model Name.
+
+Next, add your API keys as usual and separate them with commas. **Note for Z.AI**: you need add `z_ai/` at the start of your API key for it to be recognized, e.g.: `AIza..., z_ai/..., csk-...`.
+
+**Note**: commands such as `//prefill` or `//ooctrick` might not be effective on other models.
+
+All of this is work in progress, please report any issues!
 
 ***
 
