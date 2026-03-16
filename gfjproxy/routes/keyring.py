@@ -132,11 +132,13 @@ def api():
 
     api_key = ".".join(
         [
-            "gfjproxy",
+            "gfjproxy.gemini_cli",
             base64url_encode(PROXY_URL),
             base64url_encode(subject_digest),
         ]
     )
+
+    storage.keyring_put(api_key, json.dumps(credentials.json()))
 
     xlogtime(None, "Keyring processing done", ref_time)
 

@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Self
@@ -5,11 +6,13 @@ from uuid import uuid4
 
 import httpx
 
-from .._globals import PROCESS_TIMEOUT
+from .._globals import PROCESS_TIMEOUT, PROXY_URL
 from ..http_client import http_client
 from ..logging import xlog, xlogtime
-from ..models import JaiMessage
-from ..utils import utcfromtimestamp, utcnow
+from ..models import JaiMessage, JaiResult, JaiResultMetadata, JaiResultTokenUsage
+from ..statistics import track_stats
+from ..storage import storage
+from ..utils import base64url_decode, utcfromtimestamp, utcnow
 from ..xuiduser import XUID
 
 # https://github.com/google-gemini/gemini-cli/blob/17b37144a96da13bf7a0917411bc1d34142609d7/packages/core/src/code_assist/oauth2.ts#L72
@@ -83,6 +86,16 @@ class Credentials:
             refresh_token=refresh_token,
             scope=scope,
         )
+
+    def json(self):
+        return {
+            "access_token": self.access_token,
+            "id_token": self.id_token,
+            "refresh_token": self.refresh_token,
+            "expiry_date": self.expiry_date.timestamp() * 1000,
+            "scope": self.scope,
+            "token_type": "Bearer",
+        }
 
 
 @dataclass(kw_only=True, slots=True, frozen=True)
@@ -166,11 +179,11 @@ def gemini_cli_refresh_credentials(
         xlog(user, f"{message}\n{e.response.text!r}")
         return RefreshCredentialsResult.from_error((e.response.status_code, message))
     except httpx.RequestError as e:
-        message = f"Refresh credentials network error: {str(e)}"
+        message = f"Refresh credentials network error: {e}"
         xlog(user, message)
         return RefreshCredentialsResult.from_error((502, message))
     except Exception as e:
-        xlog(user, f"Refresh credentials unexpected error: {repr(e)}")
+        xlog(user, f"Refresh credentials unexpected error: {e!r}")
         return RefreshCredentialsResult.from_error((500, "Unknown exception"))
 
     xlogtime(user, "Refreshed credentials!", ref_time)
@@ -220,11 +233,11 @@ def gemini_cli_load_project_id(
         xlog(user, f"{message}\n{e.response.text!r}")
         return LoadProjectIdResult.from_error((e.response.status_code, message))
     except httpx.RequestError as e:
-        message = f"Load project id network error: {str(e)}"
+        message = f"Load project id network error: {e}"
         xlog(user, message)
         return LoadProjectIdResult.from_error((502, message))
     except Exception as e:
-        xlog(user, f"Load project id unexpected error: {repr(e)}")
+        xlog(user, f"Load project id unexpected error: {e!r}")
         return LoadProjectIdResult.from_error((500, "Unknown exception"))
 
     if not resp_json.get("currentTier"):
@@ -301,13 +314,119 @@ def gemini_cli_generate_content_ex(
         xlog(user, f"{message}\n{(error_json or e.response.text)!r}")
         return GenerateContentExResult.from_error((e.response.status_code, message))
     except httpx.RequestError as e:
-        message = f"Gemini CLI generate network error: {str(e)}"
+        message = f"Gemini CLI generate network error: {e}"
         xlog(user, message)
         return GenerateContentExResult.from_error((502, message))
     except Exception as e:
-        xlog(user, f"Gemini CLI generate unexpected error: {repr(e)}")
+        xlog(user, f"Gemini CLI generate unexpected error: {e!r}")
         return GenerateContentExResult.from_error((500, "Unknown exception"))
 
     xlogtime(user, "Gemini CLI generated!", ref_time)
 
     return GenerateContentExResult.from_value(resp_json)
+
+
+def gemini_cli_generate_content(
+    user: XUID,
+    api_key: str,
+    model: str,
+    messages: list[JaiMessage],
+    settings: dict[str, Any] = {},
+) -> JaiResult:
+    """Wrapper around gemini_cli_generate_content_ex for use by proxy handlers.
+
+    User paramater is only used for logging. Generation settings must all be passed inside the
+    settings parameter."""
+
+    raw_credentials = storage.keyring_get(api_key)
+    if not raw_credentials:
+        this_proxy_url = PROXY_URL.rstrip("/")
+
+        message = "API key not valid."
+        proxy_url = base64url_decode(api_key.split(".")[2]).decode().rstrip("/")
+        if proxy_url != this_proxy_url:
+            message = f"This API key is from another proxy ({proxy_url})."
+
+        message += f" You need to create an API key on this proxy's keyring ({this_proxy_url}/keyring)."
+
+        track_stats("g_cli.failed.client.invalid.api_key")
+        return JaiResult(
+            400,
+            message,
+            metadata=JaiResultMetadata(
+                api_key_valid=False,
+            ),
+        )
+
+    try:
+        credentials = Credentials.parse(json.loads(raw_credentials))
+    except Exception as e:  # This shoud never happen
+        xlog(user, f"Exception while loading credentials from keyring: {e!r}")
+        track_stats("g_cli.failed.system.creds")
+        return JaiResult(500, "Invalid/missing credentials in API key")
+
+    rcr = gemini_cli_refresh_credentials(user, credentials)
+    if not rcr.success:
+        error_code, error_message = rcr.error
+        track_stats("g_cli.failed.system.refresh")
+        return JaiResult(error_code, error_message)
+    credentials = rcr.value
+
+    storage.keyring_put(api_key, json.dumps(credentials.json()))
+
+    lpidr = gemini_cli_load_project_id(user, credentials)
+    if not lpidr.success:
+        error_code, error_message = lpidr.error
+        track_stats("g_cli.failed.system.load")
+        return JaiResult(error_code, error_message)
+    project_id = lpidr.value
+
+    gcexr = gemini_cli_generate_content_ex(
+        user,
+        credentials.access_token,
+        project_id,
+        model,
+        messages,
+        settings,
+    )
+    if not gcexr.success:
+        error_code, error_message = gcexr.error
+        track_stats("g_cli.failed")
+        return JaiResult(error_code, error_message)
+    result: dict[str, Any] = gcexr.value.get("response", {})
+
+    text = ""
+    extras = ""
+    metadata = JaiResultMetadata()
+
+    # lol
+    if (
+        result
+        and isinstance((candidates := result.get("candidates")), list)
+        and len(candidates) > 0
+        and isinstance((candidate := candidates[0]), dict)
+        and isinstance((content := candidate.get("content")), dict)
+        and isinstance((parts := content.get("parts")), list)
+        and len(parts) > 0
+        and isinstance((part := parts[0]), dict)
+        and isinstance((part_text := part.get("text")), str)
+    ):
+        # lmao even
+        text = part_text
+
+    if isinstance((usage := result.get("usageMetadata")), dict):
+        metadata.token_usage = JaiResultTokenUsage(
+            prompt_tokens=usage.get("promptTokenCount"),
+            completion_tokens=usage.get("candidatesTokenCount"),
+            reasoning_tokens=usage.get("thoughtsTokenCount"),
+            total_tokens=usage.get("totalTokenCount"),
+        )
+
+    if not text:
+        # Rejection?
+        xlog(user, f"No result text: {result!r}")
+        track_stats("g_cli.rejected")
+        return JaiResult(502, "Response blocked/empty.", metadata=metadata)
+
+    track_stats("g_cli.succeeded")
+    return JaiResult(200, text, extras=extras, metadata=metadata)

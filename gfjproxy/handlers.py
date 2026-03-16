@@ -1,16 +1,28 @@
+from hashlib import sha256
 from random import randint
 from typing import Any, cast
 
-from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
+from ._globals import BANNER, BANNER_VERSION, PREFILL, PROXY_URL, THINK
 from .commands import CommandError, CommandExit
 from .logging import xlog
 from .models import JaiMessage, JaiRequest, JaiResult
-from .providers import cerebras_generate_content, gemini_generate_content
+from .providers.cerebras import cerebras_generate_content
+from .providers.gemini import gemini_generate_content
+from .providers.gemini_cli import gemini_cli_generate_content
 from .statistics import track_stats
 from .utils import ResponseHelper
 from .xuiduser import XUID, UserSettings
 
 ################################################################################
+
+
+GFJPROXY_GEMINI_CLI_API_KEY_LEN = (
+    len("gfjproxy.gemini_cli")  # prefix
+    + 1  # dot
+    + (4 * len(PROXY_URL) + 2) // 3  # base64 of PROXY_URL
+    + 1  # dot
+    + +(4 * sha256().digest_size + 2) // 3  # base64 of HMAC
+)
 
 
 def _handle_request(
@@ -23,6 +35,7 @@ def _handle_request(
     api_key_patterns = [
         (39, "AIza", "google"),
         (52, "csk-", "cerebras"),
+        (GFJPROXY_GEMINI_CLI_API_KEY_LEN, "gfjproxy.gemini_cli.", "gemini_cli"),
     ]
 
     for length, prefix, provider in api_key_patterns:
@@ -58,6 +71,8 @@ def _handle_request(
             return cerebras_generate_content(user, api_key, model, messages, settings)
         case "google":
             return gemini_generate_content(user, api_key, model, messages, settings)
+        case "gemini_cli":
+            return gemini_cli_generate_content(user, api_key, model, messages, settings)
         case _:
             return JaiResult(500, f"This proxy does not support {provider}")
 
