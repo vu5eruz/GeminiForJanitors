@@ -1,6 +1,7 @@
 """Utilities."""
 
 import atexit
+import base64
 import json
 import re
 import subprocess
@@ -268,6 +269,27 @@ def _runner(cloudflared: str):
 def run_cloudflared(cloudflared: str):
     runner_thread = threading.Thread(target=_runner, args=(cloudflared,), daemon=True)
     runner_thread.start()
+
+
+################################################################################
+
+
+def base64url_encode(input: str | bytes) -> str:
+    if isinstance(input, str):
+        input = input.encode("utf-8")
+
+    return base64.urlsafe_b64encode(input).decode("ascii").rstrip("=")
+
+
+def base64url_decode(input: str | bytes) -> bytes:
+    if isinstance(input, str):
+        input = input.encode("utf-8")
+
+    padding = len(input) % 4
+    if padding > 0 and not input.endswith(b"="):
+        input += b"=" * (4 - padding)
+
+    return base64.urlsafe_b64decode(input)
 
 
 ################################################################################

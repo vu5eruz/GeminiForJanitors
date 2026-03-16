@@ -3,115 +3,118 @@
 *,
 ::before,
 ::after {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html {
-    font-family:
-        system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
-        "Apple Color Emoji", "Segoe UI Emoji";
-    font-size: 16px;
-    line-height: 1.2;
-    tab-size: 4;
-    -webkit-text-size-adjust: 100%;
+  font-family:
+    system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 16px;
+  line-height: 1.2;
+  tab-size: 4;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-    background: #313338;
-    color: #c7bfbf;
-    margin: 2em auto;
-    max-width: 1000px;
-    padding: 1em;
-    hyphens: auto;
-    -ms-hyphens: auto;
-    -webkit-hyphens: auto;
+  background: #313338;
+  color: #c7bfbf;
+  margin: 2em auto;
+  max-width: 1000px;
+  padding: 1em;
+  hyphens: auto;
+  -ms-hyphens: auto;
+  -webkit-hyphens: auto;
 }
 
 h1,
 h2,
 h3 {
-    color: #f5f5f5;
+  color: #f5f5f5;
 }
 
 b,
 strong {
-    font-weight: bolder;
+  font-weight: bolder;
 }
 
 img {
-    max-width: 100%;
+  max-width: 100%;
 }
 
 a {
-    color: #c09ff8;
-    text-decoration: none;
+  color: #c09ff8;
+  text-decoration: none;
+}
+
+hr {
+  width: 100%;
 }
 
 code,
 kbd,
 samp,
 pre {
-    font-family:
-        ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo,
-        monospace;
-    font-size: 1em;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+  font-family:
+    ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 1em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 small {
-    font-size: 80%;
+  font-size: 80%;
 }
 
 sub,
 sup {
-    font-size: 75%;
-    line-height: 0;
-    position: relative;
-    vertical-align: baseline;
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
 }
 
 sub {
-    bottom: -0.25em;
+  bottom: -0.25em;
 }
 
 sup {
-    top: -0.5em;
+  top: -0.5em;
 }
 
 table {
-    border-collapse: collapse;
-    margin: auto;
-    color: #f5f5f5;
+  border-collapse: collapse;
+  margin: auto;
+  color: #f5f5f5;
 }
 
 th,
 td {
-    padding: 0.75em 1em;
-    text-align: left;
+  padding: 0.75em 1em;
+  text-align: left;
 }
 
 th {
-    font-weight: normal;
-    font-size: 110%;
+  font-weight: normal;
+  font-size: 110%;
 }
 
 td {
-    border-left: 1px solid #444;
+  border-left: 1px solid #444;
 }
 
 th[scope="col"] {
-    text-align: center;
-    border-bottom: 1px solid #444;
+  text-align: center;
+  border-bottom: 1px solid #444;
 }
 
 th[scope="row"],
 td {
-    text-align: right;
+  text-align: right;
 }
 
 tbody tr:hover {
-    background-color: #42454a;
+  background-color: #42454a;
 }
 
 button,
@@ -119,79 +122,210 @@ input,
 optgroup,
 select,
 textarea {
-    font-family: inherit;
-    font-size: 100%;
-    line-height: 1.2;
-    margin: 0;
+  font-family: inherit;
+  font-size: 100%;
+  line-height: 1.2;
+  margin: 0;
+}
+
+input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  margin: 0;
 }
 
 legend {
-    padding: 0;
+  padding: 0;
 }
 
 progress {
-    vertical-align: baseline;
+  vertical-align: baseline;
 }
 
 summary {
-    display: list-item;
+  display: list-item;
 }
 
 canvas {
-    background: #313338;
+  background: #313338;
 }
 
 .chart-container {
-    width: 80%;
-    margin: 20px auto;
+  width: 80%;
+  margin: 20px auto;
 }
 
 table.health {
-    margin: 0;
+  margin: 0;
 }
 
 table.health th,
 table.health td {
-    padding: 0.25em 0.5em;
+  padding: 0.25em 0.5em;
 }
 
 table.health th {
-    color: deepskyblue;
-    text-align: right;
+  color: deepskyblue;
+  text-align: right;
 }
 
 table.health td {
-    border-left: none;
-    color: lightblue;
-    text-align: left;
+  border-left: none;
+  color: lightblue;
+  text-align: left;
 }
 
 .stats-hierarchy {
-    max-width: 500px;
-    margin: auto;
+  max-width: 500px;
+  margin: auto;
 }
 
 .stats-hierarchy dl {
-    margin: 0;
+  margin: 0;
 }
 
 .stats-row {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 1px dotted #888; /* Optional: adds a leader line */
-    margin-bottom: 0.5em;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dotted #888; /* Optional: adds a leader line */
+  margin-bottom: 0.5em;
 }
 
 .stats-hierarchy dt {
-    font-weight: normal;
-    font-size: 110%;
+  font-weight: normal;
+  font-size: 110%;
 }
 
 .stats-hierarchy dd {
-    margin: 0;
-    font-weight: bold;
+  margin: 0;
+  font-weight: bold;
 }
 
 .stats-hierarchy dl dl {
-    padding-left: 20px;
+  padding-left: 20px;
+}
+
+.hidden\! {
+  display: none !important;
+}
+
+.gap-1-25 {
+  gap: 1.25rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.75rem;
+  background: #26282d;
+  padding: 1.25rem 1rem;
+  border-radius: 1rem;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.form-group {
+  border: none;
+}
+
+.form-group legend {
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: #f5f5f5;
+}
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-wrapper label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+textarea {
+  background: #21242e;
+  color: #f0f0f0;
+  width: 100%;
+  padding: 0.75rem;
+  border: 3px solid #805ad533;
+  border-radius: 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 120px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+textarea:focus {
+  outline: none;
+  background: #24283a;
+  border-color: #805ad566;
+}
+
+.submit-btn {
+  color: #f5f5f5;
+  background: #bf5ad51a;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.4rem;
+  border: 2px solid #805ad5;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.submit-btn:hover {
+  background: #bf5ad533;
+  border-color: #805ad5bf;
+}
+
+.submit-btn:disabled {
+  color: #c7bfbf;
+  background: #bf5ad50f;
+  border-color: #805ad52f;
+}
+
+/* Based on https://uiverse.io/Yaya12085/rude-mouse-79 */
+.radio-inputs {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  border-radius: 0.5rem;
+  background-color: #1a1e21;
+  padding: 0.5rem;
+  font-size: 14px;
+}
+
+.radio-inputs .radio {
+  color: #f5f5f5;
+  background: #bf5ad51a;
+  font-weight: 600;
+  flex: 1 1 auto;
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 0.4rem;
+  border: 2px solid #805ad5aa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.radio-inputs .radio:has(input:checked) {
+  background: #bf5ad53a;
+  border-color: #805ad5a8;
+}
+
+.radio-inputs .radio input {
+  display: none;
 }

@@ -142,14 +142,29 @@ class UserStorage:
         """Unlocks the storage and allow future access."""
         raise NotImplementedError("UserStorage.unlock")
 
+    def keyring_get(self, key: str) -> str | None:
+        """Gets raw data from the keyring.
+        Returns None if the key is not present on the keyring."""
+        raise NotImplementedError("UserStorage.keyring_get")
+
+    def keyring_put(self, key: str, data: str):
+        """Puts raw data into the keyring, overwriting any old data."""
+        raise NotImplementedError("UserStorage.keyring_put")
+
+    def keyring_rem(self, key: str):
+        """Removes and key and its raw data from the keyring.
+        Raises a KeyError if the key is not present on the keyring."""
+        raise NotImplementedError("UserStorage.keyring_rem")
+
 
 class LocalUserStorage(UserStorage):
     """Implements a non-persistent in-memory user storage."""
 
     def __init__(self):
         self._announcement = ""
-        self._storage: dict[XUID, dict] = dict()
-        self._locks: dict[str, _threading_Lock] = dict()
+        self._storage: dict[XUID, dict] = {}
+        self._keyring: dict[str, str] = {}
+        self._locks: dict[str, _threading_Lock] = {}
 
     def active(self) -> bool:
         return True
@@ -188,6 +203,15 @@ class LocalUserStorage(UserStorage):
     def unlock(self, xuid: XUID):
         if lock := self._locks.pop(xuid.lockid(), None):
             lock.release()
+
+    def keyring_get(self, key: str) -> str | None:
+        return self._keyring.get(key)
+
+    def keyring_put(self, key: str, data: str):
+        self._keyring[key] = data
+
+    def keyring_rem(self, key: str):
+        del self._keyring[key]
 
 
 class RedisUserStorage(UserStorage):
@@ -251,6 +275,18 @@ class RedisUserStorage(UserStorage):
                 lock.release()
             except redis.exceptions.LockNotOwnedError:
                 pass
+
+    def keyring_get(self, key: str) -> str | None:
+        data = self._client.get(f"keyring:{key}")
+        if isinstance(data, bytes):
+            return data.decode("utf-8")
+
+    def keyring_put(self, key: str, data: str):
+        self._client.set(f"keyring:{key}", data.encode("utf-8"))
+
+    def keyring_rem(self, key: str):
+        if self._client.delete(f"keyring:{key}") == 0:
+            raise KeyError(f"keyring:{key}")
 
 
 ################################################################################

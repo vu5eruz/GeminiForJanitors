@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="apple-mobile-web-app-title" content="{{ title }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <link rel="stylesheet" href="/static/index.css" />
+    <title>{{ title }}</title>
+  </head>
+  <body>
+    <h1>{{ title }}</h1>
+    <a href="{{ url }}">{{ url }}</a>
+    <form id="api-form" class="card gap-1-25">
+      <fieldset class="form-group">
+        <legend>Input your service credentials</legend>
+        <div class="input-wrapper">
+          <label for="creds">Raw JSON data:</label>
+          <textarea
+            id="creds"
+            name="creds"
+            rows="8"
+            placeholder="{{ placeholder }}"
+            spellcheck="false"
+            required
+          ></textarea>
+        </div>
+      </fieldset>
+      <fieldset class="form-group">
+        <legend>What service are these credentials for?</legend>
+        <div class="radio-inputs">
+          <label class="radio">
+            <input type="radio" name="api" checked="" />
+            <span class="radio-name">Alpha</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="api" />
+            <span class="radio-name">Beta</span>
+          </label>
+        </div>
+      </fieldset>
+      <hr />
+      <fieldset class="form-group">
+        <button id="submit" type="submit" class="submit-btn">Create API Key</button>
+      </fieldset>
+    </form>
+    <div id="api-result" class="card hidden!">
+      <p id="api-result-message">Your API key is:</p>
+      <pre id="api-result-data">undefined</pre>
+      <p id="api-result-extras">
+        This API key is unique to this proxy (<a href="{{ url }}">{{ url }}</a>) and will not work
+        on others. If you switch to another proxy, you will have to create a new API key for it.
+      </p>
+    </div>
+    <script>
+      const formElement = document.getElementById("api-form");
+      const submitButtonElement = document.getElementById("submit");
+      const resultElement = document.getElementById("api-result");
+
+      formElement.onsubmit = (event) => {
+        event.preventDefault();
+
+        submitButtonElement.disabled = true;
+        resultElement.classList.add("hidden!");
+
+        setTimeout(() => {
+          submitButtonElement.disabled = false;
+          resultElement.classList.remove("hidden!");
+        }, 1500);
+      };
+    </script>
+  </body>
+</html>
