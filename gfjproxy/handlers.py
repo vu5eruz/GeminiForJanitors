@@ -113,7 +113,9 @@ def handle_proxy_test(
         )
 
     track_stats("r.test.succeeded")
-    return response.add_message(result.text)
+    return response.add_message(
+        "TEST"  # Don't send result.text in case it isn't perfect a "TEST" string
+    )
 
 
 def handle_chat_message(

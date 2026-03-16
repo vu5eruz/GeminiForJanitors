@@ -1,6 +1,6 @@
 from typing import Any
 
-from httpx import ReadTimeout
+import httpx
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
@@ -39,41 +39,35 @@ def cerebras_generate_content(
         cerebras_response = http_client.post(
             "https://api.cerebras.ai/v1/chat/completions",
             json=cerebras_request,
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"Authorization": f"Bearer {api_key.removeprefix('cerebras/')}"},
             timeout=PROCESS_TIMEOUT,
         )
-    except ReadTimeout:
+        cerebras_response.raise_for_status()
+        cerebras_result = cerebras_response.json()
+    except httpx.TimeoutException:
         track_stats("cerebras.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except Exception as e:
-        xlog(user, repr(e))
-        track_stats("cerebras.failed.unknown.exception")
-        return JaiResult(502, "Unhanded exception from Cerebras Inference.")
+    except httpx.HTTPStatusError as e:
+        message = "Error from Cerebras"
 
-    cerebras_result: dict[str, Any] = {}
-    if cerebras_response.headers.get("content-type", "").startswith("application/json"):
-        cerebras_result = cerebras_response.json()
+        if error := e.response.json().get("error"):
+            if error_code := error.get("code"):
+                message += f" ({error_code})"
+            if error_message := error.get("message"):
+                message += f": {error_message}"
 
-    if not cerebras_response.is_success:
-        xlog(
-            user,
-            " ".join(
-                [
-                    str(cerebras_response.status_code),
-                    cerebras_response.reason_phrase,
-                    repr(cerebras_result),
-                ]
-            ),
-        )
-
-        if cerebras_response.is_client_error:
-            track_stats("cerebras.failed.client.unknown")
-        elif cerebras_response.is_server_error:
-            track_stats("cerebras.failed.server.unknown")
+        if e.response.is_client_error:
+            track_stats("cerebras.failed.client")
+        elif e.response.is_server_error:
+            track_stats("cerebras.failed.server")
         else:
             track_stats("cerebras.failed.unknown")
 
-        return JaiResult(cerebras_response.status_code, cerebras_response.reason_phrase)
+        return JaiResult(e.response.status_code, message)
+    except Exception as e:
+        xlog(user, repr(e))
+        track_stats("cerebras.failed.exception")
+        return JaiResult(502, "Unhanded exception from Cerebras.")
 
     text = ""
     extras = ""
