@@ -9,6 +9,7 @@ from .models import JaiMessage, JaiRequest, JaiResult
 from .providers.cerebras import cerebras_generate_content
 from .providers.gemini import gemini_generate_content
 from .providers.gemini_cli import gemini_cli_generate_content
+from .providers.z_ai import z_ai_generate_content
 from .statistics import track_stats
 from .utils import ResponseHelper
 from .xuiduser import XUID, UserSettings
@@ -35,6 +36,7 @@ def _handle_request(
     api_key_patterns = [
         (39, "AIza", "google"),
         (52, "csk-", "cerebras"),
+        (54, "z_ai/", "z_ai"),
         (GFJPROXY_GEMINI_CLI_API_KEY_LEN, "gfjproxy.gemini_cli.", "gemini_cli"),
     ]
 
@@ -61,6 +63,7 @@ def _handle_request(
                     f"- A `{provider}` API key starts with `{prefix}` and is `{length}` characters long."
                     for length, prefix, provider in api_key_patterns
                 )
+                + "\nIf your API key works on non-GeminiForJanitors proxies, please report this issue to the Gemini Proxy guide. (Don't post your full API keys online!)"
             ),
         )
 
@@ -69,10 +72,12 @@ def _handle_request(
     match provider:
         case "cerebras":
             return cerebras_generate_content(user, api_key, model, messages, settings)
-        case "google":
-            return gemini_generate_content(user, api_key, model, messages, settings)
         case "gemini_cli":
             return gemini_cli_generate_content(user, api_key, model, messages, settings)
+        case "google":
+            return gemini_generate_content(user, api_key, model, messages, settings)
+        case "z_ai":
+            return z_ai_generate_content(user, api_key, model, messages, settings)
         case _:
             return JaiResult(500, f"This proxy does not support {provider}")
 
