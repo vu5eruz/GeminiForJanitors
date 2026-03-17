@@ -41,7 +41,7 @@ def z_ai_generate_content(
         z_ai_response = http_client.post(
             "https://api.z.ai/api/paas/v4/chat/completions",
             json=z_ai_request,
-            headers={"Authorization": f"Bearer {api_key.removeprefix('z_ai/')}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             timeout=PROCESS_TIMEOUT,
         )
         z_ai_response.raise_for_status()

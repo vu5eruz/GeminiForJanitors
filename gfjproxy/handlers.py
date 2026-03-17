@@ -1,8 +1,7 @@
-from hashlib import sha256
 from random import randint
 from typing import Any, cast
 
-from ._globals import BANNER, BANNER_VERSION, PREFILL, PROXY_URL, THINK
+from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError, CommandExit
 from .logging import xlog
 from .models import JaiMessage, JaiRequest, JaiResult
@@ -16,14 +15,40 @@ from .xuiduser import XUID, UserSettings
 
 ################################################################################
 
+API_KEY_PREFIXES = {
+    "AIza": "google",
+    "csk-": "cerebras",
+    "sk-ant-": "anthropic",
+    "sk-or-v1-": "openrouter",
+    "sk-proj-": "openai",
+    "gfjproxy.gemini_cli.": "gemini_cli",
+}
 
-GFJPROXY_GEMINI_CLI_API_KEY_LEN = (
-    len("gfjproxy.gemini_cli")  # prefix
-    + 1  # dot
-    + (4 * len(PROXY_URL) + 2) // 3  # base64 of PROXY_URL
-    + 1  # dot
-    + +(4 * sha256().digest_size + 2) // 3  # base64 of HMAC
-)
+PROVIDER_FUNCS = {
+    "cerebras": cerebras_generate_content,
+    "gemini_cli": gemini_cli_generate_content,
+    "google": gemini_generate_content,
+    "z_ai": z_ai_generate_content,
+}
+
+
+def _resolve_provider(api_key: str) -> tuple[str | None, str]:
+    """Resolves which provider an API key belongs to.
+
+    Returns:
+        provider (str | None): The provider's name if any.
+        api_key (str): The cleaned up API key.
+    """
+    api_key_split = api_key.split("/", maxsplit=1)
+    if len(api_key_split) == 2:  # "provider/api_key" syntax
+        return api_key_split[0].lower(), api_key_split[1]
+
+    # The API key is plain and needs to be pattern matched
+    for prefix, provider in API_KEY_PREFIXES.items():
+        if api_key.startswith(prefix):
+            return provider, api_key
+
+    return None, api_key
 
 
 def _handle_request(
@@ -33,53 +58,49 @@ def _handle_request(
     messages: list[JaiMessage],
     settings: dict[str, Any] = {},
 ) -> JaiResult:
-    api_key_patterns = [
-        (39, "AIza", "google"),
-        (52, "csk-", "cerebras"),
-        (54, "z_ai/", "z_ai"),
-        (GFJPROXY_GEMINI_CLI_API_KEY_LEN, "gfjproxy.gemini_cli.", "gemini_cli"),
-    ]
-
-    for length, prefix, provider in api_key_patterns:
-        if len(api_key) == length and api_key.startswith(prefix):
-            if model := models.get(provider):
-                break
-            return JaiResult(
-                400,
-                f"Missing model for {provider}",
-                extras=(
-                    f"You have a `{provider}` API key but you didn't specify a model for it.\n"
-                    + "Make sure to use OpenRouter syntax `provider/model`.\n"
-                    + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
-                ),
-            )
-    else:
+    """Dispatch a JaiRequest request to the appropriate providen given the API key."""
+    provider_name, api_key = _resolve_provider(api_key)
+    if not provider_name:
         return JaiResult(
             400,
             "The proxy couldn't recognize an API key.",
             extras=(
-                f"Your API key `{api_key}` didn't match any of the following:\n"
-                + "\n".join(
-                    f"- A `{provider}` API key starts with `{prefix}` and is `{length}` characters long."
-                    for length, prefix, provider in api_key_patterns
-                )
-                + "\nIf your API key works on non-GeminiForJanitors proxies, please report this issue to the Gemini Proxy guide. (Don't post your full API keys online!)"
+                f"Your API key `{api_key}` didn't match any of the proxy's prefixes.\n"
+                + "You should specify the provider at the start of your API key. For example:\n"
+                + "- If the key is for Cerebras, add `cerebras/` at the start of it.\n"
+                + "- If the key is for Google AI or Vertex AI, add `google/` at the start of it.\n"
+                + "- If the key is for Z.AI, add `z_ai/` at the start of it.\n"
+                # No mention of Gemini CLI since support is WIP and its API key always resolve
             ),
         )
 
-    xlog(user, f"Using {provider}/{model}")
+    provider_func = PROVIDER_FUNCS.get(provider_name)
+    if not provider_func:
+        return JaiResult(
+            500,
+            f"You have a `{provider_name}` API key but this proxy does not support it.",
+        )
 
-    match provider:
-        case "cerebras":
-            return cerebras_generate_content(user, api_key, model, messages, settings)
-        case "gemini_cli":
-            return gemini_cli_generate_content(user, api_key, model, messages, settings)
-        case "google":
-            return gemini_generate_content(user, api_key, model, messages, settings)
-        case "z_ai":
-            return z_ai_generate_content(user, api_key, model, messages, settings)
-        case _:
-            return JaiResult(500, f"This proxy does not support {provider}")
+    model = models.get(provider_name)
+    if not model:
+        extras = (
+            f"You have a `{provider_name}` API key but you didn't specify a model for it.\n"
+            + "Make sure to use OpenRouter syntax `provider/model`.\n"
+            + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
+        )
+
+        if provider_name == "openrouter":
+            pass
+
+        return JaiResult(
+            400,
+            f"Missing model for {provider_name}",
+            extras=extras,
+        )
+
+    xlog(user, f"Using {provider_name}/{model}")
+
+    return provider_func(user, api_key, model, messages, settings)
 
 
 ################################################################################
