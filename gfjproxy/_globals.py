@@ -118,86 +118,49 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 25
+BANNER_VERSION = 26
 
 BANNER = rf"""***
-# {PROXY_NAME} ({PROXY_VERSION})
+# **{PROXY_NAME}** ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-The proxy is being updated with major new features! Please report any bugs or strange errors to the Gemini Proxy Guide.
-
-Support for Gemini CLI API keys is being worked on, providing free gemini-3-pro-preview usage per Google Account. Contact `@undefined_anon` on Discord if you have a desktop PC and want to try out this beta feature.
-
-Support for Cerebras and Z.AI is now available, you can now use models from other companies!
-- Cerebras offers `llama3.1-8b` and `qwen-3-235b-a22b-instruct-2507` for free.
-- Z.AI offers `GLM-4.5-Flash` and `GLM-4.7-Flash` for free.
-
-To use these models, you need to use OpenRouter syntax and separate them with commas. For example, if you want to use Gemini and Cerebras models, put `gemini-3-flash-preview, cerebras/llama3.1-8b` into your proxy settings Model Name.
-
-Next, add your API keys as usual and separate them with commas. **Note for Z.AI**: you need add `z_ai/` at the start of your API key for it to be recognized, e.g.: `AIza..., z_ai/..., csk-...`.
-
-**Note**: commands such as `//prefill` or `//ooctrick` might not be effective on other models.
-
-All of this is work in progress, please report any issues!
+This proxy is hosted by volunteers, bound to Render's monthly 100 GB bandwidth quota.
+Go to `https://gfjproxies.vu5eruz.workers.dev/` for a list of URLs you can use.
+Make sure to use URLs with low `bandwidth` usage!
 
 ***
 
-## Commands
+## **Features**
 
-You can include one or more commands in your messages, separated by spaces. You can turn on some commands and they will apply across all messages in all chats. Some commands can be called with `this` to make them only apply to the next message. Preset commands need to be called every time you want to use them.
+You can use commands and set jailbreaks in your chat. Send a message with `//help commands` for more info.
 
-- `//aboutme`
-  Shows you info about your proxy usage and what commands you have turned on or off.
+You can use multiple API keys and automatically switch between them. Send a message with `//help multikey` for more info.
 
-- `//banner`
-  Shows you this banner, regardless of whether you have seen it before or if you use the `/quiet/` URL.
+You can use models from different companies: Cerebras, Google, OpenRouter and Z.AI. Send a message with `//help providers` for more info.
 
-- `//advsettings on|off|this`
-  Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing. *Note:* Top K/P may have no effect.
+You can see proxy statistics and find out if there are more errors than usual. Open `{PROXY_URL}/stats` to find out.
 
-- `//ooctrick on|off|this`
-  Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.
-
-- `//prefill on|off|this`
-  Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
-
-- `//search on|off|this`
-  Enables the use of Google Search, allowing the model to look up any information relevant to the chat.
-
-- `//think on|off|this`
-  Tricks Gemini into doing its thinking inside the response to bypass content filters. *Note:* this might cause ᐸthinkᐳ/ᐸresponseᐳ to leak into the bot's messages.
-
-- `//think_text keep|remove`
-  Configures the proxy to either include the model's thinking in the response or remove it entirely.
-
-- `//nobot on|off|this`
-  Removes the bot's description from the chat, in case it contains ToS-breaking content. *Note:* use this only as a last resort. This will negatively impact your chat.
-
-- `//preset gigakostyl`
-  Adds a simple writing guideline for NSFW roleplay, plus "X-ray views" to sex scenes.
-
-- `//preset minipopka`
-  Adds a longer writing guideline to enhance narration and NSFW roleplay.
-
-- `//dice_roll [count]d(faces)[(p|m)(extra)]`
-- `//dice_char on|off|this`
-- `//dice_help`
-  Rolls dices using proxy-provided random numbers. See `//dice_help` for more info.
+You should only see this banner if you are a new user or if there is an update. Send a message with `//banner` to see this banner again. Change your proxy URL to `{PROXY_URL}/quiet/` to disable it.
 
 ***
 
-## Extras
+## **Updates**
 
-You can use more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
+### March 16, 2026
 
-You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `{PROXY_URL}/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
+● Added support for different providers! You can now use models from other companies!
 
-***
+● Added support for **Cerebras**! Its API keys start with `csk-` and to use a model you need to add `cerebras/` at the start: `cerebras/llama3.1-8b`
 
-This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
+● Added support for **Z.AI**! You must add `z_ai/` at the start of its API keys and to use a model you need to add `z_ai/` at the start: `z_ai/glm-4.7-flash`
 
-Check out `https://gfjproxies.vu5eruz.workers.dev/` for a list of alternative proxies you can use. Choose proxies with low `bandwidth` usage.
+● Added support for **Gemini CLI**! It has `gemini-3-pro-preview` for free! **You need a desktop PC** to obtain OAuth credentials and create an API key. Contact `@undefined_anon` on Discord for more info.
 
-Feel free to reroll or edit this message to remove this banner."""
+### March 17, 2026
+
+● The banner was been rewritten! Hopefully you will all find it easier to read.
+
+● Added support for **OpenRouter**! Its API keys start with `sk-or-v1-` and to use a model you need to write it in full: `openrouter/stepfun/step-3.5-flash:free`
+"""
 
 ################################################################################
