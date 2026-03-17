@@ -4,7 +4,7 @@ from typing import Any, cast
 from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
 from .commands import CommandError, CommandExit
 from .logging import xlog
-from .models import JaiMessage, JaiRequest, JaiResult
+from .models import JaiMessage, JaiRequest, JaiResult, JaiResultMetadata
 from .providers.cerebras import cerebras_generate_content
 from .providers.gemini import gemini_generate_content
 from .providers.gemini_cli import gemini_cli_generate_content
@@ -75,6 +75,7 @@ def _handle_request(
                 + "- If the key is for OpenRouter, add `openrouter/` at the start of it.\n"
                 # No mention of Gemini CLI since support is WIP and its API key always resolve
             ),
+            metadata=JaiResultMetadata(api_key_valid=False),
         )
 
     provider_func = PROVIDER_FUNCS.get(provider_name)
