@@ -8,6 +8,7 @@ from .models import JaiMessage, JaiRequest, JaiResult
 from .providers.cerebras import cerebras_generate_content
 from .providers.gemini import gemini_generate_content
 from .providers.gemini_cli import gemini_cli_generate_content
+from .providers.openrouter import openrouter_generate_content
 from .providers.z_ai import z_ai_generate_content
 from .statistics import track_stats
 from .utils import ResponseHelper
@@ -28,6 +29,7 @@ PROVIDER_FUNCS = {
     "cerebras": cerebras_generate_content,
     "gemini_cli": gemini_cli_generate_content,
     "google": gemini_generate_content,
+    "openrouter": openrouter_generate_content,
     "z_ai": z_ai_generate_content,
 }
 
@@ -70,6 +72,7 @@ def _handle_request(
                 + "- If the key is for Cerebras, add `cerebras/` at the start of it.\n"
                 + "- If the key is for Google AI or Vertex AI, add `google/` at the start of it.\n"
                 + "- If the key is for Z.AI, add `z_ai/` at the start of it.\n"
+                + "- If the key is for OpenRouter, add `openrouter/` at the start of it.\n"
                 # No mention of Gemini CLI since support is WIP and its API key always resolve
             ),
         )
@@ -85,12 +88,12 @@ def _handle_request(
     if not model:
         extras = (
             f"You have a `{provider_name}` API key but you didn't specify a model for it.\n"
-            + "Make sure to use OpenRouter syntax `provider/model`.\n"
+            + "Make sure to use OpenRouter model syntax `provider/model`.\n"
             + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
         )
 
         if provider_name == "openrouter":
-            pass
+            extras += "\n**Note For OpenRouter API keys**: use an extended model name: `openrouter/anthropic/claude-3.5-sonnet`, `openrouter/meta-llama/llama-3.1-405b`, etc."
 
         return JaiResult(
             400,
