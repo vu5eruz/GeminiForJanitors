@@ -25,7 +25,7 @@ class BandwidthUsage:
         return self.total >= 0
 
 
-def _query_bandwidth_usage() -> BandwidthUsage:
+def _query_bandwidth_usage() -> BandwidthUsage | None:
     if not RENDER_API_KEY or not RENDER_SERVICE_ID:
         total = perf_counter() - START_TIME
         xlog(None, f"Bandwidth: using mock total {total:.2f} MiB")
@@ -43,18 +43,22 @@ def _query_bandwidth_usage() -> BandwidthUsage:
         microsecond=0,
     )
 
-    response = http_client.get(
-        "https://api.render.com/v1/metrics/bandwidth",
-        params={
-            "resource": RENDER_SERVICE_ID,
-            "endTime": end_time.isoformat() + "Z",
-            "startTime": start_time.isoformat() + "Z",
-        },
-        headers={
-            "Accept": "application/json",
-            "Authorization": f"Bearer {RENDER_API_KEY}",
-        },
-    )
+    try:
+        response = http_client.get(
+            "https://api.render.com/v1/metrics/bandwidth",
+            params={
+                "resource": RENDER_SERVICE_ID,
+                "endTime": end_time.isoformat() + "Z",
+                "startTime": start_time.isoformat() + "Z",
+            },
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {RENDER_API_KEY}",
+            },
+        )
+    except Exception as e:
+        xlog(None, f"Bandwidth: exception: {e}")
+        return None
 
     xlog(
         None,
