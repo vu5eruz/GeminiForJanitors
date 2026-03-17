@@ -26,8 +26,6 @@ def z_ai_generate_content(
     z_ai_request = {
         "model": model,
         "stream": False,
-        "temperature": settings.get("temperature"),
-        "top_p": settings.get("top_p"),
         "messages": [
             {
                 "content": message.content,
@@ -36,6 +34,12 @@ def z_ai_generate_content(
             for message in messages
         ],
     }
+
+    for key, value in settings.items():
+        if key == "temperature":
+            z_ai_request["temperature"] = value
+        elif key == "top_p":
+            z_ai_request["top_p"] = value
 
     try:
         z_ai_response = http_client.post(
@@ -77,9 +81,16 @@ def z_ai_generate_content(
     extras = ""
     metadata = JaiResultMetadata()
 
-    if choices := z_ai_result.get("choices"):
-        if isinstance(choices[0], dict) and (message := choices[0].get("message")):
-            text = message.get("content")
+    message = {}
+
+    if (
+        isinstance(z_ai_result, dict)
+        and isinstance(choices := z_ai_result.get("choices"), list)
+        and len(choices) > 0
+        and isinstance(choices[0], dict)
+        and isinstance(message := choices[0].get("message"), dict)
+    ):
+        text = message.get("content", "")
 
     if usage := z_ai_result.get("usage"):
         metadata.token_usage = JaiResultTokenUsage(
@@ -90,6 +101,14 @@ def z_ai_generate_content(
             ),
             total_tokens=usage.get("total_tokens"),
         )
+
+    if not text and isinstance(message, dict):
+        # The `//think on` jailbreak seems to make Z.AI models spill
+        # the response into "reasoning_content" instead of "content".
+        # Hopefully handlers.py can handle this down the line.
+        text = message.get("reasoning_content", "")
+        if "<response>" not in text and "</response>" not in text:
+            extras = "Z.AI returned anomalous response. The `//think` command might cause this."
 
     if not text:
         # Rejection?
