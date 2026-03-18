@@ -19,7 +19,7 @@
       <fieldset class="form-group">
         <legend>Input your Gemini CLI credentials</legend>
         <div class="input-wrapper">
-          <label for="creds">Raw JSON data:</label>
+          <label for="creds">Raw JSON data (values can be in any order):</label>
           <textarea
             id="creds"
             name="creds"
@@ -45,6 +45,7 @@
     </div>
     <div id="api-error" class="card hidden!">
       <p id="api-error-message" style="color: #f86a6a">Error.</p>
+      <p id="api-error-extra" class="hidden!" style="color: #f86a6a">Error.</p>
     </div>
     <script>
       const formElement = document.getElementById("api-form");
@@ -54,6 +55,7 @@
       const resultDataElement = document.getElementById("api-result-data");
       const errorElement = document.getElementById("api-error");
       const errorMessageElement = document.getElementById("api-error-message");
+      const errorExtraElement = document.getElementById("api-error-extra");
 
       formElement.onsubmit = async (event) => {
         event.preventDefault();
@@ -76,6 +78,25 @@
 
           const result = await response.json();
           if (result.error !== undefined) {
+            if (result.extra !== undefined) {
+              if (result.extra.startsWith("Verify your account: ")) {
+                const url = result.extra.replace("Verify your account: ", "");
+                const anchor = document.createElement("a");
+                anchor.href = url;
+                anchor.style.wordBreak = "break-all";
+                anchor.textContent = url;
+
+                errorExtraElement.textContent = "Verify your account and try again:";
+                errorExtraElement.appendChild(document.createElement("br"));
+                errorExtraElement.appendChild(anchor);
+              } else {
+                errorExtraElement.textContent = result.extra;
+              }
+              errorExtraElement.classList.remove("hidden!");
+            } else {
+              errorExtraElement.classList.add("hidden!");
+            }
+
             throw new Error(result.error);
           }
 

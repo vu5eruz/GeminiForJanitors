@@ -140,7 +140,7 @@ class LoadProjectIdResult(Result[str, tuple[int, str]]):
 
 
 @dataclass(kw_only=True, slots=True, frozen=True)
-class GenerateContentExResult(Result[dict[str, Any], tuple[int, str]]):
+class GenerateContentExResult(Result[dict[str, Any], tuple[int, str, str]]):
     pass
 
 
@@ -175,7 +175,18 @@ def gemini_cli_refresh_credentials(
     except httpx.TimeoutException:
         return RefreshCredentialsResult.from_error((504, "Google OAuth timed out"))
     except httpx.HTTPStatusError as e:
+        error = {}
+        if e.response.headers.get("content-type", "").startswith("application/json"):
+            error = e.response.json()
+
         message = f"Refresh credentials error: {e.response.status_code} {e.response.reason_phrase}"
+
+        if isinstance(error, dict):
+            if error_type := error.get("error"):
+                message += f" ({error_type})"
+            if error_description := error.get("error_description"):
+                message += f": {error_description}"
+
         xlog(user, f"{message}\n{e.response.text!r}")
         return RefreshCredentialsResult.from_error((e.response.status_code, message))
     except httpx.RequestError as e:
@@ -297,29 +308,41 @@ def gemini_cli_generate_content_ex(
         resp.raise_for_status()
         resp_json = resp.json()
     except httpx.TimeoutException:
-        return GenerateContentExResult.from_error((504, "Google Cloud Code timed out"))
+        return GenerateContentExResult.from_error(
+            (504, "Google Cloud Code timed out", "")
+        )
     except httpx.HTTPStatusError as e:
         error_json = {}
         if e.response.headers.get("content-type", "").startswith("application/json"):
             error_json = e.response.json()
 
         message = f"Gemini CLI generate error: {e.response.status_code} {e.response.reason_phrase}"
+        extras = ""
 
         if isinstance((error := error_json.get("error")), dict):
-            if error_status := error.get("status", ""):
+            if error_status := error.get("status"):
                 message += f" ({error_status})"
-            if error_message := error.get("message", ""):
+            if error_message := error.get("message"):
                 message += f": {error_message}"
 
+            for detail in error.get("details", []):
+                reason = detail.get("reason")
+                metadata = detail.get("metadata", {})
+                if reason == "VALIDATION_REQUIRED":
+                    if validation_url := metadata.get("validation_url"):
+                        extras = f"Verify your account: {validation_url.strip()}"
+
         xlog(user, f"{message}\n{(error_json or e.response.text)!r}")
-        return GenerateContentExResult.from_error((e.response.status_code, message))
+        return GenerateContentExResult.from_error(
+            (e.response.status_code, message, extras)
+        )
     except httpx.RequestError as e:
         message = f"Gemini CLI generate network error: {e}"
         xlog(user, message)
-        return GenerateContentExResult.from_error((502, message))
+        return GenerateContentExResult.from_error((502, message, ""))
     except Exception as e:
         xlog(user, f"Gemini CLI generate unexpected error: {e!r}")
-        return GenerateContentExResult.from_error((500, "Unknown exception"))
+        return GenerateContentExResult.from_error((500, "Unknown exception", ""))
 
     xlogtime(user, "Gemini CLI generated!", ref_time)
 
@@ -390,9 +413,9 @@ def gemini_cli_generate_content(
         settings,
     )
     if not gcexr.success:
-        error_code, error_message = gcexr.error
+        error_code, error_message, error_extras = gcexr.error
         track_stats("g_cli.failed")
-        return JaiResult(error_code, error_message)
+        return JaiResult(error_code, error_message, extras=error_extras)
     result: dict[str, Any] = gcexr.value.get("response", {})
 
     text = ""

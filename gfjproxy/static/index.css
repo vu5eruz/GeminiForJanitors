@@ -48,6 +48,9 @@ a {
 }
 
 hr {
+  border-color: #181d1f;
+  border-style: solid;
+  border-width: 1px;
   width: 100%;
 }
 

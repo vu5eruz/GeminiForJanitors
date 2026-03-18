@@ -98,9 +98,10 @@ def api():
         {"temperature": 0},
     )
     if not gcexr.success:
-        error_code, error_message = gcexr.error
+        error_code, error_message, error_extra = gcexr.error
         xlog(None, f"Keyring processing failed: {error_code}: {error_message}")
-        return {"error": error_message}, error_code
+        return {"error": error_message, "extra": error_extra}, error_code
+
     text = (
         gcexr.value.get("response", {})
         .get("candidates", [{}])[0]
@@ -109,7 +110,7 @@ def api():
         .get("text")
     )
 
-    if text.strip().upper() != "HELLO":
+    if not text.strip().upper().startswith("HELLO"):
         error_code = 502
         error_message = f"Gemini CLI gave an unexpected response: {text!r}"
         xlog(None, f"Keyring processing failed: {error_code}: {error_message}")
