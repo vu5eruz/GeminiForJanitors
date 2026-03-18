@@ -251,6 +251,7 @@ table.health td {
 }
 
 textarea {
+  outline: none;
   background: #21242e;
   color: #f0f0f0;
   width: 100%;
@@ -261,13 +262,10 @@ textarea {
   font-size: 0.9rem;
   resize: vertical;
   min-height: 120px;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  transition: all 0.2s;
 }
 
 textarea:focus {
-  outline: none;
   background: #24283a;
   border-color: #805ad566;
 }
