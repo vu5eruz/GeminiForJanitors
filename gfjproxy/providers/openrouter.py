@@ -89,6 +89,16 @@ def openrouter_generate_content(
         track_stats("openrouter.failed.exception")
         return JaiResult(502, "Unhanded exception from OpenRouter.")
 
+    if isinstance(error := openrouter_result.json().get("error"), dict):
+        message = "Error from OpenRouter"
+        if error_code := error.get("code"):
+            message += f" ({error_code})"
+        if error_message := error.get("message"):
+            message += f": {error_message}"
+        xlog(user, f"Error despite successful status: {openrouter_result!r}")
+        track_stats("openrouter.failed.anomalous")
+        return JaiResult(502, message)
+
     text = ""
     metadata = JaiResultMetadata()
 
