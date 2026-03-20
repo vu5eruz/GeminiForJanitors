@@ -89,7 +89,7 @@ def openrouter_generate_content(
         track_stats("openrouter.failed.exception")
         return JaiResult(502, "Unhanded exception from OpenRouter.")
 
-    if isinstance(error := openrouter_result.json().get("error"), dict):
+    if isinstance(error := openrouter_result.get("error"), dict) and error:
         message = "Error from OpenRouter"
         if error_code := error.get("code"):
             message += f" ({error_code})"
