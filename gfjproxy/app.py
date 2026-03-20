@@ -96,9 +96,11 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
 
+    from .routes.keyring import keyring
     from .routes.proxy import proxy
     from .routes.system import system
 
+    app.register_blueprint(keyring)
     app.register_blueprint(proxy)
     app.register_blueprint(system)
 

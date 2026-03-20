@@ -6,16 +6,16 @@ Hashing an API key with a secret salt gives an unique user ID for program use.
 """
 
 import json
-from base64 import urlsafe_b64encode as _base64
-from hashlib import sha256 as _hash_fun  # Choice of hash function is arbitrary
-from hmac import digest as _hmac_digest
-from threading import Lock as _threading_Lock
-from time import time as _unix_time
+from hashlib import sha256
+from hmac import digest
+from threading import Lock
 
 import redis
 import redis.exceptions
 import redis.lock
 from colorama.ansi import Fore as _colorama_ansi_fore
+
+from .utils import base64url_encode, utctimestamp
 
 _color_palette = [
     # no black, it'd be unreadable on dark theme
@@ -53,16 +53,16 @@ class XUID:
       issues should a XUID be part of any collections with heterogeneous types.
       This is the intended behavior. XUIDs must be handled with utmost care."""
 
-    LEN_REPR = (4 * _hash_fun().digest_size + 2) // 3
-    LEN_STR = 8  # Arbitrary, could be made a global proxy settings
-    LEN_PRETTY = LEN_STR + 2  # Does not includes non-visible ANSI escape codes
+    LEN_REPR = (4 * sha256().digest_size + 2) // 3
+    LEN_STR = 8
+    LEN_PRETTY = LEN_STR + 2
 
     def __init__(self, user: str | bytes, salt: str | bytes):
         user = user.encode("utf-8") if isinstance(user, str) else user
         salt = salt.encode("utf-8") if isinstance(salt, str) else salt
 
-        self._xuid_raw = _hmac_digest(salt, user, _hash_fun)
-        self._xuid_str = _base64(self._xuid_raw).rstrip(b"=").decode("ascii")
+        self._xuid_raw = digest(salt, user, sha256)
+        self._xuid_str = base64url_encode(self._xuid_raw)
 
     def __hash__(self) -> int:
         return hash(self._xuid_raw)
@@ -142,14 +142,29 @@ class UserStorage:
         """Unlocks the storage and allow future access."""
         raise NotImplementedError("UserStorage.unlock")
 
+    def keyring_get(self, key: str) -> str | None:
+        """Gets raw data from the keyring.
+        Returns None if the key is not present on the keyring."""
+        raise NotImplementedError("UserStorage.keyring_get")
+
+    def keyring_put(self, key: str, data: str):
+        """Puts raw data into the keyring, overwriting any old data."""
+        raise NotImplementedError("UserStorage.keyring_put")
+
+    def keyring_rem(self, key: str):
+        """Removes and key and its raw data from the keyring.
+        Raises a KeyError if the key is not present on the keyring."""
+        raise NotImplementedError("UserStorage.keyring_rem")
+
 
 class LocalUserStorage(UserStorage):
     """Implements a non-persistent in-memory user storage."""
 
     def __init__(self):
         self._announcement = ""
-        self._storage: dict[XUID, dict] = dict()
-        self._locks: dict[str, _threading_Lock] = dict()
+        self._storage: dict[XUID, dict] = {}
+        self._keyring: dict[str, str] = {}
+        self._locks: dict[str, Lock] = {}
 
     def active(self) -> bool:
         return True
@@ -182,12 +197,21 @@ class LocalUserStorage(UserStorage):
     def lock(self, xuid: XUID) -> bool:
         lockid = xuid.lockid()
         if lockid not in self._locks:
-            self._locks[lockid] = _threading_Lock()
+            self._locks[lockid] = Lock()
         return self._locks[lockid].acquire(blocking=False)
 
     def unlock(self, xuid: XUID):
         if lock := self._locks.pop(xuid.lockid(), None):
             lock.release()
+
+    def keyring_get(self, key: str) -> str | None:
+        return self._keyring.get(key)
+
+    def keyring_put(self, key: str, data: str):
+        self._keyring[key] = data
+
+    def keyring_rem(self, key: str):
+        del self._keyring[key]
 
 
 class RedisUserStorage(UserStorage):
@@ -252,6 +276,18 @@ class RedisUserStorage(UserStorage):
             except redis.exceptions.LockNotOwnedError:
                 pass
 
+    def keyring_get(self, key: str) -> str | None:
+        data = self._client.get(f"keyring:{key}")
+        if isinstance(data, bytes):
+            return data.decode("utf-8")
+
+    def keyring_put(self, key: str, data: str):
+        self._client.set(f"keyring:{key}", data.encode("utf-8"))
+
+    def keyring_rem(self, key: str):
+        if self._client.delete(f"keyring:{key}") == 0:
+            raise KeyError(f"keyring:{key}")
+
 
 ################################################################################
 
@@ -270,7 +306,7 @@ class UserSettings:
         self._data, self._exists = self._storage.get(self._xuid)
 
         if not self._exists:
-            self._data["timestamp_first_seen"] = int(_unix_time())
+            self._data["timestamp_first_seen"] = int(utctimestamp())
 
         self._data["version"] = 1
 
@@ -366,7 +402,7 @@ class UserSettings:
 
     def last_seen(self) -> int | None:
         if seconds := self._data.get("timestamp_last_seen"):
-            return int(_unix_time() - seconds)
+            return int(utctimestamp() - seconds)
         return None
 
     def last_seen_msg(self) -> str:
@@ -375,7 +411,7 @@ class UserSettings:
         return "not seen before"
 
     def save(self):
-        self._data["timestamp_last_seen"] = int(_unix_time())
+        self._data["timestamp_last_seen"] = int(utctimestamp())
         self._storage.put(self._xuid, self._data)
 
     def do_show_banner(self, banner_version):

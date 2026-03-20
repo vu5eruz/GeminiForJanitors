@@ -1,6 +1,8 @@
 """Utilities."""
 
 import atexit
+import base64
+import datetime
 import json
 import re
 import subprocess
@@ -268,6 +270,62 @@ def _runner(cloudflared: str):
 def run_cloudflared(cloudflared: str):
     runner_thread = threading.Thread(target=_runner, args=(cloudflared,), daemon=True)
     runner_thread.start()
+
+
+################################################################################
+
+
+# https://github.com/googleapis/google-cloud-python/blob/b9466f9c85c94331ffc39e1da3cf98fb5ff7d612/packages/google-auth/google/auth/_helpers.py#L111
+def utcnow() -> datetime.datetime:
+    """Returns the current UTC datetime.
+
+    Returns:
+        datetime: The current time in UTC.
+    """
+    return datetime.datetime.now(datetime.UTC)
+
+
+# https://github.com/googleapis/google-cloud-python/blob/b9466f9c85c94331ffc39e1da3cf98fb5ff7d612/packages/google-auth/google/auth/_helpers.py#L127
+def utcfromtimestamp(timestamp: float) -> datetime.datetime:
+    """Returns the UTC datetime from a timestamp.
+
+    Args:
+        timestamp (float): The timestamp, in fractional seconds, to convert.
+
+    Returns:
+        datetime: The time in UTC.
+    """
+    return datetime.datetime.fromtimestamp(timestamp, tz=datetime.UTC)
+
+
+def utctimestamp() -> float:
+    """Returns the current UTC timestamp.
+
+    Returns:
+        float: The current time in UTC in fractional seconds.
+    """
+    return time.time()
+
+
+################################################################################
+
+
+def base64url_encode(input: str | bytes) -> str:
+    if isinstance(input, str):
+        input = input.encode("utf-8")
+
+    return base64.urlsafe_b64encode(input).decode("ascii").rstrip("=")
+
+
+def base64url_decode(input: str | bytes) -> bytes:
+    if isinstance(input, str):
+        input = input.encode("utf-8")
+
+    padding = len(input) % 4
+    if padding > 0 and not input.endswith(b"="):
+        input += b"=" * (4 - padding)
+
+    return base64.urlsafe_b64decode(input)
 
 
 ################################################################################

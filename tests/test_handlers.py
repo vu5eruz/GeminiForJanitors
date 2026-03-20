@@ -201,7 +201,10 @@ def test_proxy_test(mocker: MockerFixture, params: dict[str, Any]):
     xuid = XUID("john", "smith")
     user = UserSettings(storage, xuid)
 
-    jai_req = JaiRequest()
+    jai_req = JaiRequest(
+        api_key="AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        models={"google": "gemini-2.5-flash"},
+    )
 
     response = handle_proxy_test(user, jai_req, ResponseHelper(wrap_errors=True))
 
@@ -449,7 +452,11 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
 
     user = UserSettings(LocalUserStorage(), XUID("john", "smith"))
 
-    jai_req = JaiRequest(messages=user_messages)
+    jai_req = JaiRequest(
+        api_key="AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        models={"google": "gemini-2.5-flash"},
+        messages=user_messages,
+    )
 
     for key, value in extra_settings:
         if key == "call_do_show_banner":

@@ -1,8 +1,9 @@
-import pytest
 import secrets
 
+import pytest
+
 from gfjproxy._globals import REDIS_URL
-from gfjproxy.xuiduser import LocalUserStorage, RedisUserStorage, XUID
+from gfjproxy.xuiduser import XUID, LocalUserStorage, RedisUserStorage
 
 ################################################################################
 
@@ -71,6 +72,16 @@ def test_xuid_len():
 
     assert len(repr(xuid)) == XUID.LEN_REPR
     assert len(str(xuid)) == XUID.LEN_STR
+
+
+def test_xuid_values():
+    """Test whether XUIDs with known inputs produce known outputs."""
+
+    assert repr(XUID("abc", "def")) == "OX9Gc0Hk14xHSGfvMmHNtGwOEDUempiZY-bLLc5A7l0"
+    assert repr(XUID("ghi", "jkl")) == "oAq4QBE6hvFe5v9DjFwLbAXvaTS9rC1XeBL7ODCknTw"
+    assert repr(XUID("mno", "pqr")) == "Zv1y48dMIT3Jb8GvFxxNBbItbZExbgEqBIaFsWEVHos"
+    assert repr(XUID("stu", "vwx")) == "dEPxAObFp_EEU0ZS7k1WHr8cGgEnVreKqNRmxwOmPzU"
+    assert repr(XUID("yz_", "123")) == "-74HrAQW2RHzkYd58d1__tz9a-LO_VLDbtClvnqc460"
 
 
 ################################################################################

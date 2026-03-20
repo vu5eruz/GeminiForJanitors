@@ -118,74 +118,53 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 24
+BANNER_VERSION = 27
 
 BANNER = rf"""***
-# {PROXY_NAME} ({PROXY_VERSION})
+# **{PROXY_NAME}** ({PROXY_VERSION})
 *Hosted by {PROXY_ADMIN}*
 
-Two new commands //dice_roll and //dice_char are available for testing!
-
-Read the //dice_help command for more info.
-
-***
-
-## Commands
-
-You can include one or more commands in your messages, separated by spaces. You can turn on some commands and they will apply across all messages in all chats. Some commands can be called with `this` to make them only apply to the next message. Preset commands need to be called every time you want to use them.
-
-- `//aboutme`
-  Shows you info about your proxy usage and what commands you have turned on or off.
-
-- `//banner`
-  Shows you this banner, regardless of whether you have seen it before or if you use the `/quiet/` URL.
-
-- `//advsettings on|off|this`
-  Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing. *Note:* Top K/P may have no effect.
-
-- `//ooctrick on|off|this`
-  Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.
-
-- `//prefill on|off|this`
-  Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
-
-- `//search on|off|this`
-  Enables the use of Google Search, allowing the model to look up any information relevant to the chat.
-
-- `//think on|off|this`
-  Tricks Gemini into doing its thinking inside the response to bypass content filters. *Note:* this might cause ᐸthinkᐳ/ᐸresponseᐳ to leak into the bot's messages.
-
-- `//think_text keep|remove`
-  Configures the proxy to either include the model's thinking in the response or remove it entirely.
-
-- `//nobot on|off|this`
-  Removes the bot's description from the chat, in case it contains ToS-breaking content. *Note:* use this only as a last resort. This will negatively impact your chat.
-
-- `//preset gigakostyl`
-  Adds a simple writing guideline for NSFW roleplay, plus "X-ray views" to sex scenes.
-
-- `//preset minipopka`
-  Adds a longer writing guideline to enhance narration and NSFW roleplay.
-
-- `//dice_roll [count]d(faces)[(p|m)(extra)]`
-- `//dice_char on|off|this`
-- `//dice_help`
-  Rolls dices using proxy-provided random numbers. See `//dice_help` for more info.
+This proxy is hosted by volunteers, bound to Render's monthly 100 GB bandwidth quota.
+Go to `https://gfjproxies.vu5eruz.workers.dev/` for a list of URLs you can use.
+Make sure to use URLs with low `bandwidth` usage!
 
 ***
 
-## Extras
+## **Features**
 
-You can use more than one API key, separated with commas, and the proxy will automatically rotate them for you on every message. You can use this mechanism to streamline the use of multiple Google accounts and amortize requests per day quotas, using only one proxy setting.
+You can use commands and set jailbreaks in your chat. Send a message with `//help commands` for more info.
 
-You should only see this banner if you are a new user or if there has been a new update. If you don't want to see these banners, change your proxy URL to: `{PROXY_URL}/quiet/`. You are going to miss on updates if you use that URL. You can always use the command `//banner` to receive the latest news regardless of your URL.
+You can use multiple API keys and automatically switch between them. Send a message with `//help multikey` for more info.
+
+You can use models from different companies: Cerebras, Google, OpenRouter and Z.AI. Send a message with `//help providers` for more info.
+
+You can see proxy statistics and find out if there are more errors than usual. Open `{PROXY_URL}/stats` to find out.
+
+You should only see this banner if you are a new user or if there is an update. Send a message with `//banner` to see this banner again. Change your proxy URL to `{PROXY_URL}/quiet/` to disable it.
 
 ***
 
-This proxy is hosted by volunteers, all bound to Render's monthly 100 GB bandwidth quota. Make sure to use different URLs to distribute the load!
+## **Updates**
 
-Check out `https://gfjproxies.vu5eruz.workers.dev/` for a list of alternative proxies you can use. Choose proxies with low `bandwidth` usage.
+### March 16, 2026
 
-Feel free to reroll or edit this message to remove this banner."""
+● Added support for different providers! You can now use models from other companies!
+
+● Added support for **Cerebras**! Its API keys start with `csk-` and to use a model you need to add `cerebras/` at the start: `cerebras/llama3.1-8b`
+
+● Added support for **Z.AI**! You must add `z_ai/` at the start of its API keys and to use a model you need to add `z_ai/` at the start: `z_ai/glm-4.7-flash`
+
+● Added support for **Gemini CLI**! Its API keys start with `gfjproxy.gemini_cli.` and to use a model you need to add `gemini_cli/` at the start: `gemini_cli/gemini-3-pro-preview`
+
+### March 17, 2026
+
+● The banner was been rewritten! Hopefully you will all find it easier to read.
+
+● Added support for **OpenRouter**! Its API keys start with `sk-or-v1-` and to use a model you need to write it in full: `openrouter/stepfun/step-3.5-flash:free`
+
+### March 20, 2026
+
+● Fixed a bug that caused Internal Proxy Error while serving OpenRouter requests. It should work now.
+"""
 
 ################################################################################

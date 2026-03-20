@@ -5,9 +5,8 @@ The name of some fields in here may not match with the source they are from."""
 from dataclasses import dataclass, field
 from json import loads
 
-from google.genai import types
-
 from .commands import Command, parse_message, strip_message
+from .utils import comma_split
 
 ################################################################################
 
@@ -45,28 +44,35 @@ class JaiMessage:
 class JaiRequest:
     """JanitorAI Request."""
 
+    # Authorization header
     api_key: str = ""
+    api_key_index: int = 1
+    api_key_count: int = 1
+
+    # Request body
     max_tokens: int = 0
-    frequency_penalty: float = 0.0
-    repetition_penalty: float = 0.0
     messages: list[JaiMessage] = field(default_factory=list)
-    model: str = ""
-    quiet: bool = False  # This isn't from the request JSON but from the URL
-    quiet_commands: bool = False  # This is to make testing easier
+    models: dict[str, str] = field(default_factory=dict)
     stream: bool = False
     temperature: float = 0
+    frequency_penalty: float = 0.0
+    repetition_penalty: float = 0.0
     top_k: int = 0
     top_p: float = 0.0
-    use_advsettings: bool = False  # Set by //advsettings command
-    use_dice_char: bool = False  # Set by //dice_char command
-    use_nobot: bool = False  # Set by //nobot command
-    use_ooctrick: bool = False  # Set by //ooctrick command
-    use_prefill: bool = False  # Set by //prefill command
-    use_preset: str | None = None  # Set by //preset command
-    use_search: bool = False  # Set by //search command
-    use_think: bool = False  # Set by //think command
-    key_index: int = 1
-    key_count: int = 1
+
+    # Request URL
+    quiet: bool = False
+    quiet_commands: bool = False  # Only for testing
+
+    # Commands
+    use_advsettings: bool = False
+    use_dice_char: bool = False
+    use_nobot: bool = False
+    use_ooctrick: bool = False
+    use_prefill: bool = False
+    use_preset: str | None = None
+    use_search: bool = False
+    use_think: bool = False
 
     def append_message(self, role: str, content: str):
         self.messages.append(
@@ -92,11 +98,18 @@ class JaiRequest:
             jai_req.messages = [JaiMessage.parse(jai_msg) for jai_msg in messages]
 
         if model := data.get("model"):
-            model = str(model).strip().lower()
-            if model.startswith("google/gemini"):  # OpenRouter
-                jai_req.model = model.split("/")[1]
-            else:
-                jai_req.model = model
+            for model in comma_split(model.lower()):
+                if "/" in model:
+                    provider, model_name = model.split("/", maxsplit=1)
+                    jai_req.models[provider] = model_name
+                elif model.startswith("gemini-"):
+                    jai_req.models["google"] = model
+                else:
+                    # Build a comma-separated list of unknown models
+                    if unknown := jai_req.models.get("unknown"):
+                        jai_req.models["unknown"] = f"{unknown}, {model}"
+                    else:
+                        jai_req.models["unknown"] = model
 
         if stream := data.get("stream"):
             jai_req.stream = stream
@@ -123,12 +136,20 @@ class JaiRequest:
 
 
 @dataclass(kw_only=True, slots=True)
+class JaiResultTokenUsage:
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+@dataclass(kw_only=True, slots=True)
 class JaiResultMetadata:
     "JanitorAI Generate Content Result Metadata"
 
     api_key_valid: bool = True
     rejection_feedback: str = ""
-    token_usage: types.GenerateContentResponseUsageMetadata | None = None
+    token_usage: JaiResultTokenUsage | None = None
 
 
 @dataclass(init=False, kw_only=True, slots=True)
