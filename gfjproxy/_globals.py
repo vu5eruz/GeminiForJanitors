@@ -118,7 +118,7 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 26
+BANNER_VERSION = 27
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION})
@@ -154,13 +154,17 @@ You should only see this banner if you are a new user or if there is an update. 
 
 ● Added support for **Z.AI**! You must add `z_ai/` at the start of its API keys and to use a model you need to add `z_ai/` at the start: `z_ai/glm-4.7-flash`
 
-● Added support for **Gemini CLI**! It has `gemini-3-pro-preview` for free! **You need a desktop PC** to obtain OAuth credentials and create an API key. Contact `@undefined_anon` on Discord for more info.
+● Added support for **Gemini CLI**! Its API keys start with `gfjproxy.gemini_cli.` and to use a model you need to add `gemini_cli/` at the start: `gemini_cli/gemini-3-pro-preview`
 
 ### March 17, 2026
 
 ● The banner was been rewritten! Hopefully you will all find it easier to read.
 
 ● Added support for **OpenRouter**! Its API keys start with `sk-or-v1-` and to use a model you need to write it in full: `openrouter/stepfun/step-3.5-flash:free`
+
+### March 20, 2026
+
+● Fixed a bug that caused Internal Proxy Error while serving OpenRouter requests. It should work now.
 """
 
 ################################################################################
