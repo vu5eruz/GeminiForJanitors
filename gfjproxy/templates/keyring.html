@@ -23,11 +23,27 @@
           <textarea
             id="creds"
             name="creds"
+            class="input-text"
             rows="8"
             placeholder="{{ placeholder }}"
             spellcheck="false"
             required
           ></textarea>
+        </div>
+      </fieldset>
+      <fieldset class="form-group">
+        <div class="input-wrapper">
+          <label for="model">Model for validation:</label>
+          <input
+            id="model"
+            name="model"
+            class="input-text"
+            type="text"
+            placeholder="gemini-..."
+            value="gemini-2.5-flash-lite"
+            spellcheck="false"
+            required
+          />
         </div>
       </fieldset>
       <hr />
@@ -50,6 +66,7 @@
     <script>
       const formElement = document.getElementById("api-form");
       const credsElement = document.getElementById("creds");
+      const modelElement = document.getElementById("model");
       const submitButtonElement = document.getElementById("submit");
       const resultElement = document.getElementById("api-result");
       const resultDataElement = document.getElementById("api-result-data");
@@ -132,6 +149,7 @@
             body: JSON.stringify({
               creds: JSON.parse(credsElement.value),
               credsType: "gemini_cli",
+              model: modelElement.value,
             }),
             headers: {
               "Content-Type": "application/json",
@@ -139,8 +157,8 @@
           });
 
           const result = await response.json();
-          if (result.error !== undefined) {
-            if (result.extra !== undefined) {
+          if (result.error) {
+            if (result.extra) {
               if (result.extra.startsWith("Verify your account: ")) {
                 const url = result.extra.replace("Verify your account: ", "");
                 const anchor = document.createElement("a");

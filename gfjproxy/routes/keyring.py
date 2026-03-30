@@ -60,6 +60,10 @@ def api():
             "error": f'Missing/invalid credentials type in API call: "{type}".'
         }, 400
 
+    model = request_json.get("model")
+    if not isinstance(model, str):
+        return {"error": "Missing/invalid model in API call."}, 400
+
     try:
         credentials = request_json.get("creds")
         if not isinstance(credentials, dict):
@@ -93,7 +97,7 @@ def api():
         None,
         credentials.access_token,
         project_id,
-        "gemini-3.1-flash-lite-preview",
+        model,
         [JaiMessage(content="Just say HELLO")],
         {"temperature": 0},
     )
