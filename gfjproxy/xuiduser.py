@@ -333,14 +333,6 @@ class UserSettings:
     #########################
 
     @property
-    def use_advsettings(self) -> bool:
-        return bool(self._data.get("use_advsettings", False))
-
-    @use_advsettings.setter
-    def use_advsettings(self, value):
-        self._data["use_advsettings"] = bool(value)
-
-    @property
     def use_dice_char(self) -> bool:
         return bool(self._data.get("use_dice_char", False))
 

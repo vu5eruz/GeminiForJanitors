@@ -130,7 +130,6 @@ def aboutme(args, user, jai_req, response):
         f"You have used this proxy {user.get_rcounter()} time(s).",
         f"You were {user.last_seen_msg()}.",
         "Your commands are:",
-        f"\u200b- //advsettings {'on' if user.use_nobot else 'off'}",
         f"\u200b- //dice_char {'on' if user.use_dice_char else 'off'}",
         f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
         f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
@@ -170,16 +169,6 @@ def preset(args, user, jai_req, response):
 # - Add a "use_xyz" field to models.JaiRequest
 # - Add a "use_xyz" getter/setter to xuiduser.UserSettings
 # - Implement your commands' additional logic inside handlers._gen_content
-
-
-@command(argspec=r"off|on|this", setting="advsettings")
-def advsettings(args, user, jai_req, response):
-    if jai_req.quiet_commands:
-        return response
-    return response.add_proxy_message(
-        f"Advanced generation settings {'enabled' if jai_req.use_advsettings else 'disabled'}"
-        + (" (for this message only)." if args == "this" else ".")
-    )
 
 
 @command(argspec=r"off|on|this", setting="nobot")
@@ -315,9 +304,6 @@ Preset commands need to be called every time you want to use them.
 
 - `//help commands|dice|multikey|providers`
   Shows you info about specific topics or proxy features.
-
-- `//advsettings on|off|this`
-  Enables JanitorAI generation settings: Max Tokens, Top K, Top P, and Frequency/Repetition Penalty. *Note:* use this only if you know what you are doing.
 
 - `//ooctrick on|off|this`
   Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.

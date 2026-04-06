@@ -65,7 +65,6 @@ class JaiRequest:
     quiet_commands: bool = False  # Only for testing
 
     # Commands
-    use_advsettings: bool = False
     use_dice_char: bool = False
     use_nobot: bool = False
     use_ooctrick: bool = False

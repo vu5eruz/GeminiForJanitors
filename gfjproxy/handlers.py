@@ -284,35 +284,6 @@ def handle_chat_message(
         "temperature": jai_req.temperature,
     }
 
-    if jai_req.use_advsettings or user.use_advsettings:
-        advsettings_used = []
-
-        if jai_req.max_tokens > 0:
-            advsettings_used.append("max_tokens")
-            settings["max_tokens"] = jai_req.max_tokens
-
-        if jai_req.top_k > 0:
-            advsettings_used.append("top_k")
-            settings["top_k"] = jai_req.top_k
-
-        if jai_req.top_p > 0:
-            advsettings_used.append("top_p")
-            settings["top_p"] = jai_req.top_p
-
-        if jai_req.frequency_penalty > 0:
-            advsettings_used.append("frequency_penalty")
-            settings["frequency_penalty"] = jai_req.frequency_penalty
-
-        if jai_req.repetition_penalty > 0:
-            advsettings_used.append("repetition_penalty")
-            settings["repetition_penalty"] = jai_req.repetition_penalty
-
-        xlog(
-            user,
-            f"Adding settings {', '.join(advsettings_used)} to chat"
-            + (" (for this message only)." if not user.use_advsettings else "."),
-        )
-
     if jai_req.use_search or user.use_search:
         xlog(
             user,

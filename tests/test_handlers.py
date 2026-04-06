@@ -403,32 +403,6 @@ CHAT_MESSAGE_TESTS = [
         ],
         "extra_after_tests": [("assert_temperature_value", 1.2345)],
     },
-    {  # Ensure the //advsettings command has an actual effect on generation settings
-        "generate_content_mock": make_mock_response("Bot response."),
-        "expected_result": ("Bot response.", 200),
-        "extra_settings": [
-            (
-                "jai_add_message",
-                JaiMessage.parse(
-                    {"role": "user", "content": "//advsettings this Message"}
-                ),
-            ),
-            ("jai_req_quiet", True),
-            ("jai_req_quiet_commands", True),
-            ("jai_req_max_tokens", 69),
-            ("jai_req_top_k", 50),
-            ("jai_req_top_p", 0.95),
-            ("jai_req_repetition_penalty", 0.99),
-            ("jai_req_frequency_penalty", 0.90),
-        ],
-        "extra_after_tests": [
-            ("assert_max_tokens_value", 69),
-            ("assert_top_k_value", 50),
-            ("assert_top_p_value", 0.95),
-            ("assert_repetition_penalty_value", 0.99),
-            ("assert_frequency_penalty_value", 0.90),
-        ],
-    },
 ]
 
 
