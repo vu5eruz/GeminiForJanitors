@@ -24,8 +24,6 @@ def cerebras_generate_content(
     cerebras_request = {
         "model": model,
         "stream": False,
-        "temperature": settings.get("temperature"),
-        "top_p": settings.get("top_p"),
         "messages": [
             {
                 "content": message.content,
@@ -34,6 +32,23 @@ def cerebras_generate_content(
             for message in messages
         ],
     }
+
+    # As of April 6, 2026, Cerebras does not support top_k
+    # Pass the value(s) anyway and let the user get a relevant error
+
+    for key, value in settings.items():
+        if key == "temperature":
+            cerebras_request["temperature"] = value
+        elif key == "max_tokens":
+            cerebras_request["max_completion_tokens"] = value
+        elif key == "top_k":
+            cerebras_request["top_k"] = value
+        elif key == "top_p":
+            cerebras_request["top_p"] = value
+        elif key == "frequency_penalty":
+            cerebras_request["frequency_penalty"] = value
+        elif key == "repetition_penalty":
+            cerebras_request["presence_penalty"] = value
 
     try:
         cerebras_response = http_client.post(
@@ -50,7 +65,10 @@ def cerebras_generate_content(
     except httpx.HTTPStatusError as e:
         message = "Error from Cerebras"
 
-        if error := e.response.json().get("error"):
+        if error := e.response.json():
+            if "error" in error:
+                error = error["error"]
+
             if error_code := error.get("code"):
                 message += f" ({error_code})"
             if error_message := error.get("message"):

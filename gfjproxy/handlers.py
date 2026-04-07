@@ -280,9 +280,28 @@ def handle_chat_message(
             "<think>\n➛ Okay! Understood.",
         )
 
-    settings = {
-        "temperature": jai_req.temperature,
-    }
+    settings = {}
+
+    for setting in [
+        "temperature",
+        "frequency_penalty",
+        "repetition_penalty",
+        "top_k",
+        "top_p",
+    ]:
+        jai_req_advset = jai_req.advsettings.get(setting, False)
+        user_advset = user.advsettings.get(setting, False)
+        if jai_req_advset or user_advset:
+            value = getattr(jai_req, setting)
+
+            xlog(
+                user,
+                f"Adding advanced setting {setting} to model"
+                + (" (for this message only)" if not user_advset else "")
+                + f" with value `{value}`.",
+            )
+
+            settings[setting] = value
 
     if jai_req.use_search or user.use_search:
         xlog(

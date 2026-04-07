@@ -392,6 +392,12 @@ class UserSettings:
 
     #########################
 
+    @property
+    def advsettings(self) -> dict[str, bool]:
+        return self._data.setdefault("advsettings", {})
+
+    #########################
+
     def last_seen(self) -> int | None:
         if seconds := self._data.get("timestamp_last_seen"):
             return int(utctimestamp() - seconds)

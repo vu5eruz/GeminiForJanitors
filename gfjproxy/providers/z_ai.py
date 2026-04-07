@@ -35,11 +35,24 @@ def z_ai_generate_content(
         ],
     }
 
+    # As of April 6, 2026, Z.AI documentation does not mention support for
+    # top_k, frequency_penalty or repetition_penalty in their API. While these
+    # using settings does not return an error, //help advsettings still
+    # documents Z.AI as having no support.
+
     for key, value in settings.items():
         if key == "temperature":
             z_ai_request["temperature"] = value
+        elif key == "max_tokens":
+            z_ai_request["max_tokens"] = value
+        elif key == "top_k":
+            z_ai_request["top_k"] = value
         elif key == "top_p":
             z_ai_request["top_p"] = value
+        elif key == "frequency_penalty":
+            z_ai_request["frequency_penalty"] = value
+        elif key == "repetition_penalty":
+            z_ai_request["presence_penalty"] = value
 
     try:
         z_ai_response = http_client.post(

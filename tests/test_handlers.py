@@ -399,9 +399,7 @@ CHAT_MESSAGE_TESTS = [
             ),
             ("jai_req_quiet", True),
             ("jai_req_quiet_commands", True),
-            ("jai_req_temperature", 1.2345),
         ],
-        "extra_after_tests": [("assert_temperature_value", 1.2345)],
     },
 ]
 
@@ -441,18 +439,6 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
             jai_req.quiet = value
         elif key == "jai_req_quiet_commands":
             jai_req.quiet_commands = value
-        elif key == "jai_req_temperature":
-            jai_req.temperature = value
-        elif key == "jai_req_max_tokens":
-            jai_req.max_tokens = value
-        elif key == "jai_req_top_k":
-            jai_req.top_k = value
-        elif key == "jai_req_top_p":
-            jai_req.top_p = value
-        elif key == "jai_req_repetition_penalty":
-            jai_req.repetition_penalty = value
-        elif key == "jai_req_frequency_penalty":
-            jai_req.frequency_penalty = value
         else:
             assert 0, f"Invalid extra_settings key: {key}"
 
@@ -464,7 +450,6 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
     )
 
     _, kwargs = mock_instance.models.generate_content.call_args
-    gemini_config = kwargs.get("config", {})
 
     for key, value in extra_after_tests:
         if key == "look_for_prefill_in_contents":
@@ -473,18 +458,6 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
                     break
             else:
                 assert 0, "No prefill found in contents"
-        elif key == "assert_temperature_value":
-            assert gemini_config.get("temperature") == pytest.approx(value)
-        elif key == "assert_max_tokens_value":
-            assert gemini_config.get("max_output_tokens") == value
-        elif key == "assert_top_k_value":
-            assert gemini_config.get("top_k") == value
-        elif key == "assert_top_p_value":
-            assert gemini_config.get("top_p") == pytest.approx(value)
-        elif key == "assert_repetition_penalty_value":
-            assert gemini_config.get("presence_penalty") == pytest.approx(value)
-        elif key == "assert_frequency_penalty_value":
-            assert gemini_config.get("frequency_penalty") == pytest.approx(value)
         else:
             assert 0, f"Invalid extra_after_tests key: {key}"
 

@@ -137,6 +137,21 @@ def aboutme(args, user, jai_req, response):
         f"\u200b- //search {'on' if user.use_search else 'off'}",
         f"\u200b- //think {'on' if user.use_think else 'off'}",
         f"\u200b- //think_text {user.think_text}",
+        *(
+            f"\u200b- //advset_{setting} {'on' if user.advsettings.get(setting) else 'off'}"
+            + (
+                f" (value `{getattr(jai_req, setting)}`)"
+                if user.advsettings.get(setting)
+                else ""
+            )
+            for setting in [
+                "temperature",
+                "frequency_penalty",
+                "repetition_penalty",
+                "top_k",
+                "top_p",
+            ]
+        ),
         f"This message is using API key {jai_req.api_key_index + 1} out of {jai_req.api_key_count}.",
     )
     raise CommandExit()
@@ -290,6 +305,65 @@ def dice_roll(args, user, jai_req, response):
 ################################################################################
 
 
+def _advset(setting, args, user, jai_req, response):
+    if args == "this":
+        jai_req.advsettings[setting] = True
+    elif args == "on":
+        jai_req.advsettings[setting] = True
+        user.advsettings[setting] = True
+    else:  # "off"
+        jai_req.advsettings[setting] = False
+        user.advsettings[setting] = False
+
+    if jai_req.quiet_commands:
+        return response
+
+    value = getattr(jai_req, setting)
+
+    response.add_proxy_message(
+        f"Advanced setting {setting} {'enabled' if args != 'off' else 'disabled'}"
+        + (" (for this message only)" if args == "this" else "")
+        + f" with value `{value}`."
+        + (
+            "\nMake sure to set it to nonzero in JanitorAI's Generation Settings."
+            if not value
+            else ""
+        )
+    )
+
+    if not value:
+        raise CommandExit()
+    return response
+
+
+@command(argspec=r"off|on|this")
+def advset_temperature(args, user, jai_req, response):
+    return _advset("temperature", args, user, jai_req, response)
+
+
+@command(argspec=r"off|on|this")
+def advset_frequency_penalty(args, user, jai_req, response):
+    return _advset("frequency_penalty", args, user, jai_req, response)
+
+
+@command(argspec=r"off|on|this")
+def advset_repetition_penalty(args, user, jai_req, response):
+    return _advset("repetition_penalty", args, user, jai_req, response)
+
+
+@command(argspec=r"off|on|this")
+def advset_top_k(args, user, jai_req, response):
+    return _advset("top_k", args, user, jai_req, response)
+
+
+@command(argspec=r"off|on|this")
+def advset_top_p(args, user, jai_req, response):
+    return _advset("top_p", args, user, jai_req, response)
+
+
+################################################################################
+
+
 HELP_COMMANDS = """***
 You can include one or more commands in your messages, separated by spaces.
 You can turn on some commands and they will apply across all messages in all chats.
@@ -302,7 +376,7 @@ Preset commands need to be called every time you want to use them.
 - `//banner`
   Shows you the banner, regardless of whether you have seen it before or if you use the `/quiet/` URL.
 
-- `//help commands|dice|multikey|providers`
+- `//help advsettings|commands|dice|multikey|providers`
   Shows you info about specific topics or proxy features.
 
 - `//ooctrick on|off|this`
@@ -332,6 +406,78 @@ Preset commands need to be called every time you want to use them.
 - `//dice_roll [count]d(faces)[(p|m)(extra)]`
 - `//dice_char on|off|this`
   Rolls dices using proxy-provided random numbers. See `//help dice` for more info.
+
+- `//advset_temperature on|off|this`
+- `//advset_frequency_penalty on|off|this`
+- `//advset_repetition_penalty on|off|this`
+- `//advset_top_k on|off|this`
+- `//advset_top_p on|off|this`
+  Controls whether to apply advanced settings to the model. See `//help advsettings` for more info.
+"""
+
+
+HELP_ADVSETTINGS = """***
+# **Advanced Settings**
+
+The proxy supports passing advanced settings to providers to tweak how the AI writes.
+
+You can configure these in JanitorAI's Generation Settings.
+They must be set to a number greater than zero in JanitorAI to apply.
+Most of these also require a specific command to be enabled in the proxy.
+
+## **Temperature**
+`//advset_temperature on|off|this`
+
+Controls how predictable the AI's word choises are.
+- Low temperature makes the AI prefer more common or likely words.
+- High temperature makes the AI to chose words more freely or randomly.
+
+Setting temperature to zero makes the AI to always try to the exact same response.
+
+## **Max Tokens**
+The proxy always ignores this setting.
+
+Limits how much the AI can write, however it cuts the thinking process too early
+and usually leads to error and degraded responses, this it is ignored.
+
+## **Context Size**
+
+Controls how much of the chat history JanitorAI sends to the proxy.
+- Low context size makes the AI forgetful and unware of older messages.
+- High context size provides the AI with much more of the chat history.
+
+Setting context size too high can cause Tokens Per Minute errors.
+
+## **Top K**
+`//advset_top_k on|off|this`
+Not supported by `z_ai` models.
+
+Sets an exact limit on how many words the AI can pick from.
+- Low top k makes the AI pick from a small list of common words.
+- High top k makes the AI pick from a larger list of words, common and uncommon.
+
+Setting top k too hich can make the AI to accidentally use gibberish or random symbols.
+
+## **Top P**
+`//advset_top_p on|off|this`
+
+Makes the selection of words the AI can pick from based on how likely they are.
+- Low top p makes the AI pick only from the most common words.
+- High top p makes the pick from a larger selection of words.
+
+## **Repetition Penalty**
+`//advset_repetition_penalty on|off|this`
+Not supported by `z_ai` and some `google` models.
+
+Encourages the AI to use new words.
+
+The proxy always implements this setting as "Presence Penalty" for compatibility.
+
+## **Frequency Penalty**
+`//advset_frequency_penalty on|off|this`
+Not supported by `z_ai` and some `google` models.
+
+Prevents the AI from overusing specific words it has already generated.
 """
 
 
@@ -435,6 +581,7 @@ You must add `z_ai/` at the start of any Z.AI API key.
 
 
 HELP = {
+    "advsettings": HELP_ADVSETTINGS,
     "commands": HELP_COMMANDS,
     "dice": HELP_DICE,
     "multikey": HELP_MULTIKEY,

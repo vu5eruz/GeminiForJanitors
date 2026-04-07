@@ -73,6 +73,8 @@ class JaiRequest:
     use_search: bool = False
     use_think: bool = False
 
+    advsettings: dict[str, bool] = field(default_factory=dict)
+
     def append_message(self, role: str, content: str):
         self.messages.append(
             JaiMessage(
