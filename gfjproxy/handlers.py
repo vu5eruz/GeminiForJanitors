@@ -280,38 +280,28 @@ def handle_chat_message(
             "<think>\n➛ Okay! Understood.",
         )
 
-    settings = {
-        "temperature": jai_req.temperature,
-    }
+    settings = {}
 
-    if jai_req.use_advsettings or user.use_advsettings:
-        advsettings_used = []
+    for setting in [
+        "temperature",
+        "frequency_penalty",
+        "repetition_penalty",
+        "top_k",
+        "top_p",
+    ]:
+        jai_req_advset = jai_req.advsettings.get(setting, False)
+        user_advset = user.advsettings.get(setting, False)
+        if jai_req_advset or user_advset:
+            value = getattr(jai_req, setting)
 
-        if jai_req.max_tokens > 0:
-            advsettings_used.append("max_tokens")
-            settings["max_tokens"] = jai_req.max_tokens
+            xlog(
+                user,
+                f"Adding advanced setting {setting} to model"
+                + (" (for this message only)" if not user_advset else "")
+                + f" with value `{value}`.",
+            )
 
-        if jai_req.top_k > 0:
-            advsettings_used.append("top_k")
-            settings["top_k"] = jai_req.top_k
-
-        if jai_req.top_p > 0:
-            advsettings_used.append("top_p")
-            settings["top_p"] = jai_req.top_p
-
-        if jai_req.frequency_penalty > 0:
-            advsettings_used.append("frequency_penalty")
-            settings["frequency_penalty"] = jai_req.frequency_penalty
-
-        if jai_req.repetition_penalty > 0:
-            advsettings_used.append("repetition_penalty")
-            settings["repetition_penalty"] = jai_req.repetition_penalty
-
-        xlog(
-            user,
-            f"Adding settings {', '.join(advsettings_used)} to chat"
-            + (" (for this message only)." if not user.use_advsettings else "."),
-        )
+            settings[setting] = value
 
     if jai_req.use_search or user.use_search:
         xlog(

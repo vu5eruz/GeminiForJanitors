@@ -250,7 +250,7 @@ table.health td {
   font-weight: 500;
 }
 
-textarea {
+.input-text {
   outline: none;
   background: #21242e;
   color: #f0f0f0;
@@ -261,11 +261,10 @@ textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9rem;
   resize: vertical;
-  min-height: 120px;
   transition: all 0.2s;
 }
 
-textarea:focus {
+.input-text:focus {
   background: #24283a;
   border-color: #805ad566;
 }

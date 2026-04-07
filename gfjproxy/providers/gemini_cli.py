@@ -277,8 +277,6 @@ def gemini_cli_generate_content_ex(
 ) -> GenerateContentExResult:
     ref_time = xlogtime(user, "Gemini CLI generating")
 
-    session_id = str(uuid4())
-
     contents = [
         {
             "role": "model" if message.role == "assistant" else "user",
@@ -287,22 +285,39 @@ def gemini_cli_generate_content_ex(
         for message in messages
     ]
 
+    # Passed and modified by reference
+    generation_config = {}
+
+    gemini_cli_request = {
+        "project": project_id,
+        "model": model,
+        "request": {
+            "contents": contents,
+            "sessionId": str(uuid4()),
+            "generationConfig": generation_config,
+        },
+    }
+
+    for key, value in settings.items():
+        if key == "temperature":
+            generation_config["temperature"] = value
+        elif key == "max_tokens":
+            generation_config["maxOutputTokens"] = value
+        elif key == "top_k":
+            generation_config["topK"] = value
+        elif key == "top_p":
+            generation_config["topP"] = value
+        elif key == "frequency_penalty":
+            generation_config["frequencyPenalty"] = value
+        elif key == "repetition_penalty":
+            generation_config["presencePenalty"] = value
+
     try:
         # https://github.com/badlogic/pi-mono/blob/83378aad7e74a0e2bb8f37c007a9685fb4609d8a/packages/ai/src/providers/google-gemini-cli.ts#L265
         resp = http_client.post(
             "https://cloudcode-pa.googleapis.com/v1internal:generateContent",
             headers=_make_headers(access_token),
-            json={
-                "project": project_id,
-                "model": model,
-                "request": {
-                    "contents": contents,
-                    "sessionId": session_id,
-                    "generationConfig": {
-                        "temperature": settings.get("temperature", 1),
-                    },
-                },
-            },
+            json=gemini_cli_request,
             timeout=PROCESS_TIMEOUT,
         )
         resp.raise_for_status()

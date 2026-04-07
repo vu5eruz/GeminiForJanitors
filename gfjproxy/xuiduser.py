@@ -333,14 +333,6 @@ class UserSettings:
     #########################
 
     @property
-    def use_advsettings(self) -> bool:
-        return bool(self._data.get("use_advsettings", False))
-
-    @use_advsettings.setter
-    def use_advsettings(self, value):
-        self._data["use_advsettings"] = bool(value)
-
-    @property
     def use_dice_char(self) -> bool:
         return bool(self._data.get("use_dice_char", False))
 
@@ -397,6 +389,12 @@ class UserSettings:
     @think_text.setter
     def think_text(self, value):
         self._data["think_text"] = str(value)
+
+    #########################
+
+    @property
+    def advsettings(self) -> dict[str, bool]:
+        return self._data.setdefault("advsettings", {})
 
     #########################
 

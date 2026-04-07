@@ -65,7 +65,6 @@ class JaiRequest:
     quiet_commands: bool = False  # Only for testing
 
     # Commands
-    use_advsettings: bool = False
     use_dice_char: bool = False
     use_nobot: bool = False
     use_ooctrick: bool = False
@@ -73,6 +72,8 @@ class JaiRequest:
     use_preset: str | None = None
     use_search: bool = False
     use_think: bool = False
+
+    advsettings: dict[str, bool] = field(default_factory=dict)
 
     def append_message(self, role: str, content: str):
         self.messages.append(

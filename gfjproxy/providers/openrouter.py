@@ -67,12 +67,18 @@ def openrouter_generate_content(
         return JaiResult(504, "Gateway Timeout")
     except httpx.HTTPStatusError as e:
         message = "Error from OpenRouter"
+        extras = ""
 
         if isinstance(error := e.response.json().get("error"), dict):
             if error_code := error.get("code"):
                 message += f" ({error_code})"
             if error_message := error.get("message"):
                 message += f": {error_message}"
+            if error_metadata := error.get("metadata"):
+                if isinstance(error_metadata, dict):
+                    extras = error_metadata.get("raw")
+                else:
+                    extras = str(error_metadata)
         else:
             xlog(user, f"{message}: {e.response.text!r}")
 
@@ -83,7 +89,7 @@ def openrouter_generate_content(
         else:
             track_stats("openrouter.failed.unknown")
 
-        return JaiResult(e.response.status_code, message)
+        return JaiResult(e.response.status_code, message, extras=extras)
     except Exception as e:
         xlog(user, repr(e))
         track_stats("openrouter.failed.exception")
