@@ -80,11 +80,19 @@ PROXY_NAME = "GeminiForJanitors"
 
 PROXY_VERSION = _make_git_version()
 
-PROXY_URL = _env.get("GFJPROXY_EXTERNAL_URL", "").rstrip("/")
+PROXY_URL = _env.get("GFJPROXY_EXTERNAL_URL", "")
 if not PROXY_URL:
-    PROXY_URL = _env.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+    PROXY_URL = _env.get("RENDER_EXTERNAL_URL", "")
     if not PROXY_URL:
         PROXY_URL = "https://geminiforjanitors.onrender.com"
+PROXY_URL = PROXY_URL.rstrip("/")
+
+PROXY_BRANCH = _env.get("GFJPROXY_BRANCH", "")
+if not PROXY_BRANCH:
+    PROXY_BRANCH = _env.get("RENDER_GIT_BRANCH", "")
+    if not PROXY_BRANCH:
+        PROXY_BRANCH = "master"
+PROXY_BRANCH = PROXY_BRANCH.strip().lower()
 
 COOLDOWN = _env.get("GFJPROXY_COOLDOWN", "0")
 
@@ -116,10 +124,10 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 28
+BANNER_VERSION = 29
 
 BANNER = rf"""***
-# **{PROXY_NAME}** ({PROXY_VERSION})
+# **{PROXY_NAME}** ({PROXY_VERSION}){" " + PROXY_BRANCH if PROXY_BRANCH != "master" else ""}
 *Hosted by {PROXY_ADMIN}*
 
 This proxy is hosted by volunteers, bound to Render's monthly 100 GB bandwidth quota.
