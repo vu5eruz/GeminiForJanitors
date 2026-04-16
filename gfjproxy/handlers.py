@@ -1,10 +1,11 @@
 from random import randint
 from typing import Any, cast
 
-from ._globals import BANNER, BANNER_VERSION, PREFILL, THINK
+from ._globals import BANNER, BANNER_VERSION, THINK
 from .commands import CommandError, CommandExit
 from .logging import xlog
 from .models import JaiMessage, JaiRequest, JaiResult, JaiResultMetadata
+from .prefill import apply_prefill, clear_prefill
 from .providers.cerebras import cerebras_generate_content
 from .providers.gemini import gemini_generate_content
 from .providers.gemini_cli import gemini_cli_generate_content
@@ -245,11 +246,11 @@ def handle_chat_message(
     if jai_req.use_prefill or user.use_prefill:
         xlog(
             user,
-            "Adding prefill to chat"
+            f"Adding prefill-{user.prefill_mode} to chat"
             + (" (for this message only)." if not user.use_prefill else "."),
         )
 
-        jai_req.append_message("assistant", PREFILL)
+        apply_prefill(jai_req, user.prefill_mode)
 
         used_prefill = True
     else:
@@ -340,6 +341,13 @@ def handle_chat_message(
 
         return response
 
+    if used_prefill:
+        if metadata := clear_prefill(result, user.prefill_mode):
+            if metadata & 2:
+                xlog(user, "Removed <starter> from response")
+            if metadata & 4:
+                xlog(user, "Removed matching code from response")
+
     if used_think:
         text = result.text
 
@@ -382,6 +390,8 @@ def handle_chat_message(
             text = f"<think>\n{thinking}\n</think>\n{text}"
 
         result.text = text
+
+    result.text = result.text.strip()
 
     xlog(user, f"Result text is {len(result.text.split())} words")
 

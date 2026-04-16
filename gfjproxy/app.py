@@ -7,7 +7,6 @@ from ._globals import (
     CLOUDFLARED,
     COOLDOWN,
     DEVELOPMENT,
-    PREFILL,
     PRESETS,
     PRODUCTION,
     PROXY_VERSION,
@@ -85,11 +84,6 @@ def create_app():
         print(" * Using presets: " + ", ".join(PRESETS.keys()))
     else:
         print(" * WARNING: No presets loaded")
-
-    if PREFILL:
-        print(f" * Using prefill ({len(PREFILL)} characters)")
-    else:
-        print(" * WARNING: No prefill loaded")
 
     # Application initialization
 

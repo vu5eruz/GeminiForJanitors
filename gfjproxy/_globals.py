@@ -60,8 +60,6 @@ else:
 CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 
 # XXX: FileNotFoundError
-with open("prefill.txt", encoding="utf-8") as prefill:
-    PREFILL = prefill.read()
 with open("think.txt", encoding="utf-8") as think:
     THINK = think.read()
 
@@ -153,6 +151,12 @@ You should only see this banner if you are a new user or if there is an update. 
 ### April 7, 2026
 
 ● The `//advsettings` command is no more! It's been replaced with five new `//advset_*` commands! See `//help advsettings` for more info.
+
+### April 16, 2026
+
+● The `//prefill` command and its jailbreak have been changed. You can now use `//prefill_mode 0|1|2|3` to select which prefill/jailbreak to use.
+
+● These changes are experimental! Please report any bugs to the Gemini Proxy Guide!
 """
 
 ################################################################################

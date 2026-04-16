@@ -134,6 +134,7 @@ def aboutme(args, user, jai_req, response):
         f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
         f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
         f"\u200b- //prefill {'on' if user.use_prefill else 'off'}",
+        f"\u200b- //prefill_mode {user.prefill_mode}",
         f"\u200b- //search {'on' if user.use_search else 'off'}",
         f"\u200b- //think {'on' if user.use_think else 'off'}",
         f"\u200b- //think_text {user.think_text}",
@@ -214,6 +215,26 @@ def prefill(args, user, jai_req, response):
         f"Prefill {'enabled' if jai_req.use_prefill else 'disabled'}"
         + (" (for this message only)." if args == "this" else ".")
     )
+
+
+@command(argspec=r"0|1|2|3")
+def prefill_mode(args, user, jai_req, response):
+    mode = int(args)
+    user.prefill_mode = mode
+    if jai_req.quiet_commands:
+        return response
+
+    if mode == 0:
+        mode_name = "classic"
+    else:
+        mode_names = []
+        if mode in (1, 3):
+            mode_names.append("interaction config")
+        if mode in (2, 3):
+            mode_names.append("code starter")
+        mode_name = " + ".join(mode_names)
+
+    return response.add_proxy_message(f"Prefill mode set to {args} ({mode_name})")
 
 
 @command(argspec=r"off|on|this", setting="search")
@@ -383,7 +404,10 @@ Preset commands need to be called every time you want to use them.
   Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.
 
 - `//prefill on|off|this`
-  Adds Eslezer's prefill to the chat. This could help prevent errors, but it is not guaranteed.
+  Adds a prefill/jailbreak to the chat. This could help prevent errors, but it is not guaranteed.
+
+- `//prefill_mode 0|1|2|3`
+  Selects what kind of prefill/jailbreak to use: classic (0), interaction config (1), starter (2), combined (3).
 
 - `//search on|off|this`
   Enables the use of Google Search, allowing the model to look up any information relevant to the chat.

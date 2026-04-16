@@ -383,6 +383,14 @@ class UserSettings:
     #########################
 
     @property
+    def prefill_mode(self) -> int:
+        return int(self._data.get("prefill_mode", 0))
+
+    @prefill_mode.setter
+    def prefill_mode(self, value):
+        self._data["prefill_mode"] = int(value)
+
+    @property
     def think_text(self) -> str:
         return str(self._data.get("think_text", "remove"))
 
