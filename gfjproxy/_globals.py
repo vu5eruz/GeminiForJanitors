@@ -118,7 +118,7 @@ STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
 # deploying using gunicorn, make sure to provide a -t value larger than the one
 # in here, to prevent issues from arising at run-time.
 PROCESS_TIMEOUT: int = max(
-    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", 90)) - 15,
+    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", 120)) - 10,
     60,
 )
 
