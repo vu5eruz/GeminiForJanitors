@@ -28,15 +28,19 @@ import gc
 from colorama import just_fix_windows_console
 from flask import Flask
 from flask_cors import CORS
+from psutil import Process
 
 from .logging import hijack_loggers, xlog
 from .storage import storage
 from .utils import run_cloudflared
 from .xuiduser import RedisUserStorage
 
+_process = Process()
+
 
 def _teardown(exception):
     gc.collect()
+    xlog(None, f"Memory {_process.memory_info().rss / 1048576:.1f} MiB")
 
 
 def create_app():
