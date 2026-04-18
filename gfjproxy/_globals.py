@@ -127,7 +127,7 @@ PROCESS_TIMEOUT: int = max(
 BANNER_VERSION = 29
 
 BANNER = rf"""***
-# **{PROXY_NAME}** ({PROXY_VERSION}){" " + PROXY_BRANCH if PROXY_BRANCH != "master" else ""}
+# **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
 *Hosted by {PROXY_ADMIN}*
 
 This proxy is hosted by volunteers, bound to Render's monthly 100 GB bandwidth quota.
