@@ -103,7 +103,7 @@ class JaiRequest:
                 if "/" in model:
                     provider, model_name = model.split("/", maxsplit=1)
                     jai_req.models[provider] = model_name
-                elif model.startswith("gemini-"):
+                elif model.startswith("gemini-") or model.startswith("gemma-"):
                     jai_req.models["google"] = model
                 else:
                     # Build a comma-separated list of unknown models
