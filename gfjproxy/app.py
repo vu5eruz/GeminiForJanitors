@@ -40,7 +40,9 @@ _process = Process()
 
 def _teardown(exception):
     gc.collect()
-    xlog(None, f"Memory {_process.memory_info().rss / 1048576:.1f} MiB")
+
+    if not PRODUCTION:
+        xlog(None, f"Memory {_process.memory_info().rss / 1048576:.1f} MiB")
 
 
 def create_app():
