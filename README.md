@@ -14,7 +14,7 @@ Any one of the following commands can be used to run the proxy. Running the prox
 
 ```sh
 flask --app "gfjproxy.app:create_app()" run -h 127.0.0.1 -p 5000
-gunicorn -b 127.0.0.1:5000 -k gevent -w 5 -t 90 "gfjproxy.app:create_app()"
+gunicorn -b 127.0.0.1:5000 -k gevent -w 5 -t 120 "gfjproxy.app:create_app()"
 ```
 
 For local/development, you might want to get a trycloudflared link to use with JanitorAI. For that, export the path to the `cloudflared` executable in the environment variable `GFJPROXY_CLOUDFLARED`. The proxy will automatically get a tunnel that you can use with JanitorAI.

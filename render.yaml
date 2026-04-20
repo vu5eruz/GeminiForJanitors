@@ -24,7 +24,7 @@ services:
       - key: GFJPROXY_XUID_SECRET
         generateValue: true
       - key: GFJPROXY_PROCESS_TIMEOUT
-        value: 90
+        value: 120
       - key: PORT
         value: 5000
       - key: UV_VERSION

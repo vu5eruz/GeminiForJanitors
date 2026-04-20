@@ -6,10 +6,9 @@ from ._globals import (
     BANDWIDTH_WARNING,
     CLOUDFLARED,
     COOLDOWN,
-    DEVELOPMENT,
-    PREFILL,
-    PRESETS,
     PRODUCTION,
+    PROXY_BRANCH,
+    PROXY_NAME,
     PROXY_VERSION,
     XUID_SECRET,
 )
@@ -29,67 +28,49 @@ import gc
 from colorama import just_fix_windows_console
 from flask import Flask
 from flask_cors import CORS
+from psutil import Process
 
-from .logging import hijack_loggers
+from .logging import hijack_loggers, xlog
 from .storage import storage
 from .utils import run_cloudflared
-from .xuiduser import LocalUserStorage, RedisUserStorage
+from .xuiduser import RedisUserStorage
+
+_process = Process()
 
 
 def _teardown(exception):
     gc.collect()
 
+    if not PRODUCTION:
+        xlog(None, f"Memory {_process.memory_info().rss / 1048576:.1f} MiB")
+
 
 def create_app():
-    # Proxy initialization with startup banner
-    # This is made to match up with Flask's own startup banner
-
-    print(f"GeminiForJanitors ({PROXY_VERSION})")
-
     just_fix_windows_console()
     hijack_loggers()
+
+    if PRODUCTION:
+        if not isinstance(storage, RedisUserStorage):
+            raise RuntimeError("Production user storage must be Redis")
+        if not XUID_SECRET:
+            raise RuntimeError("Production must have set XUID secret")
 
     if CLOUDFLARED is not None:
         run_cloudflared(CLOUDFLARED)
 
-    if PRODUCTION:
-        print(" * Production deployment")
-    else:
-        print(" * Development deployment")
-
-    if BANDWIDTH_WARNING:
-        print(f" * Bandwidth warning set at {BANDWIDTH_WARNING / 1024:.1f} GiB")
-    else:
-        print(" * Bandwidth warning disabled")
-
-    if COOLDOWN:
-        print(" * Using cooldown policy:", COOLDOWN)
-    else:
-        print(" * No cooldown policy")
-
-    if isinstance(storage, RedisUserStorage):
-        print(" * Using Redis user storage")
-    elif isinstance(storage, LocalUserStorage) and DEVELOPMENT:
-        print(" * Using local user storage")
-    else:
-        raise RuntimeError("No user storage")
-
-    if XUID_SECRET is not None:
-        print(" * Using provided XUID secret")
-    elif DEVELOPMENT:
-        print(" * WARNING: Using development XUID secret")
-    else:
-        raise RuntimeError("Missing XUID secret")
-
-    if PRESETS:
-        print(" * Using presets: " + ", ".join(PRESETS.keys()))
-    else:
-        print(" * WARNING: No presets loaded")
-
-    if PREFILL:
-        print(f" * Using prefill ({len(PREFILL)} characters)")
-    else:
-        print(" * WARNING: No prefill loaded")
+    xlog(
+        None,
+        " ".join(
+            [
+                f"{PROXY_NAME} ({PROXY_VERSION} {PROXY_BRANCH})",
+                "production" if PRODUCTION else "development",
+                f"bwarning={BANDWIDTH_WARNING / 1024:.1f}GiB",
+                f"cpolicy={COOLDOWN!r}",
+                f"ustorage={'redis' if isinstance(storage, RedisUserStorage) else 'local'}",
+                f"xuid={'set' if XUID_SECRET else 'unset'}",
+            ]
+        ),
+    )
 
     # Application initialization
 

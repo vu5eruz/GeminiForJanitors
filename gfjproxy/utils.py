@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from enum import Enum
 from itertools import groupby
 
-import click
 from flask import Response
 from httpx import HTTPError
 
@@ -181,12 +180,10 @@ class ResponseHelper:
 
     @property
     def status_code(self) -> int:
-        click.echo("!!! Don't use .status_code on a ResponseHelper!!!")
         return self.build().status_code
 
     @property
     def response(self):
-        click.echo("!!! Don't use .response on a ResponseHelper!!!")
         return self.build().response
 
 
@@ -233,7 +230,9 @@ def comma_split(s: str) -> list[str]:
 
 
 def _runner(cloudflared: str):
-    click.echo(" * Running cloudflared ...")
+    from .logging import xlog
+
+    xlog(None, "Running cloudflared ...")
 
     process = subprocess.Popen(
         [
@@ -257,14 +256,14 @@ def _runner(cloudflared: str):
             metrics = http_client.get("http://127.0.0.1:5001/metrics").text
             if match := pattern.search(metrics):
                 url = match.group("url")
-                click.echo(f" * Tunnel on {url}")
+                xlog(None, f"Cloudflared tunnel on {url}")
                 return
             else:
-                click.echo(" * Pattern search returned no match")
+                xlog(None, "Pattern search returned no match")
         except HTTPError:
             time.sleep(1)
     else:
-        click.echo(" * Couldn't get cloudflared link")
+        xlog(None, "Couldn't get cloudflared tunnel")
 
 
 def run_cloudflared(cloudflared: str):
