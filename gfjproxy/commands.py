@@ -130,6 +130,7 @@ def aboutme(args, user, jai_req, response):
         f"You have used this proxy {user.get_rcounter()} time(s).",
         f"You were {user.last_seen_msg()}.",
         "Your commands are:",
+        f"\u200b- //btrick {'on' if user.use_btrick else 'off'}",
         f"\u200b- //dice_char {'on' if user.use_dice_char else 'off'}",
         f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
         f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
