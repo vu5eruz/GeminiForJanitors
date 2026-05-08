@@ -333,6 +333,14 @@ class UserSettings:
     #########################
 
     @property
+    def use_btrick(self) -> bool:
+        return bool(self._data.get("use_btrick", False))
+
+    @use_btrick.setter
+    def use_btrick(self, value):
+        self._data["use_btrick"] = bool(value)
+
+    @property
     def use_dice_char(self) -> bool:
         return bool(self._data.get("use_dice_char", False))
 

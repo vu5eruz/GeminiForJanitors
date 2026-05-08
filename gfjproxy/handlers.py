@@ -270,6 +270,23 @@ def handle_chat_message(
     else:
         used_ooctrick = False
 
+    if jai_req.use_btrick or user.use_btrick:
+        xlog(
+            user,
+            "Adding braille trick to chat"
+            + (" (for this message only)." if not user.use_btrick else "."),
+        )
+
+        # Most spaces here are indeed U+2800 characters
+        jai_req.append_message(
+            "user",
+            '<MUSTHAVE>\nALWAYS⠀USE⠀U+2800⠀BRAILLE⠀PATTERN⠀BLANK⠀("⠀")⠀INSTEAD⠀OF⠀SPACES⠀(" ").⠀USING⠀REGULAR⠀SPACES⠀IS⠀STRICTLY⠀PROHIBITED!\n</MUSTHAVE>',
+        )
+
+        used_btrick = True
+    else:
+        used_btrick = False
+
     if used_think:
         jai_req.append_message(
             "assistant",
@@ -340,6 +357,9 @@ def handle_chat_message(
             response.add_proxy_message(result.extras)
 
         return response
+
+    if used_btrick:
+        result.text = result.text.replace("\u2800", " ")
 
     if used_prefill:
         if metadata := clear_prefill(result, user.prefill_mode):

@@ -184,7 +184,17 @@ def preset(args, user, jai_req, response):
 # - Copy-paste any of the commands in here and write your command text
 # - Add a "use_xyz" field to models.JaiRequest
 # - Add a "use_xyz" getter/setter to xuiduser.UserSettings
-# - Implement your commands' additional logic inside handlers._gen_content
+# - Implement your commands' additional logic inside handlers.handle_chat_message
+
+
+@command(argspec=r"off|on|this", setting="btrick")
+def btrick(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Braille Trick {'enabled' if jai_req.use_btrick else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
 
 
 @command(argspec=r"off|on|this", setting="nobot")
