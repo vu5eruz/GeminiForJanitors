@@ -358,10 +358,8 @@ def handle_chat_message(
         if feedback := result.metadata.rejection_feedback:
             if feedback == "MAX_TOKENS":
                 result.error += '\nTry increasing "Max tokens" in your Generation Settings or set it to zero to disable it.'
-            elif not (used_ooctrick or used_prefill or used_think):
-                result.error += (
-                    "\nTry using: `//ooctrick on`, `//prefill on`, `//think on`"
-                )
+            elif not (used_btrick or used_ooctrick or used_prefill or used_think):
+                result.error += "\nTry using one of: `//btrick on`, `//ooctrick on`, `//prefill on`, `//think on`"
 
         response.add_error(result.error, result.status)
 

@@ -411,6 +411,9 @@ Preset commands need to be called every time you want to use them.
 - `//help advsettings|commands|dice|multikey|providers`
   Shows you info about specific topics or proxy features.
 
+- `//btrick on|off|this`
+  Uses U+2800 Braille Pattern Blank when talking to the AI to help bypass content filters.
+
 - `//ooctrick on|off|this`
   Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.
 
