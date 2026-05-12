@@ -371,7 +371,7 @@ CHAT_MESSAGE_TESTS = [
         ),
         "expected_result": (
             "Response blocked/empty due to SAFETY."
-            + "\nTry using: `//ooctrick on`, `//prefill on`, `//think on`",
+            + "\nTry using one of: `//btrick on`, `//ooctrick on`, `//prefill on`, `//think on`",
             502,
         ),
     },
@@ -385,7 +385,7 @@ CHAT_MESSAGE_TESTS = [
         ),
         "expected_result": (
             "Response blocked/empty due to RECITATION."
-            + "\nTry using: `//ooctrick on`, `//prefill on`, `//think on`",
+            + "\nTry using one of: `//btrick on`, `//ooctrick on`, `//prefill on`, `//think on`",
             502,
         ),
     },

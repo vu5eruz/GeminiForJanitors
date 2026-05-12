@@ -130,6 +130,7 @@ def aboutme(args, user, jai_req, response):
         f"You have used this proxy {user.get_rcounter()} time(s).",
         f"You were {user.last_seen_msg()}.",
         "Your commands are:",
+        f"\u200b- //btrick {'on' if user.use_btrick else 'off'}",
         f"\u200b- //dice_char {'on' if user.use_dice_char else 'off'}",
         f"\u200b- //nobot {'on' if user.use_nobot else 'off'}",
         f"\u200b- //ooctrick {'on' if user.use_ooctrick else 'off'}",
@@ -184,7 +185,17 @@ def preset(args, user, jai_req, response):
 # - Copy-paste any of the commands in here and write your command text
 # - Add a "use_xyz" field to models.JaiRequest
 # - Add a "use_xyz" getter/setter to xuiduser.UserSettings
-# - Implement your commands' additional logic inside handlers._gen_content
+# - Implement your commands' additional logic inside handlers.handle_chat_message
+
+
+@command(argspec=r"off|on|this", setting="btrick")
+def btrick(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"Braille Trick {'enabled' if jai_req.use_btrick else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
 
 
 @command(argspec=r"off|on|this", setting="nobot")
@@ -399,6 +410,9 @@ Preset commands need to be called every time you want to use them.
 
 - `//help advsettings|commands|dice|multikey|providers`
   Shows you info about specific topics or proxy features.
+
+- `//btrick on|off|this`
+  Uses U+2800 Braille Pattern Blank when talking to the AI to help bypass content filters.
 
 - `//ooctrick on|off|this`
   Inserts two fake OOC messages into the chat when generating, hopefully fooling the content filters and bypassing them.

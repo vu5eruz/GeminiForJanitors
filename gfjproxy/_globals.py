@@ -124,7 +124,7 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 30
+BANNER_VERSION = 31
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
@@ -152,17 +152,9 @@ You should only see this banner if you are a new user or if there is an update. 
 
 ## **Updates**
 
-### April 7, 2026
+## May 8, 2026
 
-● The `//advsettings` command is no more! It's been replaced with five new `//advset_*` commands! See `//help advsettings` for more info.
-
-### April 16, 2026
-
-● The `//prefill` command and its jailbreak have been changed. You can now use `//prefill_mode 0|1|2|3` to select which prefill/jailbreak to use.
-
-## April 19, 2026
-
-● You can now use Gemma models, such as `gemma-4-26b-a4b-it`, without having to use `google/` prefix.
+● New jailbreak `//btrick on|off|this` is now available! Uses U+2800 Braille Pattern Blank when talking to the AI to help bypass content filters.
 """
 
 ################################################################################
