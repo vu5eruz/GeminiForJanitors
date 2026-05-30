@@ -9,6 +9,7 @@ from .prefill import apply_prefill, clear_prefill
 from .providers.cerebras import cerebras_generate_content
 from .providers.gemini import gemini_generate_content
 from .providers.gemini_cli import gemini_cli_generate_content
+from .providers.nvidia import nvidia_generate_content
 from .providers.openrouter import openrouter_generate_content
 from .providers.z_ai import z_ai_generate_content
 from .statistics import track_stats
@@ -20,6 +21,7 @@ from .xuiduser import XUID, UserSettings
 API_KEY_PREFIXES = {
     "AIza": "google",
     "csk-": "cerebras",
+    "nvapi-": "nvidia",
     "sk-ant-": "anthropic",
     "sk-or-v1-": "openrouter",
     "sk-proj-": "openai",
@@ -30,6 +32,7 @@ PROVIDER_FUNCS = {
     "cerebras": cerebras_generate_content,
     "gemini_cli": gemini_cli_generate_content,
     "google": gemini_generate_content,
+    "nvidia": nvidia_generate_content,
     "openrouter": openrouter_generate_content,
     "z_ai": z_ai_generate_content,
 }
@@ -72,6 +75,7 @@ def _handle_request(
                 + "You should specify the provider at the start of your API key. For example:\n"
                 + "- If the key is for Cerebras, add `cerebras/` at the start of it.\n"
                 + "- If the key is for Google AI or Vertex AI, add `google/` at the start of it.\n"
+                + "- If the key is for Nvidia NIM, add `nvidia/` at the start of it.\n"
                 + "- If the key is for Z.AI, add `z_ai/` at the start of it.\n"
                 + "- If the key is for OpenRouter, add `openrouter/` at the start of it.\n"
                 # No mention of Gemini CLI since support is WIP and its API key always resolve
@@ -94,8 +98,13 @@ def _handle_request(
             + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
         )
 
-        if provider_name == "openrouter":
-            extras += "\n**Note For OpenRouter API keys**: use an extended model name: `openrouter/anthropic/claude-3.5-sonnet`, `openrouter/meta-llama/llama-3.1-405b`, etc."
+        if provider_name in ("openrouter", "nvidia"):
+            extras += (
+                "\n**Note For OpenRouter and Nvidia NIM API keys**:"
+                + "  use an extended model name:"
+                + " `openrouter/anthropic/claude-3.5-sonnet`,"
+                + " `nvidia/deepseek-ai/deepseek-v4-pro`, etc."
+            )
 
         return JaiResult(
             400,
