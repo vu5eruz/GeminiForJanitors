@@ -123,7 +123,7 @@ def _handle_request(
 ################################################################################
 
 
-PERSONA_REGEX = re.compile(r"</(.+?)'s Persona>")
+PERSONA_REGEX = re.compile(r"</([^<>]+?)'s Persona>")
 
 
 def parse_user_persona_names(
@@ -136,9 +136,9 @@ def parse_user_persona_names(
     user_name: str | None = None
     first_user_message = jai_req.messages[3]
     if first_user_message.role == "user":
-        user_name_index = first_user_message.content.find(":")
+        user_name_index = first_user_message.content.find(": ")
         if user_name_index > 0:
-            user_name = first_user_message.content[:user_name_index]
+            user_name = first_user_message.content[:user_name_index].strip()
             xlog(user, f"Parsed user name: {user_name!r}")
     if not user_name:
         xlog(user, "User name not parsed")
@@ -148,7 +148,7 @@ def parse_user_persona_names(
     system_message = jai_req.messages[0]
     if system_message.role == "system":
         if persona_match := PERSONA_REGEX.search(system_message.content):
-            persona_name = str(persona_match.group(1))
+            persona_name = str(persona_match.group(1)).strip()
             xlog(user, f"Parsed persona name: {persona_name!r}")
     if not persona_name:
         xlog(user, "Persona name not parsed")
