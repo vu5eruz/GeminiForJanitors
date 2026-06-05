@@ -76,7 +76,7 @@ def openrouter_generate_content(
                 message += f": {error_message}"
             if error_metadata := error.get("metadata"):
                 if isinstance(error_metadata, dict):
-                    extras = error_metadata.get("raw")
+                    extras = str(error_metadata.get("raw", ""))
                 else:
                     extras = str(error_metadata)
         else:
