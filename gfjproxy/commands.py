@@ -198,6 +198,16 @@ def btrick(args, user, jai_req, response):
     )
 
 
+@command(argspec=r"off|on|this", setting="noass")
+def noass(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"NoAss {'enabled' if jai_req.use_noass else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
+
+
 @command(argspec=r"off|on|this", setting="nobot")
 def nobot(args, user, jai_req, response):
     if jai_req.quiet_commands:

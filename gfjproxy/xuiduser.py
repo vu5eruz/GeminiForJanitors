@@ -349,6 +349,14 @@ class UserSettings:
         self._data["use_dice_char"] = bool(value)
 
     @property
+    def use_noass(self) -> bool:
+        return bool(self._data.get("use_noass", False))
+
+    @use_noass.setter
+    def use_noass(self, value):
+        self._data["use_noass"] = bool(value)
+
+    @property
     def use_nobot(self) -> bool:
         return bool(self._data.get("use_nobot", False))
 
