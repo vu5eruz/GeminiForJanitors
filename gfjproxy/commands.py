@@ -198,6 +198,16 @@ def btrick(args, user, jai_req, response):
     )
 
 
+@command(argspec=r"off|on|this", setting="noass")
+def noass(args, user, jai_req, response):
+    if jai_req.quiet_commands:
+        return response
+    return response.add_proxy_message(
+        f"NoAss {'enabled' if jai_req.use_noass else 'disabled'}"
+        + (" (for this message only)." if args == "this" else ".")
+    )
+
+
 @command(argspec=r"off|on|this", setting="nobot")
 def nobot(args, user, jai_req, response):
     if jai_req.quiet_commands:
@@ -592,25 +602,40 @@ For example: `google/AQ.Ab8RN...` (Vertex AI API key), `openrouter/z-ai/glm-4.5-
 
 ## **Google AI Studio and Vertex AI** (`google`)
 
-All models that start with `gemini-` will be routed to Google. \
-To use Gemma models, you must add `google/` at the start.
+`https://aistudio.google.com/`
+
+All models that start with `gemini-` or `gemma-` will be routed to Google.
 
 All API keys that start with `AIza` will be used with Google models. \
 Vertex AI API keys have a different format and you must add `google/` at the start.
 
 ## **Cerebras Cloud Inference** (`cerebras`)
 
+`https://cloud.cerebras.ai/`
+
 To use any Cerebras model, you must add `cerebras/` at the start.
 
 All API keys that start with `csk-` will be used with Cerebras models.
 
+## **Nvidia NIM** (`nvidia`)
+
+`https://build.nvidia.com/`
+
+To use any model through Nvidia NIM, you must add `nvidia/` first and then the full model name.
+
+All API keys that start with `nvapi-` will be used with Nvidia NIM.
+
 ## **OpenRouter** (`openrouter`)
+
+`https://openrouter.ai/`
 
 To use any model through OpenRouter, you must add `openrouter/` first and then the full model name.
 
-All API keys that start with `sk-or-v1-` will be used with OpenRouter models.
+All API keys that start with `sk-or-v1-` will be used with OpenRouter.
 
 ## **Z.AI** (`z_ai`)
+
+`https://chat.z.ai/`
 
 To use any Z.AI model, you must add `z_ai/` at the start.
 

@@ -124,7 +124,7 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 31
+BANNER_VERSION = 32
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
@@ -142,7 +142,7 @@ You can use commands and set jailbreaks in your chat. Send a message with `//hel
 
 You can use multiple API keys and automatically switch between them. Send a message with `//help multikey` for more info.
 
-You can use models from different companies: Cerebras, Google, OpenRouter and Z.AI. Send a message with `//help providers` for more info.
+You can use models from different companies: Cerebras, Google, Nvidia NIM, OpenRouter, and Z.AI. Send a message with `//help providers` for more info.
 
 You can see proxy statistics and find out if there are more errors than usual. Open `{PROXY_URL}/stats` to find out.
 
@@ -150,11 +150,22 @@ You should only see this banner if you are a new user or if there is an update. 
 
 ***
 
+## **Notice**
+
+On **August 1, 2026**, Render will impose a 5 GB bandwidth limit on free instances, which will suspend all public URLs very quickly.
+Anyone with knowledge in Python programming can help porting and deploying the proxy to other clouds, such as Netlify, Vercel, or Railway.
+Pull requests are welcome at `https://github.com/vu5eruz/GeminiForJanitors` for contributions.
+
+***
+
 ## **Updates**
 
-## May 8, 2026
+## June 5, 2026
 
-● New jailbreak `//btrick on|off|this` is now available! Uses U+2800 Braille Pattern Blank when talking to the AI to help bypass content filters.
+● New jailbreak `//noass on|off|this` is now available! Somewhat untested, can break model output in some providers. Seems not to help with Gemini 3.5 filters.
+
+● New provider **Nvidia NIM** is now available! Its API keys start with `nvapi-`. To use a model, use its extended name, e.g.: `nvidia/deepseek-ai/deepseek-v4-pro`, `nvidia/z-ai/glm-5.1` Some of these may take very to long to reply and cause Gateway Timeout errors.
+
 """
 
 ################################################################################
