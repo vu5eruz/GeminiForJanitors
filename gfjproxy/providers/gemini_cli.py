@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any, Self
 from uuid import uuid4
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT, PROXY_URL
 from ..http_client import http_client
@@ -172,9 +172,9 @@ def gemini_cli_refresh_credentials(
         )
         resp.raise_for_status()
         resp_json = resp.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         return RefreshCredentialsResult.from_error((504, "Google OAuth timed out"))
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         error = {}
         if e.response.headers.get("content-type", "").startswith("application/json"):
             error = e.response.json()
@@ -189,7 +189,7 @@ def gemini_cli_refresh_credentials(
 
         xlog(user, f"{message}\n{e.response.text!r}")
         return RefreshCredentialsResult.from_error((e.response.status_code, message))
-    except httpx.RequestError as e:
+    except httpx2.RequestError as e:
         message = f"Refresh credentials network error: {e}"
         xlog(user, message)
         return RefreshCredentialsResult.from_error((502, message))
@@ -237,13 +237,13 @@ def gemini_cli_load_project_id(
         )
         resp.raise_for_status()
         resp_json = resp.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         return LoadProjectIdResult.from_error((504, "Google Cloud Code timed out"))
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         message = f"Load project id error: {e.response.status_code} {e.response.reason_phrase}"
         xlog(user, f"{message}\n{e.response.text!r}")
         return LoadProjectIdResult.from_error((e.response.status_code, message))
-    except httpx.RequestError as e:
+    except httpx2.RequestError as e:
         message = f"Load project id network error: {e}"
         xlog(user, message)
         return LoadProjectIdResult.from_error((502, message))
@@ -322,11 +322,11 @@ def gemini_cli_generate_content_ex(
         )
         resp.raise_for_status()
         resp_json = resp.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         return GenerateContentExResult.from_error(
             (504, "Google Cloud Code timed out", "")
         )
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         error_json = {}
         if e.response.headers.get("content-type", "").startswith("application/json"):
             error_json = e.response.json()
@@ -351,7 +351,7 @@ def gemini_cli_generate_content_ex(
         return GenerateContentExResult.from_error(
             (e.response.status_code, message, extras)
         )
-    except httpx.RequestError as e:
+    except httpx2.RequestError as e:
         message = f"Gemini CLI generate network error: {e}"
         xlog(user, message)
         return GenerateContentExResult.from_error((502, message, ""))

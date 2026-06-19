@@ -1,6 +1,6 @@
 """Global HTTP Client."""
 
-from httpx import Client
+from httpx2 import Client
 
 from ._globals import PROXY_VERSION
 

@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT, PROXY_NAME, PROXY_URL
 from ..http_client import http_client
@@ -62,10 +62,10 @@ def openrouter_generate_content(
         )
         openrouter_response.raise_for_status()
         openrouter_result = openrouter_response.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         track_stats("openrouter.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         message = "Error from OpenRouter"
         extras = ""
 

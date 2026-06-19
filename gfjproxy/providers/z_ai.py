@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
@@ -63,10 +63,10 @@ def z_ai_generate_content(
         )
         z_ai_response.raise_for_status()
         z_ai_result = z_ai_response.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         track_stats("z_ai.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         message = "Error from Z.AI"
 
         if error := e.response.json().get("error"):

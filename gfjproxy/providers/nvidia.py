@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
@@ -61,10 +61,10 @@ def nvidia_generate_content(
         )
         nvidia_response.raise_for_status()
         nvidia_result = nvidia_response.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         track_stats("nvidia.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         message = "Error from Nvidia NIM"
         extras = ""
 

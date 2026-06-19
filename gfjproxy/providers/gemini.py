@@ -2,7 +2,7 @@ from typing import Any
 
 from google import genai
 from google.genai import errors, types
-from httpx import HTTPError, ReadTimeout
+from httpx2 import HTTPError, ReadTimeout
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client

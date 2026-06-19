@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 from google.genai import errors, types
-from httpx import ReadTimeout
+from httpx2 import ReadTimeout
 from pytest_mock import MockerFixture
 
 from gfjproxy._globals import BANNER, BANNER_VERSION

@@ -13,7 +13,7 @@ from enum import Enum
 from itertools import groupby
 
 from flask import Response
-from httpx import HTTPError
+from httpx2 import HTTPError
 
 from .http_client import http_client
 
