@@ -88,10 +88,6 @@ else:
 
 CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 
-# XXX: FileNotFoundError
-with open("think.txt", encoding="utf-8") as think:
-    THINK = think.read()
-
 PRESETS = {}
 for entry in _scandir("presets"):
     if entry.is_file():

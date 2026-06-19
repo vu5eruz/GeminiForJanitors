@@ -2,7 +2,7 @@ import re
 from random import randint
 from typing import Any, cast
 
-from ._globals import BANNER, BANNER_VERSION, THINK
+from ._globals import BANNER, BANNER_VERSION
 from .commands import CommandError, CommandExit
 from .logging import xlog
 from .models import JaiMessage, JaiRequest, JaiResult, JaiResultMetadata
@@ -76,12 +76,12 @@ def _handle_request(
             "The proxy couldn't recognize an API key.",
             extras=(
                 f"Your API key `{api_key}` didn't match any of the proxy's prefixes.\n"
-                + "You should specify the provider at the start of your API key. For example:\n"
-                + "- If the key is for Cerebras, add `cerebras/` at the start of it.\n"
-                + "- If the key is for Google AI or Vertex AI, add `google/` at the start of it.\n"
-                + "- If the key is for Nvidia NIM, add `nvidia/` at the start of it.\n"
-                + "- If the key is for Z.AI, add `z_ai/` at the start of it.\n"
-                + "- If the key is for OpenRouter, add `openrouter/` at the start of it.\n"
+                "You should specify the provider at the start of your API key. For example:\n"
+                "- If the key is for Cerebras, add `cerebras/` at the start of it.\n"
+                "- If the key is for Google AI or Vertex AI, add `google/` at the start of it.\n"
+                "- If the key is for Nvidia NIM, add `nvidia/` at the start of it.\n"
+                "- If the key is for Z.AI, add `z_ai/` at the start of it.\n"
+                "- If the key is for OpenRouter, add `openrouter/` at the start of it.\n"
                 # No mention of Gemini CLI since support is WIP and its API key always resolve
             ),
             metadata=JaiResultMetadata(api_key_valid=False),
@@ -98,16 +98,16 @@ def _handle_request(
     if not model:
         extras = (
             f"You have a `{provider_name}` API key but you didn't specify a model for it.\n"
-            + "Make sure to use OpenRouter model syntax `provider/model`.\n"
-            + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
+            "Make sure to use OpenRouter model syntax `provider/model`.\n"
+            "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
         )
 
         if provider_name in ("openrouter", "nvidia"):
             extras += (
                 "\n**Note For OpenRouter and Nvidia NIM API keys**:"
-                + "  use an extended model name:"
-                + " `openrouter/anthropic/claude-3.5-sonnet`,"
-                + " `nvidia/deepseek-ai/deepseek-v4-pro`, etc."
+                "  use an extended model name:"
+                " `openrouter/anthropic/claude-3.5-sonnet`,"
+                " `nvidia/deepseek-ai/deepseek-v4-pro`, etc."
             )
 
         return JaiResult(
@@ -266,15 +266,11 @@ def handle_chat_message(
 
         jai_req.append_message(
             "user",
-            "\n".join(
-                [
-                    "<system>",
-                    f"  Character d20 roll: {randint(1, 20)}.",
-                    "  A character roll is made on every message.",
-                    "  Use this only if it is relevant.",
-                    "</system>",
-                ]
-            ),
+            "<system>\n"
+            f"  Character d20 roll: {randint(1, 20)}.\n"
+            "  A character roll is made on every message.\n"
+            "  Use this only if it is relevant.\n"
+            "</system>",
         )
 
     if jai_req.use_think or user.use_think:
@@ -284,7 +280,26 @@ def handle_chat_message(
             + (" (for this message only)." if not user.use_think else "."),
         )
 
-        jai_req.append_message("assistant", THINK)
+        jai_req.append_message(
+            "assistant",
+            "You should structure your response using thinking tags:\n"
+            "\n"
+            "<think>\n"
+            "[Your internal analysis here]\n"
+            "[Plan your roleplay response]\n"
+            "[Consider character motivations]\n"
+            "[Any reasoning or thoughts]\n"
+            "</think>\n"
+            "\n"
+            "<response>\n"
+            "[Your actual roleplay content goes here]\n"
+            "[No meta-commentary]\n"
+            "[No OOC notes unless requested]\n"
+            "[Just the story/roleplay]\n"
+            "</response>\n"
+            "\n"
+            "This format helps separate your reasoning from the actual roleplay content.",
+        )
 
         used_think = True
     else:
