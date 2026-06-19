@@ -381,7 +381,7 @@ def handle_chat_message(
             else:  # the system message goes unprefixed
                 squashed += f"\n\n{message.content}"
 
-        jai_req.messages = [JaiMessage(content=squashed.strip(), role="model")]
+        jai_req.messages = [JaiMessage(content=squashed.strip(), role="assistant")]
 
         used_noass = True
     else:
