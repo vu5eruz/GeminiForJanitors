@@ -13,8 +13,12 @@ dependencies = [
     "google-genai>=2.9.0",
     "gunicorn>=26.0.0",
     "httpx2[brotli,http2,zstd]>=2.4.0",
-    "psutil>=7.2.2",
     "redis>=8.0.0",
+]
+
+[project.optional-dependencies]
+memory = [
+    "psutil>=7.2.2",
 ]
 
 [dependency-groups]

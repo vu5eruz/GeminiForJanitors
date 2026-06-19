@@ -302,8 +302,12 @@ dependencies = [
     { name = "google-genai" },
     { name = "gunicorn" },
     { name = "httpx2", extra = ["brotli", "http2", "zstd"] },
-    { name = "psutil" },
     { name = "redis" },
+]
+
+[package.optional-dependencies]
+memory = [
+    { name = "psutil" },
 ]
 
 [package.dev-dependencies]
@@ -323,9 +327,10 @@ requires-dist = [
     { name = "google-genai", specifier = ">=2.9.0" },
     { name = "gunicorn", specifier = ">=26.0.0" },
     { name = "httpx2", extras = ["brotli", "http2", "zstd"], specifier = ">=2.4.0" },
-    { name = "psutil", specifier = ">=7.2.2" },
+    { name = "psutil", marker = "extra == 'memory'", specifier = ">=7.2.2" },
     { name = "redis", specifier = ">=8.0.0" },
 ]
+provides-extras = ["memory"]
 
 [package.metadata.requires-dev]
 dev = [

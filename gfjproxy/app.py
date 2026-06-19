@@ -28,21 +28,24 @@ import gc
 from colorama import just_fix_windows_console
 from flask import Flask
 from flask_cors import CORS
-from psutil import Process
 
 from .logging import hijack_loggers, xlog
 from .storage import storage
 from .utils import run_cloudflared
 from .xuiduser import RedisUserStorage
 
-_process = Process()
+try:
+    from psutil import Process
+    _psutil_process = Process()
+except ModuleNotFoundError:
+    _psutil_process = None
 
 
 def _teardown(exception):
     gc.collect()
 
-    if not PRODUCTION:
-        xlog(None, f"Memory {_process.memory_info().rss / 1048576:.1f} MiB")
+    if _psutil_process is not None:
+        xlog(None, f"Memory {_psutil_process.memory_info().rss / 1048576:.1f} MiB")
 
 
 def create_app():
