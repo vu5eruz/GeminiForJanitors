@@ -21,7 +21,8 @@ from .xuiduser import XUID, UserSettings
 ################################################################################
 
 API_KEY_PREFIXES = {
-    "AIza": "google",
+    "AIza": "google",  # Standard API keys
+    "AQ.": "google",  # Authorization keys
     "csk-": "cerebras",
     "nvapi-": "nvidia",
     "sk-ant-": "anthropic",
