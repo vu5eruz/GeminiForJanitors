@@ -36,6 +36,7 @@ from .xuiduser import RedisUserStorage
 
 try:
     from psutil import Process
+
     _psutil_process = Process()
 except ModuleNotFoundError:
     _psutil_process = None

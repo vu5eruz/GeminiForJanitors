@@ -1,47 +1,76 @@
 """Proxy global variables."""
 
+import subprocess
 from datetime import datetime, timedelta, timezone
 from os import environ as _env
 from os import scandir as _scandir
+from os.path import dirname as _dirname
+
+################################################################################
 
 
-def _make_git_version():
-    import os.path
-    import subprocess
+CWD = _dirname(__file__)
 
-    version = "unknown"
+
+def _fallback_env(*names) -> str | None:
+    for name in names:
+        # Check that the environment variable is not None and not the empty string
+        if value := _env.get(name):
+            return value
+    return None
+
+
+def _get_proxy_branch() -> str:
+    branch = _fallback_env("GFJPROXY_BRANCH", "RENDER_GIT_BRANCH") or "unknown"
 
     try:
-        p = subprocess.Popen(
+        res = subprocess.run(
+            ["git", "symbolic-ref", "--short", "HEAD"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=CWD,
+            text=True,
+            check=True,
+        )
+        if resstr := res.stdout.strip():
+            branch = resstr
+    except Exception:
+        pass
+
+    return branch
+
+
+def _get_proxy_version() -> str:
+    version = _fallback_env("GFJPROXY_VERSION", "RENDER_GIT_COMMIT") or "unknown"
+
+    try:
+        res = subprocess.run(
             ["git", "log", "-1", "--format=%ct-%h"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=os.path.dirname(__file__),
+            cwd=CWD,
+            text=True,
+            check=True,
         )
+        if resstr := res.stdout.strip():
+            timestamp, commit = resstr.split("-", maxsplit=1)
+
+            # The previous code used "--date=format:%Y.%m.%d --format=%ad-%h" to format
+            # the version string, leading to it being implicitly dependent on the timezone
+            # of the committer. Since up to the time of writing, the only author has been
+            # from the UTC-4 timezone, it is possible to maintain backwards compat with old
+            # deployments by making the versioning scheme officially based on UTC-4 and
+            # independent of the committer's timezone. This makes it possible to always
+            # reliably derive a version from a commit hash and its UTC timestamp alone, such
+            # as those provided from the GitHub APIs.
+
+            dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc) - timedelta(
+                hours=4
+            )
+
+            version = f"{dt:%Y.%m.%d}-{commit}"
     except Exception:
         pass
-    else:
-        out, _ = p.communicate()
-
-        if p.returncode == 0 and out:
-            timestamp_hash = out.decode().strip().split("-", maxsplit=2)
-            if len(timestamp_hash) == 2:
-                timestamp, hash = timestamp_hash
-
-                # The previous code used "--date=format:%Y.%m.%d --format=%ad-%h" to format
-                # the version string, leading to it being implicitly dependent on the timezone
-                # of the committer. Since up to the time of writting, the only author has been
-                # from the UTC-4 timezone, it is possible to maintain backwards compat with old
-                # deployments by making the versioning scheme officially based on UTC-4 and
-                # independent of the committer's timezone. This makes it possible to always
-                # reliably derive a version from a commit hash and its UTC timestamp alone, such
-                # as those provided from the GitHub APIs.
-
-                dt = datetime.fromtimestamp(
-                    int(timestamp), tz=timezone.utc
-                ) - timedelta(hours=4)
-
-                version = f"{dt:%Y.%m.%d}-{hash}"
 
     return version
 
@@ -69,7 +98,6 @@ for entry in _scandir("presets"):
         with open(f"presets/{entry.name}", encoding="utf-8") as preset:
             PRESETS[entry.name.split(".")[0]] = preset.read()
 
-
 PROXY_AUTHORS = [
     "@undefinedundefined (@undefined_anon on Discord, vu5eruz on GitHub)",
 ]
@@ -78,30 +106,20 @@ PROXY_ADMIN = _env.get("GFJPROXY_ADMIN", "Anonymous")
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _make_git_version()
+PROXY_BRANCH = _get_proxy_branch()
 
-PROXY_URL = _env.get("GFJPROXY_EXTERNAL_URL", "")
-if not PROXY_URL:
-    PROXY_URL = _env.get("RENDER_EXTERNAL_URL", "")
-    if not PROXY_URL:
-        PROXY_URL = "https://geminiforjanitors.onrender.com"
-PROXY_URL = PROXY_URL.rstrip("/")
+PROXY_VERSION = _get_proxy_version()
 
-PROXY_BRANCH = _env.get("GFJPROXY_BRANCH", "")
-if not PROXY_BRANCH:
-    PROXY_BRANCH = _env.get("RENDER_GIT_BRANCH", "")
-    if not PROXY_BRANCH:
-        PROXY_BRANCH = "master"
-PROXY_BRANCH = PROXY_BRANCH.strip().lower()
+PROXY_URL = (
+    _fallback_env("GFJPROXY_EXTERNAL_URL", "RENDER_EXTERNAL_URL")
+    or "https://geminiforjanitors.onrender.com"
+).rstrip("/")
 
 COOLDOWN = _env.get("GFJPROXY_COOLDOWN", "0")
 
 BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 76800))  # 75 GiB in MiB
 
-if (_RENDER_API_KEY := _env.get("GFJPROXY_RENDER_API_KEY", "")).startswith("rnd_"):
-    RENDER_API_KEY = _RENDER_API_KEY
-else:
-    RENDER_API_KEY = None
+RENDER_API_KEY = _env.get("GFJPROXY_RENDER_API_KEY")
 
 RENDER_SERVICE_ID = _env.get("RENDER_SERVICE_ID")
 
