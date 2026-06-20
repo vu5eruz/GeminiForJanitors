@@ -201,6 +201,13 @@ def handle_chat_message(
 
     This handles when the user sends a simple chat message to the bot."""
 
+    # For in-prod print debugging and data mining lmao
+    xlog(
+        user,
+        f"Request has {len(jai_req.messages)} message(s) with role(s): "
+        + "".join(m.role[0] if m.role else "?" for m in jai_req.messages),
+    )
+
     user_name, persona_name = parse_user_persona_names(user, jai_req)
 
     last_user_message = jai_req.messages[-1]
