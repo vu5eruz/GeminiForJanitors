@@ -10,6 +10,20 @@ from ..statistics import track_stats
 from ..xuiduser import XUID
 
 
+def _simplify_error_message(message: str) -> str:
+    if not message:
+        return "[empty error message]"
+
+    # Nvidia sometimes seems to send duplicated error messages in the same string
+    # I.e. the first half of the string is equal to the second half, separated by a space
+    half_len = len(message) // 2
+    if message[half_len] == " " and message[:half_len] == message[half_len + 1 :]:
+        return message[:half_len]
+
+    # No simplifications done
+    return message
+
+
 def nvidia_generate_content(
     user: XUID,
     api_key: str,
@@ -77,7 +91,7 @@ def nvidia_generate_content(
                     if error_code := error.get("code"):
                         message += f" ({error_code})"
                     if error_message := error.get("message"):
-                        message += f": {error_message}"
+                        message += f": {_simplify_error_message(error_message)}"
             elif content_type.startswith("application/problem+json"):
                 response_json = e.response.json()
 
