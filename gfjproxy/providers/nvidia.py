@@ -35,6 +35,10 @@ def nvidia_generate_content(
 
     User paramater is only used for logging."""
 
+    if len(messages) == 1 and messages[0].role == "assistant":
+        # For some models, "conversation roles must alternate user/assistant/user/assistant/"
+        messages.insert(0, JaiMessage(content=".", role="user"))
+
     nvidia_request = {
         "model": model,
         "stream": False,
