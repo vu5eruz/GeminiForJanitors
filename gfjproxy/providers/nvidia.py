@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
@@ -8,6 +8,20 @@ from ..logging import xlog
 from ..models import JaiMessage, JaiResult, JaiResultMetadata, JaiResultTokenUsage
 from ..statistics import track_stats
 from ..xuiduser import XUID
+
+
+def _simplify_error_message(message: str) -> str:
+    if not message:
+        return "[empty error message]"
+
+    # Nvidia sometimes seems to send duplicated error messages in the same string
+    # I.e. the first half of the string is equal to the second half, separated by a space
+    half_len = len(message) // 2
+    if message[half_len] == " " and message[:half_len] == message[half_len + 1 :]:
+        return message[:half_len]
+
+    # No simplifications done
+    return message
 
 
 def nvidia_generate_content(
@@ -20,6 +34,10 @@ def nvidia_generate_content(
     """Wrapper around Nvidia NIM API.
 
     User paramater is only used for logging."""
+
+    if len(messages) == 1 and messages[0].role == "assistant":
+        # For some models, "conversation roles must alternate user/assistant/user/assistant/"
+        messages.insert(0, JaiMessage(content=".", role="user"))
 
     nvidia_request = {
         "model": model,
@@ -61,10 +79,10 @@ def nvidia_generate_content(
         )
         nvidia_response.raise_for_status()
         nvidia_result = nvidia_response.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         track_stats("nvidia.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         message = "Error from Nvidia NIM"
         extras = ""
 
@@ -77,7 +95,7 @@ def nvidia_generate_content(
                     if error_code := error.get("code"):
                         message += f" ({error_code})"
                     if error_message := error.get("message"):
-                        message += f": {error_message}"
+                        message += f": {_simplify_error_message(error_message)}"
             elif content_type.startswith("application/problem+json"):
                 response_json = e.response.json()
 

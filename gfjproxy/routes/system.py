@@ -5,6 +5,7 @@ from flask import Blueprint, redirect, render_template, request, send_from_direc
 from .._globals import (
     BANDWIDTH_WARNING,
     PROXY_ADMIN,
+    PROXY_BRANCH,
     PROXY_NAME,
     PROXY_URL,
     PROXY_VERSION,
@@ -58,6 +59,7 @@ def health():
     health = {
         "admin": PROXY_ADMIN,
         "bandwidth": usage.total,
+        "branch": PROXY_BRANCH,
         "bwarning": BANDWIDTH_WARNING,
         "cooldown": get_cooldown(usage),
         "cpolicy": str(cooldown_policy),

@@ -1,47 +1,76 @@
 """Proxy global variables."""
 
+import subprocess
 from datetime import datetime, timedelta, timezone
 from os import environ as _env
 from os import scandir as _scandir
+from os.path import dirname as _dirname
+
+################################################################################
 
 
-def _make_git_version():
-    import os.path
-    import subprocess
+CWD = _dirname(__file__)
 
-    version = "unknown"
+
+def _fallback_env(*names) -> str | None:
+    for name in names:
+        # Check that the environment variable is not None and not the empty string
+        if value := _env.get(name):
+            return value
+    return None
+
+
+def _get_proxy_branch() -> str:
+    branch = _fallback_env("GFJPROXY_BRANCH", "RENDER_GIT_BRANCH") or "unknown"
 
     try:
-        p = subprocess.Popen(
+        res = subprocess.run(
+            ["git", "symbolic-ref", "--short", "HEAD"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=CWD,
+            text=True,
+            check=True,
+        )
+        if resstr := res.stdout.strip():
+            branch = resstr
+    except Exception:
+        pass
+
+    return branch
+
+
+def _get_proxy_version() -> str:
+    version = _fallback_env("GFJPROXY_VERSION", "RENDER_GIT_COMMIT") or "unknown"
+
+    try:
+        res = subprocess.run(
             ["git", "log", "-1", "--format=%ct-%h"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=os.path.dirname(__file__),
+            cwd=CWD,
+            text=True,
+            check=True,
         )
+        if resstr := res.stdout.strip():
+            timestamp, commit = resstr.split("-", maxsplit=1)
+
+            # The previous code used "--date=format:%Y.%m.%d --format=%ad-%h" to format
+            # the version string, leading to it being implicitly dependent on the timezone
+            # of the committer. Since up to the time of writing, the only author has been
+            # from the UTC-4 timezone, it is possible to maintain backwards compat with old
+            # deployments by making the versioning scheme officially based on UTC-4 and
+            # independent of the committer's timezone. This makes it possible to always
+            # reliably derive a version from a commit hash and its UTC timestamp alone, such
+            # as those provided from the GitHub APIs.
+
+            dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc) - timedelta(
+                hours=4
+            )
+
+            version = f"{dt:%Y.%m.%d}-{commit}"
     except Exception:
         pass
-    else:
-        out, _ = p.communicate()
-
-        if p.returncode == 0 and out:
-            timestamp_hash = out.decode().strip().split("-", maxsplit=2)
-            if len(timestamp_hash) == 2:
-                timestamp, hash = timestamp_hash
-
-                # The previous code used "--date=format:%Y.%m.%d --format=%ad-%h" to format
-                # the version string, leading to it being implicitly dependent on the timezone
-                # of the committer. Since up to the time of writting, the only author has been
-                # from the UTC-4 timezone, it is possible to maintain backwards compat with old
-                # deployments by making the versioning scheme officially based on UTC-4 and
-                # independent of the committer's timezone. This makes it possible to always
-                # reliably derive a version from a commit hash and its UTC timestamp alone, such
-                # as those provided from the GitHub APIs.
-
-                dt = datetime.fromtimestamp(
-                    int(timestamp), tz=timezone.utc
-                ) - timedelta(hours=4)
-
-                version = f"{dt:%Y.%m.%d}-{hash}"
 
     return version
 
@@ -59,16 +88,11 @@ else:
 
 CLOUDFLARED = _env.get("GFJPROXY_CLOUDFLARED")
 
-# XXX: FileNotFoundError
-with open("think.txt", encoding="utf-8") as think:
-    THINK = think.read()
-
 PRESETS = {}
 for entry in _scandir("presets"):
     if entry.is_file():
         with open(f"presets/{entry.name}", encoding="utf-8") as preset:
             PRESETS[entry.name.split(".")[0]] = preset.read()
-
 
 PROXY_AUTHORS = [
     "@undefinedundefined (@undefined_anon on Discord, vu5eruz on GitHub)",
@@ -78,30 +102,20 @@ PROXY_ADMIN = _env.get("GFJPROXY_ADMIN", "Anonymous")
 
 PROXY_NAME = "GeminiForJanitors"
 
-PROXY_VERSION = _make_git_version()
+PROXY_BRANCH = _get_proxy_branch()
 
-PROXY_URL = _env.get("GFJPROXY_EXTERNAL_URL", "")
-if not PROXY_URL:
-    PROXY_URL = _env.get("RENDER_EXTERNAL_URL", "")
-    if not PROXY_URL:
-        PROXY_URL = "https://geminiforjanitors.onrender.com"
-PROXY_URL = PROXY_URL.rstrip("/")
+PROXY_VERSION = _get_proxy_version()
 
-PROXY_BRANCH = _env.get("GFJPROXY_BRANCH", "")
-if not PROXY_BRANCH:
-    PROXY_BRANCH = _env.get("RENDER_GIT_BRANCH", "")
-    if not PROXY_BRANCH:
-        PROXY_BRANCH = "master"
-PROXY_BRANCH = PROXY_BRANCH.strip().lower()
+PROXY_URL = (
+    _fallback_env("GFJPROXY_EXTERNAL_URL", "RENDER_EXTERNAL_URL")
+    or "https://geminiforjanitors.onrender.com"
+).rstrip("/")
 
 COOLDOWN = _env.get("GFJPROXY_COOLDOWN", "0")
 
 BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 76800))  # 75 GiB in MiB
 
-if (_RENDER_API_KEY := _env.get("GFJPROXY_RENDER_API_KEY", "")).startswith("rnd_"):
-    RENDER_API_KEY = _RENDER_API_KEY
-else:
-    RENDER_API_KEY = None
+RENDER_API_KEY = _env.get("GFJPROXY_RENDER_API_KEY")
 
 RENDER_SERVICE_ID = _env.get("RENDER_SERVICE_ID")
 
@@ -124,7 +138,7 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 32
+BANNER_VERSION = 33
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
@@ -162,9 +176,13 @@ Pull requests are welcome at `https://github.com/vu5eruz/GeminiForJanitors` for 
 
 ## June 5, 2026
 
-● New jailbreak `//noass on|off|this` is now available! Somewhat untested, can break model output in some providers. Seems not to help with Gemini 3.5 filters.
+● New provider **Nvidia NIM** is now available! Its API keys start with `nvapi-`. To use a model, use its extended name, e.g.: `nvidia/deepseek-ai/deepseek-v4-pro`, `nvidia/z-ai/glm-5.1` Many models sometimes take too long to reply and cause Gateway Timeout errors.
 
-● New provider **Nvidia NIM** is now available! Its API keys start with `nvapi-`. To use a model, use its extended name, e.g.: `nvidia/deepseek-ai/deepseek-v4-pro`, `nvidia/z-ai/glm-5.1` Some of these may take very to long to reply and cause Gateway Timeout errors.
+## June 19, 2026
+
+● The proxy now recognizes API keys that start with `AQ.` for use with Gemini!
+
+● Notice: if you are using API keys that start with `AIza`, know that Google will reject them starting September 2026! You are advised to update all your keys to the new `AQ.` type!  See https://ai.google.dev/gemini-api/docs/api-key for more info.
 
 """
 

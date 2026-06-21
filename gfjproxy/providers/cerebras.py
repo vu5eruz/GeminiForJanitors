@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
@@ -59,10 +59,10 @@ def cerebras_generate_content(
         )
         cerebras_response.raise_for_status()
         cerebras_result = cerebras_response.json()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         track_stats("cerebras.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         message = "Error from Cerebras"
 
         if error := e.response.json():

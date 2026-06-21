@@ -1,6 +1,6 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT, PROXY_NAME, PROXY_URL
 from ..http_client import http_client
@@ -64,9 +64,9 @@ def proxy_generate_content(
             timeout=PROCESS_TIMEOUT,
         )
         proxy_response.raise_for_status()
-    except httpx.TimeoutException:
+    except httpx2.TimeoutException:
         return JaiResult(504, "Gateway Timeout")
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         return JaiResult(e.response.status_code, e.response.text)
     except Exception as e:
         xlog(user, repr(e))
