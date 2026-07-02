@@ -156,7 +156,7 @@ You can use commands and set jailbreaks in your chat. Send a message with `//hel
 
 You can use multiple API keys and automatically switch between them. Send a message with `//help multikey` for more info.
 
-You can use models from different companies: Cerebras, Google, Nvidia NIM, OpenRouter, and Z.AI. Send a message with `//help providers` for more info.
+You can use models from different companies: Cerebras, DeepSeek, Google, Nvidia NIM, OpenRouter, and Z.AI. Send a message with `//help providers` for more info.
 
 You can see proxy statistics and find out if there are more errors than usual. Open `{PROXY_URL}/stats` to find out.
 

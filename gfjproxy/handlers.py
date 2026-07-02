@@ -8,6 +8,7 @@ from .logging import xlog
 from .models import JaiMessage, JaiRequest, JaiResult, JaiResultMetadata
 from .prefill import apply_prefill, clear_prefill
 from .providers.cerebras import cerebras_generate_content
+from .providers.deepseek import deepseek_generate_content
 from .providers.gemini import gemini_generate_content
 from .providers.gemini_cli import gemini_cli_generate_content
 from .providers.nvidia import nvidia_generate_content
@@ -33,6 +34,7 @@ API_KEY_PREFIXES = {
 
 PROVIDER_FUNCS = {
     "cerebras": cerebras_generate_content,
+    "deepseek": deepseek_generate_content,
     "gemini_cli": gemini_cli_generate_content,
     "google": gemini_generate_content,
     "nvidia": nvidia_generate_content,
@@ -78,6 +80,7 @@ def _handle_request(
                 f"Your API key `{api_key}` didn't match any of the proxy's prefixes.\n"
                 "You should specify the provider at the start of your API key. For example:\n"
                 "- If the key is for Cerebras, add `cerebras/` at the start of it.\n"
+                "- If the key is for DeepSeek, add `deepseek/` at the start of it.\n"
                 "- If the key is for Google AI or Vertex AI, add `google/` at the start of it.\n"
                 "- If the key is for Nvidia NIM, add `nvidia/` at the start of it.\n"
                 "- If the key is for Z.AI, add `z_ai/` at the start of it.\n"
@@ -99,7 +102,7 @@ def _handle_request(
         extras = (
             f"You have a `{provider_name}` API key but you didn't specify a model for it.\n"
             "Make sure to use OpenRouter model syntax `provider/model`.\n"
-            "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, etc."
+            "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, `deepseek/deepseek-chat`, etc."
         )
 
         if provider_name in ("openrouter", "nvidia"):

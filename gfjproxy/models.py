@@ -107,6 +107,8 @@ class JaiRequest:
                     jai_req.models[provider] = model_name
                 elif model.startswith("gemini-") or model.startswith("gemma-"):
                     jai_req.models["google"] = model
+                elif model.startswith("deepseek-"):
+                    jai_req.models["deepseek"] = model
                 else:
                     # Build a comma-separated list of unknown models
                     if unknown := jai_req.models.get("unknown"):
