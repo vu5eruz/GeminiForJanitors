@@ -138,7 +138,7 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 33
+BANNER_VERSION = 34
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
@@ -184,6 +184,9 @@ Pull requests are welcome at `https://github.com/vu5eruz/GeminiForJanitors` for 
 
 ● Notice: if you are using API keys that start with `AIza`, know that Google will reject them starting September 2026! You are advised to update all your keys to the new `AQ.` type!  See https://ai.google.dev/gemini-api/docs/api-key for more info.
 
+## July 2, 2026
+
+● New provider **DeepSeek* is now available! Its API keys start with `sk-` and you must add `deepseek/` at the start to use them.
 """
 
 ################################################################################
