@@ -617,6 +617,14 @@ To use any Cerebras model, you must add `cerebras/` at the start.
 
 All API keys that start with `csk-` will be used with Cerebras models.
 
+## **DeepSeek** (`deepseek`)
+
+`https://platform.deepseek.com/`
+
+To use any DeepSeek model, you must add `deepseek/` at the start.
+
+You must add `deepseek/` at the start of any DeepSeek API key.
+
 ## **Nvidia NIM** (`nvidia`)
 
 `https://build.nvidia.com/`
