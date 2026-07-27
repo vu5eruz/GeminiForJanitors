@@ -33,7 +33,7 @@ def _get_proxy_branch() -> str:
         )
         if resstr := res.stdout.strip():
             branch = resstr
-    except subprocess.SubprocessError:
+    except (FileNotFoundError, subprocess.SubprocessError):
         pass
 
     return branch
@@ -65,7 +65,7 @@ def _get_proxy_version() -> str:
             dt = datetime.fromtimestamp(int(timestamp), tz=UTC) - timedelta(hours=4)
 
             version = f"{dt:%Y.%m.%d}-{commit}"
-    except subprocess.SubprocessError:
+    except (FileNotFoundError, subprocess.SubprocessError):
         pass
 
     return version

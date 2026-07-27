@@ -90,7 +90,7 @@ def cerebras_generate_content(
         return JaiResult(502, "Unhanded exception from Cerebras.")
 
     try:
-        text = str(cerebras_result["choices"][0]["message"]["content"])
+        text = str(cerebras_result["choices"][0]["message"]["content"] or "")
     except (KeyError, IndexError, TypeError):
         text = ""
 

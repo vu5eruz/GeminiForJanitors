@@ -138,12 +138,16 @@ def parse_user_persona_names(
         return "User", "Narrator"
 
     user_name: str | None = None
-    first_user_message = jai_req.messages[3]
-    if first_user_message.role == "user":
-        user_name_index = first_user_message.content.find(": ")
-        if user_name_index > 0:
-            user_name = first_user_message.content[:user_name_index].strip()
-            xlog(user, f"Parsed user name: {user_name!r}")
+    first_user_message = next(
+        (m for m in jai_req.messages if m.role == "user" and len(m.content) > 1),
+        None,
+    )
+    if (
+        first_user_message is not None
+        and (user_name_index := first_user_message.content.find(": ")) > 0
+    ):
+        user_name = first_user_message.content[:user_name_index].strip()
+        xlog(user, f"Parsed user name: {user_name!r}")
     if not user_name:
         xlog(user, "User name not parsed")
         user_name = "User"

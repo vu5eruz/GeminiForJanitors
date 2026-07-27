@@ -106,7 +106,7 @@ def openrouter_generate_content(
         return JaiResult(502, message)
 
     try:
-        text = str(openrouter_result["choices"][0]["message"]["content"])
+        text = str(openrouter_result["choices"][0]["message"]["content"] or "")
     except (KeyError, IndexError, TypeError):
         text = ""
 

@@ -119,16 +119,12 @@ def nvidia_generate_content(
         track_stats("nvidia.failed.exception")
         return JaiResult(502, "Unhanded exception from Nvidia NIM.")
 
-    text = ""
+    try:
+        text = str(nvidia_result["choices"][0]["message"]["content"] or "")
+    except (KeyError, IndexError, TypeError):
+        text = ""
+
     metadata = JaiResultMetadata()
-
-    if (
-        (choices := nvidia_result.get("choices"))
-        and isinstance(choices[0], dict)
-        and (message := choices[0].get("message"))
-    ):
-        text = message.get("content")
-
     if usage := nvidia_result.get("usage"):
         metadata.token_usage = JaiResultTokenUsage(
             prompt_tokens=usage.get("prompt_tokens"),

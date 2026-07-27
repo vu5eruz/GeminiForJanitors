@@ -91,7 +91,7 @@ def deepseek_generate_content(
         return JaiResult(502, "Unhanded exception from DeepSeek.")
 
     try:
-        text = str(deepseek_result["choices"][0]["message"]["content"])
+        text = str(deepseek_result["choices"][0]["message"]["content"] or "")
     except (KeyError, IndexError, TypeError):
         text = ""
 
