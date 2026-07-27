@@ -132,8 +132,8 @@ def api():
         jwt_payload_json = json.loads(jwt_payload)
         subject: str = jwt_payload_json["sub"]
         subject_digest = digest(xuid_secret, subject.encode("utf-8"), "sha256")
-    except Exception as e:  # This should never happen.
-        xlog(None, f"Keyring processing exception during key generation: {repr(e)}")
+    except Exception as e:  # ruff: ignore[BLE001]
+        xlog(None, f"Keyring processing exception during key generation: {e!r}")
         return {"error": "Credentials have missing/invalid id_token"}, 400
 
     api_key = ".".join(

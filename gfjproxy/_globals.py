@@ -1,7 +1,7 @@
 """Proxy global variables."""
 
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from os import environ as _env
 from os import scandir as _scandir
 from os.path import dirname as _dirname
@@ -26,15 +26,14 @@ def _get_proxy_branch() -> str:
     try:
         res = subprocess.run(
             ["git", "symbolic-ref", "--short", "HEAD"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             cwd=CWD,
             text=True,
             check=True,
         )
         if resstr := res.stdout.strip():
             branch = resstr
-    except Exception:
+    except subprocess.SubprocessError:
         pass
 
     return branch
@@ -46,8 +45,7 @@ def _get_proxy_version() -> str:
     try:
         res = subprocess.run(
             ["git", "log", "-1", "--format=%ct-%h"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             cwd=CWD,
             text=True,
             check=True,
@@ -64,12 +62,10 @@ def _get_proxy_version() -> str:
             # reliably derive a version from a commit hash and its UTC timestamp alone, such
             # as those provided from the GitHub APIs.
 
-            dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc) - timedelta(
-                hours=4
-            )
+            dt = datetime.fromtimestamp(int(timestamp), tz=UTC) - timedelta(hours=4)
 
             version = f"{dt:%Y.%m.%d}-{commit}"
-    except Exception:
+    except subprocess.SubprocessError:
         pass
 
     return version
@@ -113,7 +109,9 @@ PROXY_URL = (
 
 COOLDOWN = _env.get("GFJPROXY_COOLDOWN", "0")
 
-BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 76800))  # 75 GiB in MiB
+BANDWIDTH_WARNING = int(
+    _env.get("GFJPROXY_BANDWIDTH_WARNING", "76800")
+)  # 75 GiB in MiB
 
 RENDER_API_KEY = _env.get("GFJPROXY_RENDER_API_KEY")
 
@@ -123,7 +121,7 @@ REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
 XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
-STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
+STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", "24"))
 
 ################################################################################
 
@@ -132,7 +130,7 @@ STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
 # deploying using gunicorn, make sure to provide a -t value larger than the one
 # in here, to prevent issues from arising at run-time.
 PROCESS_TIMEOUT: int = max(
-    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", 120)) - 10,
+    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", "120")) - 10,
     60,
 )
 

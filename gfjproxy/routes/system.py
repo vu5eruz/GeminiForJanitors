@@ -49,10 +49,9 @@ def favicon():
 @system.route("/healthz")
 def health():
     keyspace = -1
-    if client := get_redis_client():
-        if keyspace_info := client.info("keyspace"):
-            assert isinstance(keyspace_info, dict)
-            keyspace = int(keyspace_info.get("db0", {}).get("keys", -1))
+    if (client := get_redis_client()) and (keyspace_info := client.info("keyspace")):
+        assert isinstance(keyspace_info, dict)
+        keyspace = int(keyspace_info.get("db0", {}).get("keys", -1))
 
     usage = bandwidth_usage()
 

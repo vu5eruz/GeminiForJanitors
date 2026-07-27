@@ -18,15 +18,18 @@ def _stripmultispace(string, *, regex=re.compile(r" +")):
     return regex.sub(" ", string)
 
 
+PROXY_TAG_REGEX = re.compile(
+    re.escape(ResponseHelper.PROXY_TAG_OPEN)
+    + r".*?"
+    + re.escape(ResponseHelper.PROXY_TAG_CLOSE),
+    re.DOTALL,
+)
+
+
 def _stripproxytext(
     string,
     *,
-    regex=re.compile(
-        re.escape(ResponseHelper.PROXY_TAG_OPEN)
-        + r".*?"
-        + re.escape(ResponseHelper.PROXY_TAG_CLOSE),
-        re.S,
-    ),
+    regex=PROXY_TAG_REGEX,
 ):
     """Remove <proxy></proxy> tags and their content."""
 
@@ -65,13 +68,9 @@ class Command:
 class CommandError(Exception):
     """User error raised by commands."""
 
-    pass
-
 
 class CommandExit(Exception):
     """Exception to exit processing early raised by commands."""
-
-    pass
 
 
 COMMANDS = {}
@@ -171,7 +170,7 @@ def preset(args, user, jai_req, response):
         raise CommandError(
             f'"`{args}`" is not a valid preset.'
             + " Available presets: "
-            + ", ".join(f"`{key}`" for key in PRESETS.keys())
+            + ", ".join(f"`{key}`" for key in PRESETS)
         )
 
     jai_req.use_preset = PRESETS[args]
@@ -310,7 +309,9 @@ def dice_char(args, user, jai_req, response):
 def dice_roll(args, user, jai_req, response):
     dice = args.replace("p", "+").replace("m", "-")
 
-    match = re.fullmatch(r"(\d+)?d(\d+)([+-]\d+)?([a-z])?", dice, re.A | re.I)
+    match = re.fullmatch(
+        r"(\d+)?d(\d+)([+-]\d+)?([a-z])?", dice, re.ASCII | re.IGNORECASE
+    )
     if not match:
         return response.add_proxy_message(
             f"Invalid dice syntax `{args}`\nUse the `//dice_help` command for more info."

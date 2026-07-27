@@ -48,14 +48,14 @@ def _get_finish_reason_feedback(response: types.GenerateContentResponse) -> str 
         if isinstance(prompt_feedback.block_reason, types.BlockedReason):
             return prompt_feedback.block_reason.name
 
-    if candidates := response.candidates:
-        if (
-            isinstance(candidates, list)
-            and len(candidates) >= 1
-            and isinstance(candidates[0], types.Candidate)
-            and isinstance(candidates[0].finish_reason, types.FinishReason)
-        ):
-            return candidates[0].finish_reason.name
+    if (
+        (candidates := response.candidates)
+        and isinstance(candidates, list)
+        and len(candidates) >= 1
+        and isinstance(candidates[0], types.Candidate)
+        and isinstance(candidates[0].finish_reason, types.FinishReason)
+    ):
+        return candidates[0].finish_reason.name
 
     return None
 
@@ -65,8 +65,11 @@ def _get_quota_violation_feedback(qid: str) -> str | None:
 
     Returns None if an unknown quota ID is given."""
 
-    if qid.startswith("GenerateContentInputTokensPerModelPerMinute") or qid.startswith(
-        "GenerateContentPaidTierInputTokensPerModelPerMinute"
+    if qid.startswith(
+        (
+            "GenerateContentInputTokensPerModelPerMinute",
+            "GenerateContentPaidTierInputTokensPerModelPerMinute",
+        )
     ):
         return "Input Tokens per Minute quota exceeded."
 
@@ -87,7 +90,7 @@ def gemini_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Wrapper around Google AI's Gemini.
 
@@ -118,7 +121,7 @@ def gemini_generate_content(
         ],
     }
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             gemini_config["temperature"] = value
         elif key == "max_tokens":
@@ -260,7 +263,7 @@ def gemini_generate_content(
         xlog(user, repr(e))  # Log these fellas for they are anomalous
         track_stats("g.failed.server.unknown")
         return JaiResult(e.code, e.message)
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         track_stats("g.failed.unknown")
         return JaiResult(502, "Unhanded exception from Google AI.")

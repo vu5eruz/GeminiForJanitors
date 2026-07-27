@@ -15,7 +15,7 @@ def cerebras_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Wrapper around Cerebras' Chat Completions API.
 
@@ -36,7 +36,7 @@ def cerebras_generate_content(
     # As of April 6, 2026, Cerebras does not support top_k
     # Pass the value(s) anyway and let the user get a relevant error
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             cerebras_request["temperature"] = value
         elif key == "max_tokens":
@@ -84,19 +84,17 @@ def cerebras_generate_content(
             track_stats("cerebras.failed.unknown")
 
         return JaiResult(e.response.status_code, message)
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))
         track_stats("cerebras.failed.exception")
         return JaiResult(502, "Unhanded exception from Cerebras.")
 
-    text = ""
-    extras = ""
+    try:
+        text = str(cerebras_result["choices"][0]["message"]["content"])
+    except (KeyError, IndexError, TypeError):
+        text = ""
+
     metadata = JaiResultMetadata()
-
-    if choices := cerebras_result.get("choices"):
-        if isinstance(choices[0], dict) and (message := choices[0].get("message")):
-            text = message.get("content")
-
     if usage := cerebras_result.get("usage"):
         metadata.token_usage = JaiResultTokenUsage(
             prompt_tokens=usage.get("prompt_tokens"),
@@ -111,4 +109,4 @@ def cerebras_generate_content(
         return JaiResult(502, "Response blocked/empty.", metadata=metadata)
 
     track_stats("cerebras.succeeded")
-    return JaiResult(200, text, extras=extras, metadata=metadata)
+    return JaiResult(200, text, metadata=metadata)

@@ -68,7 +68,7 @@ def _handle_request(
     api_key: str,
     models: dict[str, str],
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Dispatch a JaiRequest request to the appropriate providen given the API key."""
     provider_name, api_key = _resolve_provider(api_key)
@@ -150,10 +150,11 @@ def parse_user_persona_names(
 
     persona_name: str | None = None
     system_message = jai_req.messages[0]
-    if system_message.role == "system":
-        if persona_match := PERSONA_REGEX.search(system_message.content):
-            persona_name = str(persona_match.group(1)).strip()
-            xlog(user, f"Parsed persona name: {persona_name!r}")
+    if system_message.role == "system" and (
+        persona_match := PERSONA_REGEX.search(system_message.content)
+    ):
+        persona_name = str(persona_match.group(1)).strip()
+        xlog(user, f"Parsed persona name: {persona_name!r}")
     if not persona_name:
         xlog(user, "Persona name not parsed")
         persona_name = "Narrator"
@@ -481,12 +482,11 @@ def handle_chat_message(
     if used_btrick:
         result.text = result.text.replace("\u2800", " ")
 
-    if used_prefill:
-        if metadata := clear_prefill(result, user.prefill_mode):
-            if metadata & 2:
-                xlog(user, "Removed <starter> from response")
-            if metadata & 4:
-                xlog(user, "Removed matching code from response")
+    if used_prefill and (metadata := clear_prefill(result, user.prefill_mode)):
+        if metadata & 2:
+            xlog(user, "Removed <starter> from response")
+        if metadata & 4:
+            xlog(user, "Removed matching code from response")
 
     if used_think:
         text = result.text

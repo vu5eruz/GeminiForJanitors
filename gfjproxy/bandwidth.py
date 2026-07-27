@@ -5,6 +5,7 @@ import threading
 from dataclasses import dataclass
 from time import perf_counter
 
+import httpx2
 import redis
 import redis.exceptions
 import redis.lock
@@ -33,7 +34,7 @@ def _query_bandwidth_usage() -> BandwidthUsage | None:
 
     xlog(None, "Bandwidth: querying ...")
 
-    end_time = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    end_time = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
     start_time = end_time.replace(
         day=1,
@@ -56,7 +57,7 @@ def _query_bandwidth_usage() -> BandwidthUsage | None:
                 "Authorization": f"Bearer {RENDER_API_KEY}",
             },
         )
-    except Exception as e:
+    except httpx2.HTTPError as e:
         xlog(None, f"Bandwidth: exception: {e}")
         return None
 

@@ -14,7 +14,7 @@ def proxy_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Forwards the request to another URL.
 
@@ -35,7 +35,7 @@ def proxy_generate_content(
         ],
     }
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             proxy_request["temperature"] = value
         elif key == "max_tokens":
@@ -68,7 +68,7 @@ def proxy_generate_content(
         return JaiResult(504, "Gateway Timeout")
     except httpx2.HTTPStatusError as e:
         return JaiResult(e.response.status_code, e.response.text)
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))
         return JaiResult(502, "Unhanded exception from proxy.")
 

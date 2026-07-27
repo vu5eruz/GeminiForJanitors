@@ -57,27 +57,27 @@ class Credentials:
     def parse(data: dict) -> "Credentials":
         access_token = data.get("access_token")
         if not isinstance(access_token, str):
-            raise ValueError("Missing/invalid access_token")
+            raise TypeError("Missing/invalid access_token")
 
         id_token = data.get("id_token")
         if not isinstance(id_token, str):
-            raise ValueError("Missing/invalid id_token")
+            raise TypeError("Missing/invalid id_token")
 
         refresh_token = data.get("refresh_token")
         if not isinstance(refresh_token, str):
-            raise ValueError("Missing/invalid refresh_token")
+            raise TypeError("Missing/invalid refresh_token")
 
         expiry_date = data.get("expiry_date")
         if not isinstance(expiry_date, (int, float)):
-            raise ValueError("Missing/invalid expiry_date")
+            raise TypeError("Missing/invalid expiry_date")
 
         scope = data.get("scope")
         if not isinstance(scope, str):
-            raise ValueError("Missing/invalid scope")
+            raise TypeError("Missing/invalid scope")
 
         token_type = data.get("token_type")
         if token_type != "Bearer":
-            raise ValueError("Missing/invalid token_type")
+            raise TypeError("Missing/invalid token_type")
 
         return Credentials(
             access_token=access_token,
@@ -193,7 +193,7 @@ def gemini_cli_refresh_credentials(
         message = f"Refresh credentials network error: {e}"
         xlog(user, message)
         return RefreshCredentialsResult.from_error((502, message))
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, f"Refresh credentials unexpected error: {e!r}")
         return RefreshCredentialsResult.from_error((500, "Unknown exception"))
 
@@ -247,7 +247,7 @@ def gemini_cli_load_project_id(
         message = f"Load project id network error: {e}"
         xlog(user, message)
         return LoadProjectIdResult.from_error((502, message))
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, f"Load project id unexpected error: {e!r}")
         return LoadProjectIdResult.from_error((500, "Unknown exception"))
 
@@ -273,7 +273,7 @@ def gemini_cli_generate_content_ex(
     project_id: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> GenerateContentExResult:
     ref_time = xlogtime(user, "Gemini CLI generating")
 
@@ -298,7 +298,7 @@ def gemini_cli_generate_content_ex(
         },
     }
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             generation_config["temperature"] = value
         elif key == "max_tokens":
@@ -343,9 +343,10 @@ def gemini_cli_generate_content_ex(
             for detail in error.get("details", []):
                 reason = detail.get("reason")
                 metadata = detail.get("metadata", {})
-                if reason == "VALIDATION_REQUIRED":
-                    if validation_url := metadata.get("validation_url"):
-                        extras = f"Verify your account: {validation_url.strip()}"
+                if reason == "VALIDATION_REQUIRED" and (
+                    validation_url := metadata.get("validation_url")
+                ):
+                    extras = f"Verify your account: {validation_url.strip()}"
 
         xlog(user, f"{message}\n{(error_json or e.response.text)!r}")
         return GenerateContentExResult.from_error(
@@ -355,7 +356,7 @@ def gemini_cli_generate_content_ex(
         message = f"Gemini CLI generate network error: {e}"
         xlog(user, message)
         return GenerateContentExResult.from_error((502, message, ""))
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, f"Gemini CLI generate unexpected error: {e!r}")
         return GenerateContentExResult.from_error((500, "Unknown exception", ""))
 
@@ -369,7 +370,7 @@ def gemini_cli_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Wrapper around gemini_cli_generate_content_ex for use by proxy handlers.
 
@@ -398,7 +399,7 @@ def gemini_cli_generate_content(
 
     try:
         credentials = Credentials.parse(json.loads(raw_credentials))
-    except Exception as e:  # This shoud never happen
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, f"Exception while loading credentials from keyring: {e!r}")
         track_stats("g_cli.failed.system.creds")
         return JaiResult(500, "Invalid/missing credentials in API key")

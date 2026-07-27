@@ -15,7 +15,7 @@ def z_ai_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Wrapper around Z.AI's Chat Completions API.
     API keys must be prefixed with "z_ai/" to help the handlers distinguish them,
@@ -40,7 +40,7 @@ def z_ai_generate_content(
     # using settings does not return an error, //help advsettings still
     # documents Z.AI as having no support.
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             z_ai_request["temperature"] = value
         elif key == "max_tokens":
@@ -85,7 +85,7 @@ def z_ai_generate_content(
             track_stats("z_ai.failed.unknown")
 
         return JaiResult(e.response.status_code, message)
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))
         track_stats("z_ai.failed.exception")
         return JaiResult(502, "Unhanded exception from Z.AI.")

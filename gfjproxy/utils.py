@@ -262,8 +262,7 @@ def _runner(cloudflared: str):
                 xlog(None, "Pattern search returned no match")
         except HTTPError:
             time.sleep(1)
-    else:
-        xlog(None, "Couldn't get cloudflared tunnel")
+    xlog(None, "Couldn't get cloudflared tunnel")
 
 
 def run_cloudflared(cloudflared: str):

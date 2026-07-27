@@ -225,7 +225,7 @@ class RedisUserStorage(UserStorage):
     EXPIRY_TIME_IN_SECONDS = 30 * 24 * 60 * 60  # Arbitrary
 
     def __init__(self, url: str = DEFAULT_URL, timeout: float = 30):
-        self._locks: dict[str, redis.lock.Lock] = dict()
+        self._locks: dict[str, redis.lock.Lock] = {}
         self._client = redis.from_url(
             url, socket_timeout=timeout, socket_connect_timeout=timeout
         )

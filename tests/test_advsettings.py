@@ -100,7 +100,7 @@ def test_advset_this(
 
         mock_credentials = mocker.MagicMock(spec=Credentials)
         mock_credentials.access_token = "a"
-        mock_credentials.json = lambda: {}
+        mock_credentials.json = dict
 
         mock_refresh_credentials = mocker.patch(
             "gfjproxy.providers.gemini_cli.gemini_cli_refresh_credentials"

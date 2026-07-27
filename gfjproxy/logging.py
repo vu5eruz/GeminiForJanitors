@@ -34,12 +34,7 @@ class _CustomFilter(logging.Filter):
         # /healthz is the default value on render.com and should be changed.
         # If something is hitting /healthz, then something strange is going on.
 
-        if record.getMessage().find('"GET /health HTTP/1.1" 200') != -1:
-            return False
-
-        # All good
-
-        return True
+        return record.getMessage().find('"GET /health HTTP/1.1" 200') == -1
 
 
 class _CustomFormatter(logging.Formatter):

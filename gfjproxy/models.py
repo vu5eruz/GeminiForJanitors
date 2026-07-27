@@ -100,12 +100,12 @@ class JaiRequest:
         if messages := data.get("messages"):
             jai_req.messages = [JaiMessage.parse(jai_msg) for jai_msg in messages]
 
-        if model := data.get("model"):
-            for model in comma_split(model.lower()):
+        if models := data.get("model"):
+            for model in comma_split(models.lower()):
                 if "/" in model:
                     provider, model_name = model.split("/", maxsplit=1)
                     jai_req.models[provider] = model_name
-                elif model.startswith("gemini-") or model.startswith("gemma-"):
+                elif model.startswith(("gemini-", "gemma-")):
                     jai_req.models["google"] = model
                 elif model.startswith("deepseek-"):
                     jai_req.models["deepseek"] = model
