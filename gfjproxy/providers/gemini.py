@@ -139,9 +139,7 @@ def gemini_generate_content(
         elif key == "repetition_penalty":
             generation_config["presencePenalty"] = value
         elif key == "search" and value:
-            gemini_request["tools"] = [
-                {"googleSearch": {"searchTypes": ["SEARCH_TYPE_WEB_SEARCH"]}}
-            ]
+            gemini_request["tools"] = [{"googleSearch": {}}]
 
     try:
         response = http_client.post(
@@ -175,7 +173,24 @@ def gemini_generate_content(
             error_status = error.get("status", "")
             error_details = error.get("details", [])
 
-            if error_status == "INVALID_ARGUMENT":
+            if error_status == "NOT_FOUND":
+                stats_key += ".not_found"
+                if error_message.startswith("models/"):
+                    stats_key += ".model"
+                    error_message = f"Invalid/unsupported model '{model}'"
+                elif "no longer available" in error_message:
+                    stats_key += ".unavailable"
+                    error_message = f"Model '{model}' is no longer available"
+            elif error_status == "UNAUTHENTICATED":
+                stats_key += ".unauthenticated"
+                if "invalid authentication credentials" in error_message:
+                    stats_key += ".api_key"
+                    error_message = (
+                        "Request had invalid authentication credentials.\n"
+                        "Your API key is probably not valid."
+                    )
+                    metadata.api_key_valid = False
+            elif error_status == "INVALID_ARGUMENT":
                 stats_key += ".invalid"
                 if "API key not valid" in error_message:
                     stats_key += ".api_key"
