@@ -1,8 +1,6 @@
 from typing import Any
 
-from google import genai
-from google.genai import errors, types
-from httpx2 import HTTPError, ReadTimeout
+import httpx2
 
 from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
@@ -26,7 +24,7 @@ def _resolve_link(user: XUID, link: str) -> str:
                 response.raise_for_status()
             if location := response.headers.get("Location"):
                 result = location
-    except HTTPError as e:
+    except httpx2.HTTPError as e:
         xlog(user, f"Could not resolve link:\n{e!r}")
 
     if result != link:
@@ -37,27 +35,22 @@ def _resolve_link(user: XUID, link: str) -> str:
     return result
 
 
-def _get_finish_reason_feedback(response: types.GenerateContentResponse) -> str | None:
-    """Extracts a human-readable message from a failed GenerateContentResponse.
+def _get_finish_reason_feedback(response: dict[str, Any]) -> str | None:
+    """Extracts a human-readable message from a failed GenerateContentResponse dictionary.
 
     Returns None if no message could be extracted."""
 
-    if prompt_feedback := response.prompt_feedback:
-        if prompt_feedback.block_reason_message:
-            return str(prompt_feedback.block_reason_message)
-        if isinstance(prompt_feedback.block_reason, types.BlockedReason):
-            return prompt_feedback.block_reason.name
+    prompt_feedback = response.get("promptFeedback")
+    if isinstance(prompt_feedback, dict):
+        if block_reason_message := prompt_feedback.get("blockReasonMessage"):
+            return str(block_reason_message)
+        if block_reason := prompt_feedback.get("blockReason"):
+            return str(block_reason)
 
-    if (
-        (candidates := response.candidates)
-        and isinstance(candidates, list)
-        and len(candidates) >= 1
-        and isinstance(candidates[0], types.Candidate)
-        and isinstance(candidates[0].finish_reason, types.FinishReason)
-    ):
-        return candidates[0].finish_reason.name
-
-    return None
+    try:
+        return response["candidates"][0]["finishReason"]
+    except (KeyError, IndexError, TypeError):
+        return None
 
 
 def _get_quota_violation_feedback(qid: str) -> str | None:
@@ -97,172 +90,150 @@ def gemini_generate_content(
     User paramater is only used for logging. Generation settings must all be passed inside the
     settings parameter."""
 
-    gemini_config: types.GenerateContentConfigDict = {
-        "http_options": {
-            "timeout": PROCESS_TIMEOUT * 1_000  # milliseconds
-        },
-        "safety_settings": [
+    generation_config: dict[str, Any] = {}
+
+    gemini_request: dict[str, Any] = {
+        "safetySettings": [
             {
-                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
-                "category": types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                "threshold": "BLOCK_NONE",
+                "category": "HARM_CATEGORY_HATE_SPEECH",
             },
             {
-                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
-                "category": types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                "threshold": "BLOCK_NONE",
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
             },
             {
-                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
-                "category": types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                "threshold": "BLOCK_NONE",
+                "category": "HARM_CATEGORY_HARASSMENT",
             },
             {
-                "threshold": types.HarmBlockThreshold.BLOCK_NONE,
-                "category": types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                "threshold": "BLOCK_NONE",
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
             },
+            {
+                "threshold": "BLOCK_NONE",
+                "category": "HARM_CATEGORY_JAILBREAK",
+            },
+        ],
+        "generationConfig": generation_config,
+        "contents": [
+            {
+                "role": "user" if msg.role == "user" else "model",
+                "parts": [{"text": msg.content}],
+            }
+            for msg in messages
         ],
     }
 
     for key, value in (settings or {}).items():
         if key == "temperature":
-            gemini_config["temperature"] = value
+            generation_config["temperature"] = value
         elif key == "max_tokens":
-            gemini_config["max_output_tokens"] = value
+            generation_config["maxOutputTokens"] = value
         elif key == "top_k":
-            gemini_config["top_k"] = value
+            generation_config["topK"] = value
         elif key == "top_p":
-            gemini_config["top_p"] = value
+            generation_config["topP"] = value
         elif key == "frequency_penalty":
-            gemini_config["frequency_penalty"] = value
+            generation_config["frequencyPenalty"] = value
         elif key == "repetition_penalty":
-            gemini_config["presence_penalty"] = value
+            generation_config["presencePenalty"] = value
         elif key == "search" and value:
-            gemini_config["tools"] = [types.Tool(google_search=types.GoogleSearch())]
-
-    gemini_contents = []
-    for msg in messages:
-        if msg.role == "assistant" or msg.role == "system":
-            gemini_contents.append(types.ModelContent({"text": msg.content}))
-        else:
-            gemini_contents.append(types.UserContent({"text": msg.content}))
-
-    gemini_client = genai.Client(api_key=api_key)
+            gemini_request["tools"] = [
+                {"googleSearch": {"searchTypes": ["SEARCH_TYPE_WEB_SEARCH"]}}
+            ]
 
     try:
-        gemini_result = gemini_client.models.generate_content(
-            model=model, contents=gemini_contents, config=gemini_config
+        response = http_client.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+            headers={"x-goog-api-key": api_key},
+            json=gemini_request,
+            timeout=PROCESS_TIMEOUT,
         )
-    except ReadTimeout:
+        response.raise_for_status()
+        gemini_result = response.json()
+    except httpx2.TimeoutException:
         track_stats("g.time_out")
         return JaiResult(504, "Gateway Timeout")
-    except errors.ClientError as e:
-        if e.message is None:  # Make type checkers happy
-            e.message = "Unknown error"
+    except httpx2.HTTPStatusError as e:
+        message = "Error from Google AI"
+        metadata = JaiResultMetadata()
 
-        if e.status == "NOT_FOUND":
-            # 404 NOT_FOUND "models/* is not found for API version v1beta"
-            if e.message.startswith("models/"):
-                track_stats("g.failed.client.not_found.model")
-                return JaiResult(e.code, f"Invalid/unsupported model '{model}'")
+        if e.response.is_client_error:
+            stats_key = "g.failed.client"
+        elif e.response.is_server_error:
+            stats_key = "g.failed.server"
+        else:
+            stats_key = "g.failed.unknown"
 
-            xlog(user, repr(e))  # Anomalous
-            track_stats("g.failed.client.not_found.unknown")
-            return JaiResult(e.code, e.message)
+        if error := e.response.json():
+            if "error" in error:
+                error = error["error"]
 
-        if e.status == "INVALID_ARGUMENT":
-            if "API key not valid" in e.message:
-                # 400 INVALID_ARGUMENT "API key not valid. Please pass a valid API key."
-                track_stats("g.failed.client.invalid.api_key")
-                return JaiResult(
-                    e.code,
-                    e.message,
-                    metadata=JaiResultMetadata(
-                        api_key_valid=False,
-                    ),
-                )
+            error_code = error.get("code", e.response.status_code)
+            error_message = error.get("message", "")
+            error_status = error.get("status", "")
+            error_details = error.get("details", [])
 
-            # 400 INVALID_ARGUMENT "Penalty is not enabled for models/*"
-            track_stats("g.failed.client.invalid")
-            return JaiResult(e.code, e.message)
-
-        details: list[Any] = []
-        if isinstance(e.details, dict):
-            details.extend(
-                e.details.get("details", e.details.get("error", {}).get("details", []))
-            )
-
-        if e.status == "PERMISSION_DENIED":
-            for detail in details:
-                if not isinstance(detail, dict):
-                    continue
-                if detail.get("@type") != "type.googleapis.com/google.rpc.ErrorInfo":
-                    continue
-
-                if reason := detail.get("reason"):
+            if error_status == "INVALID_ARGUMENT":
+                stats_key += ".invalid"
+                if "API key not valid" in error_message:
+                    stats_key += ".api_key"
+                    metadata.api_key_valid = False
+            elif error_status == "PERMISSION_DENIED":
+                stats_key += ".denied"
+                for detail in error_details:
+                    if (
+                        not isinstance(detail, dict)
+                        or detail.get("@type")
+                        != "type.googleapis.com/google.rpc.ErrorInfo"
+                        or not (reason := detail.get("reason"))
+                    ):
+                        continue
                     if reason == "SERVICE_DISABLED":
-                        # This error could either refer to an misconfigured API
-                        # key or an banned user.
-                        track_stats("g.failed.client.denied.disabled")
-                        return JaiResult(
-                            e.code, "Generative Language API needs to be enabled"
-                        )
-
+                        stats_key += ".disabled"
+                        error_message = "Generative Language API needs to be enabled"
+                        break
                     if reason == "CONSUMER_SUSPENDED":
-                        # This error is most likely a banned user.
-                        track_stats("g.failed.client.denied.suspended")
-                        return JaiResult(
-                            e.code, "Customer suspended. You might be banned."
-                        )
+                        stats_key += ".suspended"
+                        error_message = "Customer suspended. You might be banned."
+                        break
+                else:
+                    stats_key += ".unknown"
+            elif error_status == "RESOURCE_EXHAUSTED":
+                stats_key += ".quota"
+                for detail in error_details:
+                    if (
+                        not isinstance(detail, dict)
+                        or detail.get("@type")
+                        != "type.googleapis.com/google.rpc.QuotaFailure"
+                    ):
+                        continue
+                    quota_ids = (
+                        str(v.get("quotaId", ""))
+                        for v in detail.get("violations", [])
+                        if isinstance(v, dict)
+                    )
+                    for qid in quota_ids:
+                        if feedback := _get_quota_violation_feedback(qid):
+                            stats_key += f".{qid}"
+                            error_message = feedback
+                            break
+                    else:
+                        stats_key += ".unknown"
+                        break
 
-            # 403 PERMISSION_DENIED "Consumer 'api_key:*' has been suspended."
-            track_stats("g.failed.client.denied.unknown")
-            return JaiResult(e.code, e.message)
+            message += f" ({error_code}): {error_status}\n{error_message}"
+        elif error_text := e.response.text:
+            xlog(user, f"{message}: {e.response.text!r}")
 
-        if e.status == "RESOURCE_EXHAUSTED":
-            for detail in details:
-                if not isinstance(detail, dict):
-                    continue
-                if detail.get("@type") != "type.googleapis.com/google.rpc.QuotaFailure":
-                    continue
-
-                for violation in detail.get("violations", []):
-                    qid = violation.get("quotaId")
-
-                    if feedback := _get_quota_violation_feedback(qid):
-                        track_stats(f"g.failed.client.quota.violation.{qid}")
-                        return JaiResult(e.code, feedback)
-
-            # 429 RESOURCE_EXHAUSTED "Resource has been exhausted (e.g. check quota)."
-            track_stats("g.failed.client.quota.unknown")
-            return JaiResult(e.code, e.message)
-
-        xlog(user, repr(e))  # Log these fellas for they are anomalous
-        track_stats("g.failed.client.unknown")
-        return JaiResult(e.code, e.message)
-    except errors.ServerError as e:
-        if e.message is None:  # Make type checkers happy
-            e.message = "Unknown error"
-
-        if e.status == "UNAVAILABLE":
-            # 503 UNAVAILABLE "The model is overloaded. Please try again later."
-            track_stats("g.failed.server.overloaded")
-            return JaiResult(e.code, e.message)
-
-        if e.status == "DEADLINE_EXCEEDED":
-            # 504 DEADLINE_EXCEEDED "The request timed out. Please try again."
-            track_stats("g.failed.server.time_out")
-            return JaiResult(e.code, "Google AI timed out. Try again later.")
-
-        if e.status == "INTERNAL":
-            # 500 INTERNAL "An internal error has occurred."
-            # The actual message is longer and not really relevant to the users.
-            # Skip logging these errors and return our own message instead.
-            track_stats("g.failed.server.internal")
-            return JaiResult(
-                e.code, "Google AI had an internal error. Try again later."
+            message += (
+                f" ({e.response.status_code}):\n{error_text[:100]}"
+                f"{'...' if len(error_text) > 100 else ''}"
             )
 
-        xlog(user, repr(e))  # Log these fellas for they are anomalous
-        track_stats("g.failed.server.unknown")
-        return JaiResult(e.code, e.message)
+        track_stats(stats_key)
+        return JaiResult(e.response.status_code, message, metadata=metadata)
     except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         track_stats("g.failed.unknown")
@@ -272,35 +243,52 @@ def gemini_generate_content(
     extras = ""
     metadata = JaiResultMetadata()
 
-    if candidates := gemini_result.candidates:
+    if (candidates := gemini_result.get("candidates")) and isinstance(candidates, list):
         if len(candidates) > 1:
             xlog(user, "Warning: more than one candidate found in response")
-        candidate: types.Candidate = candidates[0]
+        candidate = candidates[0]
+        if isinstance(candidate, dict):
+            if (
+                (content := candidate.get("content"))
+                and isinstance(content, dict)
+                and (parts := content.get("parts"))
+                and isinstance(parts, list)
+            ):
+                text = ""
+                for part in parts:
+                    if isinstance(part, dict):
+                        part_text = part.get("text")
+                        part_thought = part.get("thought", False)
+                        if isinstance(part_text, str) and not part_thought:
+                            text += part_text
 
-        if candidate.content and (parts := candidate.content.parts):
-            text = ""
-            for part in parts:
-                if isinstance(part.text, str) and not part.thought:
-                    text += part.text
+            if gm := candidate.get("groundingMetadata"):
+                # U+3164 HANGUL FILLER
 
-        if gm := candidate.grounding_metadata:
-            # U+3164 HANGUL FILLER
+                if isinstance((wsqs := gm.get("webSearchQueries")), list):
+                    xlog(user, f"Made {len(wsqs)} web searches")
+                    extras += (
+                        "Searches:\n"
+                        + "\n".join(f"\u3164- {wsq}" for wsq in wsqs)
+                        + "\n"
+                    )
 
-            if isinstance((wsqs := gm.web_search_queries), list):
-                xlog(user, f"Made {len(wsqs)} web searches")
-                extras += (
-                    "Searches:\n" + "\n".join(f"\u3164- {wsq}" for wsq in wsqs) + "\n"
-                )
-
-            if isinstance((gcs := gm.grounding_chunks), list):
-                links: list[str] = []
-                for gc in gcs:
-                    if (web := gc.web) and (uri := web.uri):
-                        links.append(_resolve_link(user, uri))
-                xlog(user, f"Found {len(gcs)} grounding chunks {len(links)} links")
-                extras += (
-                    "Links:\n" + "\n".join(f"\u3164- {link}" for link in links) + "\n"
-                )
+                if isinstance((gcs := gm.get("groundingChunks")), list):
+                    links: list[str] = []
+                    for gc in gcs:
+                        if (
+                            isinstance(gc, dict)
+                            and (web := gc.get("web"))
+                            and isinstance(web, dict)
+                            and (uri := web.get("uri"))
+                        ):
+                            links.append(_resolve_link(user, uri))
+                    xlog(user, f"Found {len(gcs)} grounding chunks {len(links)} links")
+                    extras += (
+                        "Links:\n"
+                        + "\n".join(f"\u3164- {link}" for link in links)
+                        + "\n"
+                    )
 
     if not text:
         # Rejection
@@ -319,15 +307,12 @@ def gemini_generate_content(
             ),
         )
 
-    if isinstance(
-        (usage := gemini_result.usage_metadata),
-        types.GenerateContentResponseUsageMetadata,
-    ):
+    if isinstance((usage := gemini_result.get("usageMetadata")), dict):
         metadata.token_usage = JaiResultTokenUsage(
-            prompt_tokens=usage.prompt_token_count,
-            completion_tokens=usage.candidates_token_count,
-            reasoning_tokens=usage.thoughts_token_count,
-            total_tokens=usage.total_token_count,
+            prompt_tokens=usage.get("promptTokenCount"),
+            completion_tokens=usage.get("candidatesTokenCount"),
+            reasoning_tokens=usage.get("thoughtsTokenCount"),
+            total_tokens=usage.get("totalTokenCount"),
         )
 
     track_stats("g.succeeded")

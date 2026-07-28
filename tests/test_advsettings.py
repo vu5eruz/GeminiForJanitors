@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from google.genai import types
 from pytest_mock import MockerFixture
 
 from gfjproxy.handlers import handle_chat_message
@@ -59,32 +58,19 @@ def test_advset_this(
 ):
     """Check that the given advanced settings are being applied."""
 
-    if provider == "google":
-        mock_client = mocker.patch("gfjproxy.providers.gemini.genai.Client")
-        mock_call = mock_client.return_value.models.generate_content
-        mock_response = mocker.MagicMock(spec=types.GenerateContentResponse)
-        mock_part = mocker.MagicMock(spec=types.Part)
-        mock_part.text = "Bot response"
-        mock_part.thought = False
-        mock_candidate = mocker.MagicMock(spec=types.Candidate)
-        mock_candidate.content = mocker.MagicMock(spec=types.Content)
-        mock_candidate.content.parts = [mock_part]
-        mock_candidate.grounding_metadata = None
-        mock_response.candidates = [mock_candidate]
-        mock_response.usage_metadata = None
-        mock_call.return_value = mock_response
-    else:
-        mock_call = mocker.patch(f"gfjproxy.providers.{provider}.http_client.post")
-        mock_response = mocker.Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Bot response"}}],
-            "response": {
-                "candidates": [{"content": {"parts": [{"text": "Bot response"}]}}],
-            },
-        }
-        mock_response.raise_for_status.return_value = None
-        mock_call.return_value = mock_response
+    provider_module = "gemini" if provider == "google" else provider
+    mock_call = mocker.patch(f"gfjproxy.providers.{provider_module}.http_client.post")
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "Bot response"}}],
+        "candidates": [{"content": {"parts": [{"text": "Bot response"}]}}],
+        "response": {
+            "candidates": [{"content": {"parts": [{"text": "Bot response"}]}}],
+        },
+    }
+    mock_response.raise_for_status.return_value = None
+    mock_call.return_value = mock_response
 
     if provider == "gemini_cli":
         credentials = {
@@ -143,7 +129,7 @@ def test_advset_this(
     _, kwargs = mock_call.call_args
 
     if provider == "google":
-        json_body = kwargs["config"]
+        json_body = kwargs["json"]["generationConfig"]
     elif provider == "gemini_cli":
         json_body = kwargs["json"]["request"]["generationConfig"]
     else:
@@ -155,7 +141,7 @@ def test_advset_this(
         if k == "repetition_penalty":
             k = "presence_penalty"
 
-        if provider == "gemini_cli":
+        if provider in ("google", "gemini_cli"):
             # Convert from snake_case to camelCase
             k = "".join((w.title() if i > 0 else w) for i, w in enumerate(k.split("_")))
 
