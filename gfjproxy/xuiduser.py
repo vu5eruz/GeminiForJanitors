@@ -333,6 +333,14 @@ class UserSettings:
     #########################
 
     @property
+    def use_fixturns(self) -> bool:
+        return bool(self._data.get("use_fixturns", False))
+
+    @use_fixturns.setter
+    def use_fixturns(self, value):
+        self._data["use_fixturns"] = bool(value)
+
+    @property
     def use_btrick(self) -> bool:
         return bool(self._data.get("use_btrick", False))
 

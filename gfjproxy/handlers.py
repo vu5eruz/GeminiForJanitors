@@ -450,6 +450,16 @@ def handle_chat_message(
 
         settings["search"] = True
 
+    if jai_req.use_fixturns or user.use_fixturns:
+        xlog(
+            user,
+            "Fixing request turns"
+            + (" (for this message only)." if not user.use_fixturns else "."),
+        )
+
+        if jai_req.messages[-1].role != "user":
+            jai_req.messages.append(JaiMessage(content=".", role="user"))
+
     result = _handle_request(
         user.xuid,
         jai_req.api_key,

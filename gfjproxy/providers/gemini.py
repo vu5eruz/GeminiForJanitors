@@ -156,6 +156,7 @@ def gemini_generate_content(
     except httpx2.HTTPStatusError as e:
         message = "Error from Google AI"
         metadata = JaiResultMetadata()
+        extras = ""
 
         if e.response.is_client_error:
             stats_key = "g.failed.client"
@@ -195,6 +196,9 @@ def gemini_generate_content(
                 if "API key not valid" in error_message:
                     stats_key += ".api_key"
                     metadata.api_key_valid = False
+                elif "ending with a model turn" in error_message:
+                    stats_key += ".turns"
+                    extras = "Disable your prefills or use `//fixturns on`."
             elif error_status == "PERMISSION_DENIED":
                 stats_key += ".denied"
                 for detail in error_details:
@@ -248,7 +252,9 @@ def gemini_generate_content(
             )
 
         track_stats(stats_key)
-        return JaiResult(e.response.status_code, message, metadata=metadata)
+        return JaiResult(
+            e.response.status_code, message, extras=extras, metadata=metadata
+        )
     except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))  # These are R E A L L Y anomalous
         track_stats("g.failed.unknown")
