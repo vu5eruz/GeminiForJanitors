@@ -136,7 +136,7 @@ PROCESS_TIMEOUT: int = max(
 
 ################################################################################
 
-BANNER_VERSION = 34
+BANNER_VERSION = 35
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
@@ -172,19 +172,16 @@ Pull requests are welcome at `https://github.com/vu5eruz/GeminiForJanitors` for 
 
 ## **Updates**
 
-## June 5, 2026
-
-● New provider **Nvidia NIM** is now available! Its API keys start with `nvapi-`. To use a model, use its extended name, e.g.: `nvidia/deepseek-ai/deepseek-v4-pro`, `nvidia/z-ai/glm-5.1` Many models sometimes take too long to reply and cause Gateway Timeout errors.
-
 ## June 19, 2026
-
-● The proxy now recognizes API keys that start with `AQ.` for use with Gemini!
 
 ● Notice: if you are using API keys that start with `AIza`, know that Google will reject them starting September 2026! You are advised to update all your keys to the new `AQ.` type!  See https://ai.google.dev/gemini-api/docs/api-key for more info.
 
-## July 2, 2026
+## July 28, 2026
 
-● New provider **DeepSeek* is now available! Its API keys start with `sk-` and you must add `deepseek/` at the start to use them.
+● The proxy has had an internal rework and the Gemini provider code was changed. Please report any issues to the Gemini Proxy Guide.
+
+● New command `//fixturns` is now available to help deal with "`requests ending with a model turn are not supported`" errors!
+
 """
 
 ################################################################################
