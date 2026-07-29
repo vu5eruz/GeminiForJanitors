@@ -15,7 +15,7 @@ def deepseek_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Wrapper around DeepSeek's Chat Completions API.
 
@@ -33,7 +33,7 @@ def deepseek_generate_content(
         ],
     }
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             deepseek_request["temperature"] = value
         elif key == "max_tokens":
@@ -66,17 +66,16 @@ def deepseek_generate_content(
         message = "Error from DeepSeek"
         extras = ""
 
-        try:
-            error = e.response.json()
-            if isinstance(error, dict):
-                if "error" in error:
-                    error = error["error"]
-                if error_code := error.get("code"):
-                    message += f" ({error_code})"
-                if error_message := error.get("message"):
-                    message += f": {error_message}"
-        except Exception:
-            xlog(user, f"{message}: {e.response.text!r}")
+        error = e.response.json()
+        if isinstance(error, dict):
+            if "error" in error:
+                error = error["error"]
+            if error_code := error.get("code"):
+                message += f" ({error_code})"
+            if error_message := error.get("message"):
+                message += f": {error_message}"
+        else:
+            xlog(user, f"{message}: {error!r}")
 
         if e.response.is_client_error:
             track_stats("deepseek.failed.client")
@@ -86,18 +85,17 @@ def deepseek_generate_content(
             track_stats("deepseek.failed.unknown")
 
         return JaiResult(e.response.status_code, message, extras=extras)
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))
         track_stats("deepseek.failed.exception")
         return JaiResult(502, "Unhanded exception from DeepSeek.")
 
-    text = ""
+    try:
+        text = str(deepseek_result["choices"][0]["message"]["content"] or "")
+    except (KeyError, IndexError, TypeError):
+        text = ""
+
     metadata = JaiResultMetadata()
-
-    if choices := deepseek_result.get("choices"):
-        if isinstance(choices[0], dict) and (message := choices[0].get("message")):
-            text = message.get("content") or ""
-
     if usage := deepseek_result.get("usage"):
         metadata.token_usage = JaiResultTokenUsage(
             prompt_tokens=usage.get("prompt_tokens"),

@@ -3,13 +3,15 @@
 ################################################################################
 
 # Make sure START_TIME is initialized as early as possible
-from .start_time import START_TIME  # noqa: F401
+# ruff: disable[I001]
+from .start_time import START_TIME
 
 from ._globals import PROXY_AUTHORS, PROXY_VERSION
 
 __all__ = [
     "PROXY_AUTHORS",
     "PROXY_VERSION",
+    "START_TIME",
 ]
 
 __author__ = PROXY_AUTHORS

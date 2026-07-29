@@ -1,7 +1,7 @@
 """Proxy global variables."""
 
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from os import environ as _env
 from os import scandir as _scandir
 from os.path import dirname as _dirname
@@ -26,15 +26,14 @@ def _get_proxy_branch() -> str:
     try:
         res = subprocess.run(
             ["git", "symbolic-ref", "--short", "HEAD"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             cwd=CWD,
             text=True,
             check=True,
         )
         if resstr := res.stdout.strip():
             branch = resstr
-    except Exception:
+    except (FileNotFoundError, subprocess.SubprocessError):
         pass
 
     return branch
@@ -46,8 +45,7 @@ def _get_proxy_version() -> str:
     try:
         res = subprocess.run(
             ["git", "log", "-1", "--format=%ct-%h"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             cwd=CWD,
             text=True,
             check=True,
@@ -64,12 +62,10 @@ def _get_proxy_version() -> str:
             # reliably derive a version from a commit hash and its UTC timestamp alone, such
             # as those provided from the GitHub APIs.
 
-            dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc) - timedelta(
-                hours=4
-            )
+            dt = datetime.fromtimestamp(int(timestamp), tz=UTC) - timedelta(hours=4)
 
             version = f"{dt:%Y.%m.%d}-{commit}"
-    except Exception:
+    except (FileNotFoundError, subprocess.SubprocessError):
         pass
 
     return version
@@ -113,7 +109,9 @@ PROXY_URL = (
 
 COOLDOWN = _env.get("GFJPROXY_COOLDOWN", "0")
 
-BANDWIDTH_WARNING = int(_env.get("GFJPROXY_BANDWIDTH_WARNING", 76800))  # 75 GiB in MiB
+BANDWIDTH_WARNING = int(
+    _env.get("GFJPROXY_BANDWIDTH_WARNING", "76800")
+)  # 75 GiB in MiB
 
 RENDER_API_KEY = _env.get("GFJPROXY_RENDER_API_KEY")
 
@@ -123,7 +121,7 @@ REDIS_URL = _env.get("GFJPROXY_REDIS_URL")
 
 XUID_SECRET = _env.get("GFJPROXY_XUID_SECRET")
 
-STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
+STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", "24"))
 
 ################################################################################
 
@@ -132,13 +130,13 @@ STATS_DURATION = int(_env.get("GFJPROXY_STATS_DURATION", 24))
 # deploying using gunicorn, make sure to provide a -t value larger than the one
 # in here, to prevent issues from arising at run-time.
 PROCESS_TIMEOUT: int = max(
-    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", 120)) - 10,
+    int(_env.get("GFJPROXY_PROCESS_TIMEOUT", "120")) - 10,
     60,
 )
 
 ################################################################################
 
-BANNER_VERSION = 34
+BANNER_VERSION = 35
 
 BANNER = rf"""***
 # **{PROXY_NAME}** ({PROXY_VERSION} {PROXY_BRANCH})
@@ -174,19 +172,16 @@ Pull requests are welcome at `https://github.com/vu5eruz/GeminiForJanitors` for 
 
 ## **Updates**
 
-## June 5, 2026
-
-● New provider **Nvidia NIM** is now available! Its API keys start with `nvapi-`. To use a model, use its extended name, e.g.: `nvidia/deepseek-ai/deepseek-v4-pro`, `nvidia/z-ai/glm-5.1` Many models sometimes take too long to reply and cause Gateway Timeout errors.
-
 ## June 19, 2026
-
-● The proxy now recognizes API keys that start with `AQ.` for use with Gemini!
 
 ● Notice: if you are using API keys that start with `AIza`, know that Google will reject them starting September 2026! You are advised to update all your keys to the new `AQ.` type!  See https://ai.google.dev/gemini-api/docs/api-key for more info.
 
-## July 2, 2026
+## July 28, 2026
 
-● New provider **DeepSeek* is now available! Its API keys start with `sk-` and you must add `deepseek/` at the start to use them.
+● The proxy has had an internal rework and the Gemini provider code was changed. Please report any issues to the Gemini Proxy Guide.
+
+● New command `//fixturns` is now available to help deal with "`requests ending with a model turn are not supported`" errors!
+
 """
 
 ################################################################################

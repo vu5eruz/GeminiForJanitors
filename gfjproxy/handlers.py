@@ -68,7 +68,7 @@ def _handle_request(
     api_key: str,
     models: dict[str, str],
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Dispatch a JaiRequest request to the appropriate providen given the API key."""
     provider_name, api_key = _resolve_provider(api_key)
@@ -138,22 +138,27 @@ def parse_user_persona_names(
         return "User", "Narrator"
 
     user_name: str | None = None
-    first_user_message = jai_req.messages[3]
-    if first_user_message.role == "user":
-        user_name_index = first_user_message.content.find(": ")
-        if user_name_index > 0:
-            user_name = first_user_message.content[:user_name_index].strip()
-            xlog(user, f"Parsed user name: {user_name!r}")
+    first_user_message = next(
+        (m for m in jai_req.messages if m.role == "user" and len(m.content) > 1),
+        None,
+    )
+    if (
+        first_user_message is not None
+        and (user_name_index := first_user_message.content.find(": ")) > 0
+    ):
+        user_name = first_user_message.content[:user_name_index].strip()
+        xlog(user, f"Parsed user name: {user_name!r}")
     if not user_name:
         xlog(user, "User name not parsed")
         user_name = "User"
 
     persona_name: str | None = None
     system_message = jai_req.messages[0]
-    if system_message.role == "system":
-        if persona_match := PERSONA_REGEX.search(system_message.content):
-            persona_name = str(persona_match.group(1)).strip()
-            xlog(user, f"Parsed persona name: {persona_name!r}")
+    if system_message.role == "system" and (
+        persona_match := PERSONA_REGEX.search(system_message.content)
+    ):
+        persona_name = str(persona_match.group(1)).strip()
+        xlog(user, f"Parsed persona name: {persona_name!r}")
     if not persona_name:
         xlog(user, "Persona name not parsed")
         persona_name = "Narrator"
@@ -445,6 +450,16 @@ def handle_chat_message(
 
         settings["search"] = True
 
+    if jai_req.use_fixturns or user.use_fixturns:
+        xlog(
+            user,
+            "Fixing request turns"
+            + (" (for this message only)." if not user.use_fixturns else "."),
+        )
+
+        if jai_req.messages[-1].role != "user":
+            jai_req.messages.append(JaiMessage(content=".", role="user"))
+
     result = _handle_request(
         user.xuid,
         jai_req.api_key,
@@ -481,12 +496,11 @@ def handle_chat_message(
     if used_btrick:
         result.text = result.text.replace("\u2800", " ")
 
-    if used_prefill:
-        if metadata := clear_prefill(result, user.prefill_mode):
-            if metadata & 2:
-                xlog(user, "Removed <starter> from response")
-            if metadata & 4:
-                xlog(user, "Removed matching code from response")
+    if used_prefill and (metadata := clear_prefill(result, user.prefill_mode)):
+        if metadata & 2:
+            xlog(user, "Removed <starter> from response")
+        if metadata & 4:
+            xlog(user, "Removed matching code from response")
 
     if used_think:
         text = result.text

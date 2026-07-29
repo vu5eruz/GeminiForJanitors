@@ -1,7 +1,7 @@
 from typing import Any
 
+import httpx2
 import pytest
-from google.genai import errors, types
 from httpx2 import ReadTimeout
 from pytest_mock import MockerFixture
 
@@ -14,12 +14,18 @@ from gfjproxy.xuiduser import XUID, LocalUserStorage, UserSettings
 ################################################################################
 
 
-def make_mock_response(text):
-    return types.GenerateContentResponse(
-        candidates=[
-            types.Candidate(content=types.ModelContent(parts=[types.Part(text=text)]))
-        ]
-    )
+def make_mock_response(text: str) -> dict[str, Any]:
+    return {"candidates": [{"content": {"parts": [{"text": text}]}}]}
+
+
+def make_http_error(code: int, response_json: dict[str, Any]) -> httpx2.HTTPStatusError:
+    req = httpx2.Request("POST", "https://generativelanguage.googleapis.com/")
+    resp = httpx2.Response(code, json=response_json, request=req)
+    return httpx2.HTTPStatusError(f"HTTP {code}", request=req, response=resp)
+
+
+def make_expected_error(code: int, status: str, message: str) -> tuple[str, int]:
+    return (f"Error from Google AI ({code}): {status}\n{message}", code)
 
 
 ################################################################################
@@ -33,142 +39,169 @@ COMMON_ERRORS = [
         "expected_result": ("Gateway Timeout", 504),
     },
     {
-        "generate_content_mock": errors.APIError(
-            code=418,
-            response_json={
-                "message": "I'm a teapot",
-                "status": "TEAPOT",
-            },
-        ),
+        "generate_content_mock": Exception("I'm a teapot"),
         "expected_result": ("Unhanded exception from Google AI.", 502),
     },
     {
-        "generate_content_mock": errors.ClientError(
-            code=400,
-            response_json={
-                "message": "API key not valid. Please pass a valid API key.",
-                "status": "INVALID_ARGUMENT",
+        "generate_content_mock": make_http_error(
+            400,
+            {
+                "error": {
+                    "code": 400,
+                    "message": "API key not valid. Please pass a valid API key.",
+                    "status": "INVALID_ARGUMENT",
+                }
             },
         ),
-        "expected_result": ("API key not valid. Please pass a valid API key.", 400),
+        "expected_result": make_expected_error(
+            400, "INVALID_ARGUMENT", "API key not valid. Please pass a valid API key."
+        ),
     },
     {
-        "generate_content_mock": errors.ClientError(
-            code=429,
-            response_json={
-                "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
-                "status": "RESOURCE_EXHAUSTED",
-                "details": [
-                    {
-                        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
-                        "violations": [
-                            {
-                                "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
-                                "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
-                                "quotaDimensions": {
-                                    "model": "gemini-2.5-pro",
-                                    "location": "global",
+        "generate_content_mock": make_http_error(
+            429,
+            {
+                "error": {
+                    "code": 429,
+                    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
+                    "status": "RESOURCE_EXHAUSTED",
+                    "details": [
+                        {
+                            "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                            "violations": [
+                                {
+                                    "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+                                    "quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+                                    "quotaDimensions": {
+                                        "model": "gemini-2.5-pro",
+                                        "location": "global",
+                                    },
+                                    "quotaValue": "2",
                                 },
-                                "quotaValue": "2",
+                            ],
+                        },
+                    ],
+                }
+            },
+        ),
+        "expected_result": make_expected_error(
+            429, "RESOURCE_EXHAUSTED", "Requests per Minute quota exceeded."
+        ),
+    },
+    {
+        "generate_content_mock": make_http_error(
+            429,
+            {
+                "error": {
+                    "code": 429,
+                    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
+                    "status": "RESOURCE_EXHAUSTED",
+                    "details": [
+                        {
+                            "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                            "violations": [
+                                {
+                                    "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+                                    "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+                                    "quotaDimensions": {
+                                        "location": "global",
+                                        "model": "gemini-2.5-pro",
+                                    },
+                                    "quotaValue": "50",
+                                }
+                            ],
+                        },
+                    ],
+                }
+            },
+        ),
+        "expected_result": make_expected_error(
+            429, "RESOURCE_EXHAUSTED", "Requests per Day quota exceeded."
+        ),
+    },
+    {
+        "generate_content_mock": make_http_error(
+            403,
+            {
+                "error": {
+                    "code": 403,
+                    "message": "Generative Language API has not been used in project * before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",
+                    "status": "PERMISSION_DENIED",
+                    "details": [
+                        {
+                            "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                            "reason": "SERVICE_DISABLED",
+                            "domain": "googleapis.com",
+                            "metadata": {
+                                "activationUrl": "https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091",
+                                "service": "generativelanguage.googleapis.com",
+                                "serviceTitle": "Generative Language API",
+                                "containerInfo": "*",
+                                "consumer": "projects/*",
                             },
-                        ],
-                    },
-                ],
-            },
-        ),
-        "expected_result": ("Requests per Minute quota exceeded.", 429),
-    },
-    {
-        "generate_content_mock": errors.ClientError(
-            code=429,
-            response_json={
-                "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.",
-                "status": "RESOURCE_EXHAUSTED",
-                "details": [
-                    {
-                        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
-                        "violations": [
-                            {
-                                "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
-                                "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
-                                "quotaDimensions": {
-                                    "location": "global",
-                                    "model": "gemini-2.5-pro",
-                                },
-                                "quotaValue": "50",
-                            }
-                        ],
-                    },
-                ],
-            },
-        ),
-        "expected_result": ("Requests per Day quota exceeded.", 429),
-    },
-    {
-        "generate_content_mock": errors.ClientError(
-            code=403,
-            response_json={
-                "message": "Generative Language API has not been used in project * before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",
-                "status": "PERMISSION_DENIED",
-                "details": [
-                    {
-                        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-                        "reason": "SERVICE_DISABLED",
-                        "domain": "googleapis.com",
-                        "metadata": {
-                            "activationUrl": "https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=182995638091",
-                            "service": "generativelanguage.googleapis.com",
-                            "serviceTitle": "Generative Language API",
-                            "containerInfo": "*",
-                            "consumer": "projects/*",
                         },
-                    },
-                ],
+                    ],
+                }
             },
         ),
-        "expected_result": ("Generative Language API needs to be enabled", 403),
+        "expected_result": make_expected_error(
+            403, "PERMISSION_DENIED", "Generative Language API needs to be enabled"
+        ),
     },
     {
-        "generate_content_mock": errors.ClientError(
-            code=403,
-            response_json={
-                "message": "Permission denied: Consumer 'api_key:*' has been suspended.",
-                "status": "PERMISSION_DENIED",
-                "details": [
-                    {
-                        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-                        "reason": "CONSUMER_SUSPENDED",
-                        "domain": "googleapis.com",
-                        "metadata": {
-                            "service": "generativelanguage.googleapis.com",
-                            "containerInfo": "api_key:*",
-                            "consumer": "projects/*",
+        "generate_content_mock": make_http_error(
+            403,
+            {
+                "error": {
+                    "code": 403,
+                    "message": "Permission denied: Consumer 'api_key:*' has been suspended.",
+                    "status": "PERMISSION_DENIED",
+                    "details": [
+                        {
+                            "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                            "reason": "CONSUMER_SUSPENDED",
+                            "domain": "googleapis.com",
+                            "metadata": {
+                                "service": "generativelanguage.googleapis.com",
+                                "containerInfo": "api_key:*",
+                                "consumer": "projects/*",
+                            },
                         },
-                    },
-                ],
+                    ],
+                }
             },
         ),
-        "expected_result": ("Customer suspended. You might be banned.", 403),
+        "expected_result": make_expected_error(
+            403, "PERMISSION_DENIED", "Customer suspended. You might be banned."
+        ),
     },
     {
-        "generate_content_mock": errors.ServerError(
-            code=500,
-            response_json={
-                "message": "Some internal error.",
-                "status": "INTERNAL",
+        "generate_content_mock": make_http_error(
+            500,
+            {
+                "error": {
+                    "code": 500,
+                    "message": "Some internal error.",
+                    "status": "INTERNAL",
+                }
             },
         ),
-        "expected_result": ("Google AI had an internal error. Try again later.", 500),
+        "expected_result": make_expected_error(500, "INTERNAL", "Some internal error."),
     },
     {
-        "generate_content_mock": errors.ServerError(
-            code=503,
-            response_json={
-                "message": "The model is overloaded. Please try again later.",
-                "status": "UNAVAILABLE",
+        "generate_content_mock": make_http_error(
+            503,
+            {
+                "error": {
+                    "code": 503,
+                    "message": "The model is overloaded. Please try again later.",
+                    "status": "UNAVAILABLE",
+                }
             },
         ),
-        "expected_result": ("The model is overloaded. Please try again later.", 503),
+        "expected_result": make_expected_error(
+            503, "UNAVAILABLE", "The model is overloaded. Please try again later."
+        ),
     },
 ]
 
@@ -190,12 +223,15 @@ def test_proxy_test(mocker: MockerFixture, params: dict[str, Any]):
     generate_content_mock = params["generate_content_mock"]
     expected_message, expected_status = params["expected_result"]
 
-    mock_client_class = mocker.patch("gfjproxy.providers.gemini.genai.Client")
-    mock_instance = mock_client_class.return_value
+    mock_post = mocker.patch("gfjproxy.providers.gemini.http_client.post")
     if isinstance(generate_content_mock, Exception):
-        mock_instance.models.generate_content.side_effect = generate_content_mock
+        mock_post.side_effect = generate_content_mock
     else:
-        mock_instance.models.generate_content.return_value = generate_content_mock
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = generate_content_mock
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
 
     storage = LocalUserStorage()
     xuid = XUID("john", "smith")
@@ -208,16 +244,12 @@ def test_proxy_test(mocker: MockerFixture, params: dict[str, Any]):
 
     response = handle_proxy_test(user, jai_req, ResponseHelper(wrap_errors=True))
 
-    if response.status != 200:
-        assert (response.message, response.status) == (
-            f"PROXY ERROR {expected_status}: {expected_message}",
-            expected_status,
-        )
-    else:
-        assert (response.message, response.status) == (
-            expected_message,
-            expected_status,
-        )
+    assert (response.message, response.status) == (
+        expected_message
+        if expected_status == 200
+        else f"PROXY ERROR {expected_status}: {expected_message}",
+        expected_status,
+    )
 
 
 ################################################################################
@@ -364,11 +396,11 @@ CHAT_MESSAGE_TESTS = [
         ],
     },
     {  # Handle rejections (case 1)
-        "generate_content_mock": types.GenerateContentResponse(
-            prompt_feedback=types.GenerateContentResponsePromptFeedback(
-                block_reason=types.BlockedReason.SAFETY,
-            ),
-        ),
+        "generate_content_mock": {
+            "promptFeedback": {
+                "blockReason": "SAFETY",
+            },
+        },
         "expected_result": (
             "Response blocked/empty due to SAFETY."
             + "\nTry using one of: `//btrick on`, `//ooctrick on`, `//noass on`, `//prefill on`, `//think on`",
@@ -376,13 +408,13 @@ CHAT_MESSAGE_TESTS = [
         ),
     },
     {  # Handle rejections (case 2)
-        "generate_content_mock": types.GenerateContentResponse(
-            candidates=[
-                types.Candidate(
-                    finish_reason=types.FinishReason.RECITATION,
-                )
+        "generate_content_mock": {
+            "candidates": [
+                {
+                    "finishReason": "RECITATION",
+                }
             ],
-        ),
+        },
         "expected_result": (
             "Response blocked/empty due to RECITATION."
             + "\nTry using one of: `//btrick on`, `//ooctrick on`, `//noass on`, `//prefill on`, `//think on`",
@@ -415,12 +447,15 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
     extra_settings = params.get("extra_settings", [])
     extra_after_tests = params.get("extra_after_tests", [])
 
-    mock_client_class = mocker.patch("gfjproxy.providers.gemini.genai.Client")
-    mock_instance = mock_client_class.return_value
+    mock_post = mocker.patch("gfjproxy.providers.gemini.http_client.post")
     if isinstance(generate_content_mock, Exception):
-        mock_instance.models.generate_content.side_effect = generate_content_mock
+        mock_post.side_effect = generate_content_mock
     else:
-        mock_instance.models.generate_content.return_value = generate_content_mock
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = generate_content_mock
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
 
     user = UserSettings(LocalUserStorage(), XUID("john", "smith"))
 
@@ -449,13 +484,17 @@ def test_chat_message(mocker: MockerFixture, params: dict[str, Any]):
         expected_status,
     )
 
-    _, kwargs = mock_instance.models.generate_content.call_args
+    _, kwargs = mock_post.call_args
 
     for key, value in extra_after_tests:
         if key == "look_for_prefill_in_contents":
-            for content in kwargs.get("contents", []):
-                if "<interaction-config>" in content.parts[0].text:
-                    break
+            for content in kwargs.get("json", {}).get("contents", []):
+                for part in content.get("parts", []):
+                    if "<interaction-config>" in part.get("text", ""):
+                        break
+                else:
+                    continue
+                break
             else:
                 assert 0, "No prefill found in contents"
         else:

@@ -44,7 +44,7 @@ def apply_prefill(jai_req: JaiRequest, mode: int):
 
     if mode == 0:
         # Original Eslezer's prefill for compatibility
-        jai_req.append_message("assistant", "\n".join((PREFILL, STARTER)))
+        jai_req.append_message("assistant", f"{PREFILL}\n{STARTER}")
         return
 
     if mode in (1, 3):

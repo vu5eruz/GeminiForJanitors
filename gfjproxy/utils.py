@@ -164,7 +164,10 @@ class ResponseHelper:
                 content = []
                 for msg in msg_group:
                     if msg.kind == MessageKind.ERROR:
-                        text = f"Error {msg.status_code}: {msg.text}"
+                        if msg.text.startswith("Error from"):
+                            text = msg.text
+                        else:
+                            text = f"Error {msg.status_code}: {msg.text}"
                     else:  # PROXY message
                         text = msg.text
                     content.append(text)
@@ -262,8 +265,7 @@ def _runner(cloudflared: str):
                 xlog(None, "Pattern search returned no match")
         except HTTPError:
             time.sleep(1)
-    else:
-        xlog(None, "Couldn't get cloudflared tunnel")
+    xlog(None, "Couldn't get cloudflared tunnel")
 
 
 def run_cloudflared(cloudflared: str):

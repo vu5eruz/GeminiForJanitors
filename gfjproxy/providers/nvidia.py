@@ -29,7 +29,7 @@ def nvidia_generate_content(
     api_key: str,
     model: str,
     messages: list[JaiMessage],
-    settings: dict[str, Any] = {},
+    settings: dict[str, Any] | None = None,
 ) -> JaiResult:
     """Wrapper around Nvidia NIM API.
 
@@ -51,7 +51,7 @@ def nvidia_generate_content(
         ],
     }
 
-    for key, value in settings.items():
+    for key, value in (settings or {}).items():
         if key == "temperature":
             nvidia_request["temperature"] = value
         elif key == "max_tokens":
@@ -114,18 +114,17 @@ def nvidia_generate_content(
             track_stats("nvidia.failed.unknown")
 
         return JaiResult(e.response.status_code, message, extras=extras)
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         xlog(user, repr(e))
         track_stats("nvidia.failed.exception")
         return JaiResult(502, "Unhanded exception from Nvidia NIM.")
 
-    text = ""
+    try:
+        text = str(nvidia_result["choices"][0]["message"]["content"] or "")
+    except (KeyError, IndexError, TypeError):
+        text = ""
+
     metadata = JaiResultMetadata()
-
-    if choices := nvidia_result.get("choices"):
-        if isinstance(choices[0], dict) and (message := choices[0].get("message")):
-            text = message.get("content")
-
     if usage := nvidia_result.get("usage"):
         metadata.token_usage = JaiResultTokenUsage(
             prompt_tokens=usage.get("prompt_tokens"),

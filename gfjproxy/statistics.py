@@ -51,7 +51,7 @@ def query_stats(timestamp: float | None = None) -> Statistics:
 
     buckets = [
         make_stats_bucket(timestamp - delta * BUCKET_INTERVAL)
-        for delta in range(0, BUCKET_COUNT)
+        for delta in range(BUCKET_COUNT)
     ]
 
     pipeline = client.pipeline()
@@ -85,6 +85,6 @@ def clear_stats(statistics: Statistics):
 
     pipeline = client.pipeline()
     for bucket, stats in statistics:
-        for key in stats.keys():
+        for key in stats:
             pipeline.hdel(bucket, key)
     pipeline.execute()

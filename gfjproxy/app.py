@@ -22,7 +22,6 @@ if PRODUCTION:
 
 ################################################################################
 
-# ruff: noqa: E402
 import gc
 
 from colorama import just_fix_windows_console
