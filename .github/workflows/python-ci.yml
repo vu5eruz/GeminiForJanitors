@@ -9,7 +9,7 @@ jobs:
       GFJPROXY_REDIS_URL: "redis://localhost:6379/"
     steps:
     - uses: actions/checkout@v7
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v7
       with:
         python-version-file: ".python-version"
     - uses: astral-sh/setup-uv@v7
