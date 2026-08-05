@@ -16,6 +16,10 @@ jobs:
       id-token: write
       packages: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6
@@ -35,6 +39,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
