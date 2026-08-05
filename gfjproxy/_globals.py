@@ -21,7 +21,14 @@ def _fallback_env(*names) -> str | None:
 
 
 def _get_proxy_branch() -> str:
-    branch = _fallback_env("GFJPROXY_BRANCH", "RENDER_GIT_BRANCH") or "unknown"
+    branch = (
+        _fallback_env(
+            "GFJPROXY_BRANCH",
+            "RAILWAY_GIT_BRANCH",
+            "RENDER_GIT_BRANCH",
+        )
+        or "unknown"
+    )
 
     try:
         res = subprocess.run(
@@ -40,7 +47,14 @@ def _get_proxy_branch() -> str:
 
 
 def _get_proxy_version() -> str:
-    version = _fallback_env("GFJPROXY_VERSION", "RENDER_GIT_COMMIT") or "unknown"
+    version = (
+        _fallback_env(
+            "GFJPROXY_VERSION",
+            "RAILWAY_GIT_COMMIT_SHA",
+            "RENDER_GIT_COMMIT",
+        )
+        or "unknown"
+    )
 
     try:
         res = subprocess.run(
@@ -103,7 +117,11 @@ PROXY_BRANCH = _get_proxy_branch()
 PROXY_VERSION = _get_proxy_version()
 
 PROXY_URL = (
-    _fallback_env("GFJPROXY_EXTERNAL_URL", "RENDER_EXTERNAL_URL")
+    _fallback_env(
+        "GFJPROXY_EXTERNAL_URL",
+        "RAILWAY_PUBLIC_DOMAIN",
+        "RENDER_EXTERNAL_URL",
+    )
     or "https://geminiforjanitors.onrender.com"
 ).rstrip("/")
 
