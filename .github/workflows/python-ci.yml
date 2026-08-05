@@ -19,7 +19,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          version: "0.9.13"
+          version: "0.12.1"
 
       - uses: supercharge/redis-github-action@v2
         with:
