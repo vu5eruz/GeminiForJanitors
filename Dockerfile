@@ -1,6 +1,6 @@
 FROM python:3.13-slim-trixie
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.2-python3.13-trixie /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN set -eux; \
     apt-get update; \
