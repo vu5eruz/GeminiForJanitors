@@ -1,9 +1,6 @@
 name: Build Container
 
-on:
-  workflow_run:
-    workflows: [Python CI]
-    types: [completed]
+on: [push]
 
 jobs:
   build-container:
