@@ -24,11 +24,11 @@ services:
       - key: GFJPROXY_XUID_SECRET
         generateValue: true
       - key: GFJPROXY_PROCESS_TIMEOUT
-        value: 120
+        value: 300
       - key: PORT
         value: 5000
       - key: UV_VERSION
-        value: "0.10.4"
+        value: "0.12.1"
 
   # Key Value storage for gfjproxy user settings
   - type: keyvalue
