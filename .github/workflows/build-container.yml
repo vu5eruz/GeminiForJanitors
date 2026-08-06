@@ -20,11 +20,24 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      - name: Get Proxy Branch and Version
+        run: |
+          GIT_LOG=$(git log -1 --format="%ct-%h")
+          TIMESTAMP="${GIT_LOG%%-*}"
+          COMMIT="${GIT_LOG#*-}"
+          DATETIME=$(date -u -d "@$((TIMESTAMP - 14400))" "+%Y.%m.%d")
+          echo "BRANCH=${{ github.event.workflow_run.head_branch || github.ref_name }}" >> "$GITHUB_ENV"
+          echo "VERSION=${DATETIME}-${COMMIT}" >> "$GITHUB_ENV"
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{raw}},value=${{ env.VERSION }}
+            type=ref,event=branch
+            type=sha
 
       - name: Login to GHCR
         uses: docker/login-action@v4
@@ -36,10 +49,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push
+      - name: Build and Push
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GFJPROXY_BRANCH=${{ env.BRANCH }}
+            GFJPROXY_VERSION=${{ env.VERSION }}
