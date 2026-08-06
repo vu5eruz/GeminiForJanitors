@@ -35,9 +35,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{raw}},value=${{ env.VERSION }}
+            type=raw,value=${{ env.VERSION }}
             type=ref,event=branch
-            type=sha
 
       - name: Login to GHCR
         uses: docker/login-action@v4
