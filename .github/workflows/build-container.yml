@@ -13,7 +13,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
-      id-token: write
       packages: write
     steps:
       - uses: actions/checkout@v7
