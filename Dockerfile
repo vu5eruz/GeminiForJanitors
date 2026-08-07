@@ -22,4 +22,6 @@ EXPOSE 5000
 
 HEALTHCHECK CMD python -c "import httpx2, sys; sys.exit(httpx2.get('http://0.0.0.0:${PORT}/health').is_success)"
 
+SHELL ["/bin/sh", "-c"]
+
 CMD exec gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT:-300} "gfjproxy.app:create_app()"
