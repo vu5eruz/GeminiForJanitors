@@ -1,7 +1,6 @@
 name: Python CI
 
 on:
-  pull_request:
   push:
 
 jobs:
