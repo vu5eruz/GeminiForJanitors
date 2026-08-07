@@ -1,11 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.12.2-python3.13-trixie
-
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        redis-server \
-    ; \
-    apt-get dist-clean
+FROM ghcr.io/astral-sh/uv:0.12.2-python3.13-trixie-slim
 
 WORKDIR /app
 
@@ -21,12 +14,10 @@ ARG GFJPROXY_VERSION
 
 ENV GFJPROXY_BRANCH=${GFJPROXY_BRANCH} \
     GFJPROXY_VERSION=${GFJPROXY_VERSION} \
-    GFJPROXY_REDIS_URL=redis://127.0.0.1:6379/0 \
     PATH="/app/.venv/bin:$PATH" \
     PORT=5000 \
     PYTHONUNBUFFERED=1
 
 EXPOSE 5000
 
-CMD redis-server --maxmemory-policy allkeys-lru --daemonize yes && \
-    exec gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT:-300} "gfjproxy.app:create_app()"
+CMD exec gunicorn -b 0.0.0.0:${PORT} -k gevent -w 5 -t ${GFJPROXY_PROCESS_TIMEOUT:-300} "gfjproxy.app:create_app()"
