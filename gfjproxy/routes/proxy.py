@@ -95,7 +95,7 @@ def handle():
                 (
                     f"Unknown model(s): {unknown}\n"
                     + "Make sure to use OpenRouter syntax `provider/model`.\n"
-                    + "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, `deepseek/deepseek-chat`, etc."
+                    + "Examples: `google/gemini-3.8-flash`, `cerebras/llama3.1-8b`, `deepseek/deepseek-chat`, etc."
                 ),
                 400,
             )

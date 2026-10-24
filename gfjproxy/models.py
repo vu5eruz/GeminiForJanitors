@@ -11,6 +11,31 @@ from .utils import comma_split
 ################################################################################
 
 
+def resolve_model_provider(model: str) -> tuple[str, str]:
+    """Resolves which provider a model name belongs to.
+
+    Returns:
+        provider (str): The provider's name, or "unknown" if it can't be guessed.
+        model (str): The cleaned up model name.
+    """
+    model = model.strip().lower()
+
+    if "/" in model:
+        provider, model_name = model.split("/", maxsplit=1)
+        return provider, model_name
+
+    if model.startswith(("gemini-", "gemma-")):
+        return "google", model
+
+    if model.startswith("deepseek-"):
+        return "deepseek", model
+
+    return "unknown", model
+
+
+################################################################################
+
+
 @dataclass(kw_only=True, slots=True)
 class JaiMessage:
     """JanitorAI Message."""
@@ -78,6 +103,9 @@ class JaiRequest:
 
     advsettings: dict[str, bool] = field(default_factory=dict)
 
+    # Ordered model fallback chain (highest priority first), set by //fallback
+    fallback: list[str] = field(default_factory=list)
+
     def append_message(self, role: str, content: str):
         self.messages.append(
             JaiMessage(
@@ -103,19 +131,15 @@ class JaiRequest:
 
         if models := data.get("model"):
             for model in comma_split(models.lower()):
-                if "/" in model:
-                    provider, model_name = model.split("/", maxsplit=1)
-                    jai_req.models[provider] = model_name
-                elif model.startswith(("gemini-", "gemma-")):
-                    jai_req.models["google"] = model
-                elif model.startswith("deepseek-"):
-                    jai_req.models["deepseek"] = model
-                else:
+                provider, model_name = resolve_model_provider(model)
+                if provider == "unknown":
                     # Build a comma-separated list of unknown models
                     if unknown := jai_req.models.get("unknown"):
-                        jai_req.models["unknown"] = f"{unknown}, {model}"
+                        jai_req.models["unknown"] = f"{unknown}, {model_name}"
                     else:
-                        jai_req.models["unknown"] = model
+                        jai_req.models["unknown"] = model_name
+                else:
+                    jai_req.models[provider] = model_name
 
         if stream := data.get("stream"):
             jai_req.stream = stream

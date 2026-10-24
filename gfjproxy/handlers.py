@@ -5,7 +5,13 @@ from typing import Any, cast
 from ._globals import BANNER, BANNER_VERSION
 from .commands import CommandError, CommandExit
 from .logging import xlog
-from .models import JaiMessage, JaiRequest, JaiResult, JaiResultMetadata
+from .models import (
+    JaiMessage,
+    JaiRequest,
+    JaiResult,
+    JaiResultMetadata,
+    resolve_model_provider,
+)
 from .prefill import apply_prefill, clear_prefill
 from .providers.cerebras import cerebras_generate_content
 from .providers.deepseek import deepseek_generate_content
@@ -102,7 +108,7 @@ def _handle_request(
         extras = (
             f"You have a `{provider_name}` API key but you didn't specify a model for it.\n"
             "Make sure to use OpenRouter model syntax `provider/model`.\n"
-            "Examples: `google/gemini-2.5-flash`, `cerebras/llama3.1-8b`, `deepseek/deepseek-chat`, etc."
+            "Examples: `google/gemini-3.8-flash`, `cerebras/llama3.1-8b`, `deepseek/deepseek-chat`, etc."
         )
 
         if provider_name in ("openrouter", "nvidia"):
@@ -122,6 +128,114 @@ def _handle_request(
     xlog(user, f"Using {provider_name}/{model}")
 
     return provider_func(user, api_key, model, messages, settings)
+
+
+################################################################################
+
+# Statuses worth retrying with the next model in the fallback chain.
+# 408/504: the response never arrived. 5xx: the provider is down or overloaded.
+# 429: rate limited or out of quota. 502 also covers empty/filtered responses.
+FALLBACK_STATUSES = frozenset({408, 425, 429, 500, 502, 503, 504, 529})
+
+
+def _should_fallback(result: JaiResult) -> bool:
+    """Returns true when a failed result is worth retrying on another model.
+
+    Errors caused by the user's own setup (bad API key, nonexistent model,
+    malformed request) are not retried: another model wouldn't fix them."""
+    return result.status in FALLBACK_STATUSES
+
+
+def _fallback_chain(api_key: str, fallback: list[str]) -> tuple[str, list[str]]:
+    """Builds the list of model names to try for the given API key.
+
+    Models belonging to another provider than the API key are dropped, since
+    the request would be dispatched to the key's provider anyway."""
+    provider_name, _ = _resolve_provider(api_key)
+    if not provider_name or not fallback:
+        return "", []
+
+    chain: list[str] = []
+    for model in fallback:
+        model_provider, model_name = resolve_model_provider(model)
+        if model_provider == provider_name and model_name not in chain:
+            chain.append(model_name)
+
+    return provider_name, chain
+
+
+def _handle_request_chain(
+    user: XUID,
+    jai_req: JaiRequest,
+    messages: list[JaiMessage],
+    settings: dict[str, Any] | None = None,
+) -> JaiResult:
+    """Dispatch a request, falling back to the next model on failure.
+
+    Without a fallback chain this behaves exactly like _handle_request."""
+    provider_name, chain = _fallback_chain(jai_req.api_key, jai_req.fallback)
+
+    if len(chain) < 2:
+        if jai_req.fallback and not chain:
+            xlog(user, "Fallback chain has no model for this API key, ignoring it")
+        return _handle_request(
+            user, jai_req.api_key, jai_req.models, messages, settings
+        )
+
+    xlog(user, f"Fallback chain: {', '.join(chain)}")
+
+    failures: list[tuple[str, JaiResult]] = []
+
+    for index, model in enumerate(chain):
+        models = dict(jai_req.models)
+        models[provider_name] = model
+
+        if index:
+            xlog(
+                user,
+                f"Falling back to {provider_name}/{model} ({index + 1}/{len(chain)})",
+            )
+
+        result = _handle_request(user, jai_req.api_key, models, messages, settings)
+
+        if result:
+            if failures:
+                track_stats("r.fallback.recovered")
+                failed_model, failed_result = failures[-1]
+                note = (
+                    f"`{failed_model}` failed ({failed_result.status}), "
+                    f"this message was answered by `{model}`."
+                )
+                result.extras = f"{note}\n{result.extras}" if result.extras else note
+            return result
+
+        failures.append((model, result))
+
+        if not _should_fallback(result):
+            xlog(user, f"Not falling back on status {result.status}")
+            return result
+
+    # Every model in the chain failed
+
+    track_stats("r.fallback.exhausted")
+
+    last_model, last_result = failures[-1]
+
+    details = "\n".join(
+        f"ㅤ- `{model}`: {result.error.splitlines()[0] if result.error else result.status}"
+        for model, result in failures
+    )
+
+    last_result.error = (
+        f"All {len(failures)} of your models failed. Please try again.\n{details}"
+    )
+
+    if last_result.extras:
+        last_result.extras = (
+            f"The last model tried was `{last_model}`.\n{last_result.extras}"
+        )
+
+    return last_result
 
 
 ################################################################################
@@ -169,6 +283,12 @@ def parse_user_persona_names(
 ################################################################################
 
 
+def apply_user_fallback(user: UserSettings, jai_req: JaiRequest) -> None:
+    """Applies the user's saved fallback chain, unless a command already set one."""
+    if not jai_req.fallback and user.fallback:
+        jai_req.fallback = list(user.fallback)
+
+
 def handle_proxy_test(
     user: UserSettings, jai_req: JaiRequest, response: ResponseHelper
 ) -> ResponseHelper:
@@ -176,11 +296,12 @@ def handle_proxy_test(
 
     The sole purpose of this is to test out the user's API key and model."""
 
+    apply_user_fallback(user, jai_req)
+
     # Pass no settings. Defaults should allow for a successfuly proxy test.
-    result = _handle_request(
+    result = _handle_request_chain(
         user.xuid,
-        jai_req.api_key,
-        jai_req.models,
+        jai_req,
         jai_req.messages,
     )
 
@@ -460,10 +581,11 @@ def handle_chat_message(
         if jai_req.messages[-1].role != "user":
             jai_req.messages.append(JaiMessage(content=".", role="user"))
 
-    result = _handle_request(
+    apply_user_fallback(user, jai_req)
+
+    result = _handle_request_chain(
         user.xuid,
-        jai_req.api_key,
-        jai_req.models,
+        jai_req,
         jai_req.messages,
         settings,
     )

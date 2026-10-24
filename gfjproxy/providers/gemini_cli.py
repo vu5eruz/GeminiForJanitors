@@ -14,6 +14,7 @@ from ..statistics import track_stats
 from ..storage import storage
 from ..utils import base64url_decode, utcfromtimestamp, utcnow
 from ..xuiduser import XUID
+from .gemini import build_generation_config
 
 # https://github.com/google-gemini/gemini-cli/blob/17b37144a96da13bf7a0917411bc1d34142609d7/packages/core/src/code_assist/oauth2.ts#L72
 CLIENT_ID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
@@ -285,32 +286,15 @@ def gemini_cli_generate_content_ex(
         for message in messages
     ]
 
-    # Passed and modified by reference
-    generation_config = {}
-
     gemini_cli_request = {
         "project": project_id,
         "model": model,
         "request": {
             "contents": contents,
             "sessionId": str(uuid4()),
-            "generationConfig": generation_config,
+            "generationConfig": build_generation_config(model, settings),
         },
     }
-
-    for key, value in (settings or {}).items():
-        if key == "temperature":
-            generation_config["temperature"] = value
-        elif key == "max_tokens":
-            generation_config["maxOutputTokens"] = value
-        elif key == "top_k":
-            generation_config["topK"] = value
-        elif key == "top_p":
-            generation_config["topP"] = value
-        elif key == "frequency_penalty":
-            generation_config["frequencyPenalty"] = value
-        elif key == "repetition_penalty":
-            generation_config["presencePenalty"] = value
 
     try:
         # https://github.com/badlogic/pi-mono/blob/83378aad7e74a0e2bb8f37c007a9685fb4609d8a/packages/ai/src/providers/google-gemini-cli.ts#L265

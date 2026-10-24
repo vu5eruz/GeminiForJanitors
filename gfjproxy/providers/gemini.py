@@ -1,13 +1,74 @@
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import httpx2
 
-from .._globals import PROCESS_TIMEOUT
 from ..http_client import http_client
 from ..logging import xlog
 from ..models import JaiMessage, JaiResult, JaiResultMetadata, JaiResultTokenUsage
 from ..statistics import track_stats
 from ..xuiduser import XUID
+
+################################################################################
+
+# Thinking effort used for every model that accepts a thinking level.
+THINKING_LEVEL = "MEDIUM"
+
+# Gemini 3 and newer: sampling settings (temperature, top_k, top_p) are deprecated
+# and thinking depth is set with a thinking level instead of a token budget.
+_THINKING_LEVEL_MODELS = ("gemini-3", "gemini-4")
+
+# Models in that family that are not documented as accepting MEDIUM.
+# They are left on their own default thinking level.
+_NO_MEDIUM_MODELS = ("gemini-3.1-flash-lite",)
+
+SAFETY_SETTINGS: list[dict[str, str]] = [
+    {"threshold": "BLOCK_NONE", "category": category}
+    for category in (
+        "HARM_CATEGORY_HATE_SPEECH",
+        "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "HARM_CATEGORY_HARASSMENT",
+        "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "HARM_CATEGORY_JAILBREAK",
+    )
+]
+
+
+def uses_thinking_level(model: str) -> bool:
+    """True for Gemini 3+ models, which ignore sampling settings and take a thinking level."""
+    return model.startswith(_THINKING_LEVEL_MODELS)
+
+
+def build_generation_config(
+    model: str, settings: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Converts proxy settings into a Gemini generationConfig.
+
+    Shared by the Google AI and Gemini CLI providers."""
+    generation_config: dict[str, Any] = {}
+    modern = uses_thinking_level(model)
+
+    for key, value in (settings or {}).items():
+        if key == "max_tokens":
+            generation_config["maxOutputTokens"] = value
+        elif key == "frequency_penalty":
+            generation_config["frequencyPenalty"] = value
+        elif key == "repetition_penalty":
+            generation_config["presencePenalty"] = value
+        elif modern:
+            continue  # Sampling settings are deprecated on Gemini 3+
+        elif key == "temperature":
+            generation_config["temperature"] = value
+        elif key == "top_k":
+            generation_config["topK"] = value
+        elif key == "top_p":
+            generation_config["topP"] = value
+
+    if modern and not model.startswith(_NO_MEDIUM_MODELS):
+        generation_config["thinkingConfig"] = {"thinkingLevel": THINKING_LEVEL}
+
+    return generation_config
+
 
 ################################################################################
 
@@ -33,6 +94,18 @@ def _resolve_link(user: XUID, link: str) -> str:
         xlog(user, "Link not resolved")
 
     return result
+
+
+def _resolve_links(user: XUID, links: list[str]) -> list[str]:
+    """Resolves grounding links concurrently, keeping order and dropping duplicates.
+
+    Each lookup can take up to the client's timeout, so resolving them one by one
+    could add many seconds to a search-enabled reply."""
+    unique = list(dict.fromkeys(links))
+    if len(unique) <= 1:
+        return [_resolve_link(user, link) for link in unique]
+    with ThreadPoolExecutor(max_workers=min(8, len(unique))) as pool:
+        return list(pool.map(lambda link: _resolve_link(user, link), unique))
 
 
 def _get_finish_reason_feedback(response: dict[str, Any]) -> str | None:
@@ -90,32 +163,9 @@ def gemini_generate_content(
     User paramater is only used for logging. Generation settings must all be passed inside the
     settings parameter."""
 
-    generation_config: dict[str, Any] = {}
-
     gemini_request: dict[str, Any] = {
-        "safetySettings": [
-            {
-                "threshold": "BLOCK_NONE",
-                "category": "HARM_CATEGORY_HATE_SPEECH",
-            },
-            {
-                "threshold": "BLOCK_NONE",
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            },
-            {
-                "threshold": "BLOCK_NONE",
-                "category": "HARM_CATEGORY_HARASSMENT",
-            },
-            {
-                "threshold": "BLOCK_NONE",
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            },
-            {
-                "threshold": "BLOCK_NONE",
-                "category": "HARM_CATEGORY_JAILBREAK",
-            },
-        ],
-        "generationConfig": generation_config,
+        "safetySettings": SAFETY_SETTINGS,
+        "generationConfig": build_generation_config(model, settings),
         "contents": [
             {
                 "role": "user" if msg.role == "user" else "model",
@@ -124,29 +174,15 @@ def gemini_generate_content(
             for msg in messages
         ],
     }
-
-    for key, value in (settings or {}).items():
-        if key == "temperature":
-            generation_config["temperature"] = value
-        elif key == "max_tokens":
-            generation_config["maxOutputTokens"] = value
-        elif key == "top_k":
-            generation_config["topK"] = value
-        elif key == "top_p":
-            generation_config["topP"] = value
-        elif key == "frequency_penalty":
-            generation_config["frequencyPenalty"] = value
-        elif key == "repetition_penalty":
-            generation_config["presencePenalty"] = value
-        elif key == "search" and value:
-            gemini_request["tools"] = [{"googleSearch": {}}]
+    if (settings or {}).get("search"):
+        gemini_request["tools"] = [{"googleSearch": {}}]
 
     try:
         response = http_client.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
             headers={"x-goog-api-key": api_key},
             json=gemini_request,
-            timeout=PROCESS_TIMEOUT,
+            timeout=90,
         )
         response.raise_for_status()
         gemini_result = response.json()
@@ -165,7 +201,14 @@ def gemini_generate_content(
         else:
             stats_key = "g.failed.unknown"
 
-        if error := e.response.json():
+        try:
+            error = e.response.json()
+        except ValueError:  # HTML or plain-text error page
+            error = None
+        if not isinstance(error, dict):
+            error = None
+
+        if error:
             if "error" in error:
                 error = error["error"]
 
@@ -275,13 +318,13 @@ def gemini_generate_content(
                 and (parts := content.get("parts"))
                 and isinstance(parts, list)
             ):
-                text = ""
-                for part in parts:
-                    if isinstance(part, dict):
-                        part_text = part.get("text")
-                        part_thought = part.get("thought", False)
-                        if isinstance(part_text, str) and not part_thought:
-                            text += part_text
+                text = "".join(
+                    part_text
+                    for part in parts
+                    if isinstance(part, dict)
+                    and isinstance((part_text := part.get("text")), str)
+                    and not part.get("thought", False)
+                )
 
             if gm := candidate.get("groundingMetadata"):
                 # U+3164 HANGUL FILLER
@@ -295,15 +338,17 @@ def gemini_generate_content(
                     )
 
                 if isinstance((gcs := gm.get("groundingChunks")), list):
-                    links: list[str] = []
-                    for gc in gcs:
-                        if (
-                            isinstance(gc, dict)
-                            and (web := gc.get("web"))
-                            and isinstance(web, dict)
-                            and (uri := web.get("uri"))
-                        ):
-                            links.append(_resolve_link(user, uri))
+                    links = _resolve_links(
+                        user,
+                        [
+                            uri
+                            for gc in gcs
+                            if isinstance(gc, dict)
+                            and isinstance((web := gc.get("web")), dict)
+                            and isinstance((uri := web.get("uri")), str)
+                            and uri
+                        ],
+                    )
                     xlog(user, f"Found {len(gcs)} grounding chunks {len(links)} links")
                     extras += (
                         "Links:\n"

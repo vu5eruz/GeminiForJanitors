@@ -415,6 +415,18 @@ class UserSettings:
         self._data["prefill_mode"] = int(value)
 
     @property
+    def fallback(self) -> list[str]:
+        """Ordered list of model names to try, highest priority first."""
+        value = self._data.get("fallback", [])
+        if not isinstance(value, list):
+            return []
+        return [str(model) for model in value if model]
+
+    @fallback.setter
+    def fallback(self, value):
+        self._data["fallback"] = [str(model) for model in value if model]
+
+    @property
     def think_text(self) -> str:
         return str(self._data.get("think_text", "remove"))
 

@@ -7,7 +7,7 @@ from functools import wraps
 from random import randint
 
 from ._globals import BANNER, BANNER_VERSION, PRESETS
-from .utils import ResponseHelper
+from .utils import ResponseHelper, comma_split
 
 ################################################################################
 
@@ -76,7 +76,14 @@ class CommandExit(Exception):
 COMMANDS = {}
 
 
-def command(*, argspec: str = "", **kwargs):
+def command(*, argspec: str = "", argrest: bool = False, **kwargs):
+    """Registers a proxy command.
+
+    :param argspec: Regex the command's argument must fully match.
+    :param argrest: Take everything up to the end of the line as the argument,
+        instead of a single alphanumeric token. Needed by commands whose
+        argument contains punctuation, such as a comma-separated model list."""
+
     if argspec:
         regex = re.compile(argspec)
 
@@ -110,6 +117,7 @@ def command(*, argspec: str = "", **kwargs):
 
         COMMANDS[cmd_name] = {
             "argcount": 1 if argspec else 0,
+            "argrest": bool(argrest and argspec),
             "func": inner_wrapper,
         }
 
@@ -140,6 +148,8 @@ def aboutme(args, user, jai_req, response):
         f"\u200b- //search {'on' if user.use_search else 'off'}",
         f"\u200b- //think {'on' if user.use_think else 'off'}",
         f"\u200b- //think_text {user.think_text}",
+        "\u200b- //fallback "
+        + (", ".join(f"`{model}`" for model in user.fallback) or "off"),
         *(
             f"\u200b- //advset_{setting} {'on' if user.advsettings.get(setting) else 'off'}"
             + (
@@ -308,6 +318,67 @@ def think_text(args, user, jai_req, response):
 
 ################################################################################
 
+# Maximum amount of models allowed in a fallback chain
+FALLBACK_MAX = 5
+
+FALLBACK_ARGSPEC = r"off|show|[\w.\-/]+(?:\s*,\s*[\w.\-/]+)*"
+
+
+@command(argspec=FALLBACK_ARGSPEC, argrest=True)
+def fallback(args, user, jai_req, response):
+    args = args.lower()
+
+    if args == "off":
+        user.fallback = []
+        jai_req.fallback = []
+        if jai_req.quiet_commands:
+            return response
+        return response.add_proxy_message(
+            "Model fallback disabled. Only the model in your proxy settings will be used."
+        )
+
+    if args == "show":
+        if jai_req.quiet_commands:
+            return response
+        if not user.fallback:
+            return response.add_proxy_message(
+                "You have no model fallback chain set. Use `//fallback model1, model2` to set one."
+            )
+        return response.add_proxy_message(
+            "Your model fallback chain is:",
+            *(
+                f"\u200b{index}. `{model}`"
+                for index, model in enumerate(user.fallback, start=1)
+            ),
+        )
+
+    models = comma_split(args)
+
+    if len(models) < 2:
+        raise CommandError(
+            "`//fallback` needs at least two models, separated by commas."
+            " For example: `//fallback gemini-3.8-flash, gemini-3.6-flash`."
+        )
+
+    if len(models) > FALLBACK_MAX:
+        raise CommandError(
+            f"`//fallback` accepts at most {FALLBACK_MAX} models, you gave {len(models)}."
+        )
+
+    user.fallback = models
+    jai_req.fallback = models
+
+    if jai_req.quiet_commands:
+        return response
+
+    return response.add_proxy_message(
+        "Model fallback enabled. The proxy will try, in order:",
+        *(f"\u200b{index}. `{model}`" for index, model in enumerate(models, start=1)),
+    )
+
+
+################################################################################
+
 
 @command(argspec=r"off|on|this", setting="dice_char")
 def dice_char(args, user, jai_req, response):
@@ -433,7 +504,7 @@ Preset commands need to be called every time you want to use them.
 - `//banner`
   Shows you the banner, regardless of whether you have seen it before or if you use the `/quiet/` URL.
 
-- `//help advsettings|commands|dice|multikey|providers`
+- `//help advsettings|commands|dice|fallback|multikey|providers`
   Shows you info about specific topics or proxy features.
 
 - `//fixturns on|off|this`
@@ -465,6 +536,10 @@ Preset commands need to be called every time you want to use them.
 
 - `//nobot on|off|this`
   Removes the bot's description from the chat, in case it contains ToS-breaking content. *Note:* use this only as a last resort. This will negatively impact your chat.
+
+- `//fallback model1, model2, ...`
+- `//fallback off|show`
+  Automatically retries your message with the next model whenever one fails. See `//help fallback` for more info.
 
 - `//preset gigakostyl`
   Adds a simple writing guideline for NSFW roleplay, plus "X-ray views" to sex scenes.
@@ -672,10 +747,70 @@ You must add `z_ai/` at the start of any Z.AI API key.
 """
 
 
+HELP_FALLBACK = f"""***
+# **Model Fallback**
+
+Models go down, run out of quota or refuse to answer. \
+Model fallback makes the proxy retry your message with another model \
+instead of showing you an error.
+
+## **Setting it up**
+
+`//fallback gemini-3.8-flash, gemini-3.6-flash`
+
+The order is the priority order: the proxy always starts with the first model \
+and only moves to the next one when the previous one fails. \
+You can list up to {FALLBACK_MAX} models.
+
+The chain is saved and applies to all your chats until you change it. \
+While it is set, it *replaces* the model in your JanitorAI proxy settings, \
+so you can leave that field as is.
+
+Since model names have commas and dashes in them, `//fallback` takes \
+everything up to the end of the line as its argument. \
+Put it on its own line, or at the very end of your message.
+
+`//fallback show` tells you what your current chain is.
+
+`//fallback off` disables it and goes back to using the model in your proxy settings.
+
+## **When does it switch?**
+
+The proxy moves on to the next model when:
+- The model takes too long to answer or the request times out.
+- The provider is down or overloaded (server errors).
+- You hit a rate limit or ran out of quota for that model.
+- The answer comes back empty or blocked by the content filter.
+
+The proxy does **not** switch models when the problem is on your side, \
+such as an invalid API key or a model name that does not exist: \
+switching would not fix those and would only waste your other models.
+
+## **What you will see**
+
+If the first model works, nothing changes.
+
+If a later model had to answer, the proxy adds a small note telling you \
+which model failed and which one answered.
+
+If every model in the chain fails, you get a single error listing what each \
+model said, and you can simply send your message again.
+
+## **Notes**
+
+All the models in your chain must work with the API key you are using. \
+Models for a different provider than your key are skipped.
+
+Each retry is a real request. \
+A chain of three models can use up to three requests worth of quota on a bad day.
+"""
+
+
 HELP = {
     "advsettings": HELP_ADVSETTINGS,
     "commands": HELP_COMMANDS,
     "dice": HELP_DICE,
+    "fallback": HELP_FALLBACK,
     "multikey": HELP_MULTIKEY,
     "providers": HELP_PROVIDERS,
 }
@@ -688,7 +823,7 @@ def help(args, user, jai_req, response):
             args,
             (
                 f"There is no help topic `{args}`.\n"
-                + "Available topics are: `commands`, `dice`, `multikey`, `providers`."
+                + "Available topics are: `advsettings`, `commands`, `dice`, `fallback`, `multikey`, `providers`."
             ),
         )
     )
@@ -711,11 +846,24 @@ def parse_message(message: str) -> tuple[list[Command], str]:
     content = []
 
     cmd_argcount = 0
+    cmd_argrest = False
     prev_token = ""
     for token in _tokenize(message):
+        if cmd_argrest:
+            # Greedily take everything up to the end of the line as the argument
+            if "\n" in token:
+                cmd_argcount = 0
+                cmd_argrest = False
+                content.append(token)
+            else:
+                commands[-1].args += token
+            prev_token = token
+            continue
+
         if not cmd_argcount:
             if prev_token.startswith("//") and (cmd := COMMANDS.get(token.lower())):
                 cmd_argcount = cmd["argcount"]
+                cmd_argrest = cmd.get("argrest", False)
                 commands.append(Command(token, func=cmd["func"]))
                 content.pop()  # Remove "//" token
             else:
@@ -732,6 +880,9 @@ def parse_message(message: str) -> tuple[list[Command], str]:
             # The command function will show the appropriate error to the user
 
         prev_token = token
+
+    for cmd in commands:
+        cmd.args = cmd.args.strip()
 
     return commands, _stripmultispace("".join(content).strip())
 
